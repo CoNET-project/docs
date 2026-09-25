@@ -166,6 +166,9 @@ The initiator-hidden field boundary is now enforced for voice route commands.
 `voice_listen` has no business-wallet `walletAddress`; wake-up metadata uses
 only an opaque random `callId`, and voice frames target an opaque session ID.
 The initiating application wallet remains inside the recipient-user-PGP offer.
+An outgoing `voice_listen` may attach that offer as `offerArmor`. The
+executing mailbox forwards the ciphertext to the callee mailbox and must not
+decrypt it.
 
 The implemented initiator-hidden profile provides:
 

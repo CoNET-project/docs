@@ -130,11 +130,16 @@ application object
   → POST {"data":"..."} through entry A
 ```
 
+The sender wallet address and the sender PGP key exist only inside that
+recipient ciphertext. Entries and the mailbox must not learn them. The sender
+PGP private key never leaves the sender. The key id on the packet is the
+recipient key id.
+
 The recipient:
 
 1. decrypts with the user PGP private key;
 2. decodes the signed envelope;
-3. verifies the EIP-191 signer;
+3. verifies the EIP-191 signer. The recovered address is the sender identity. A wallet or `@BeamioTag` inside the object is only a claim; display the tag by looking up the recovered address, not by reading it from the payload;
 4. validates version, target, expiry, nonce, and limits;
 5. applies application authorization; and
 6. returns the profile-defined correlated response or signed receipt when the
@@ -157,7 +162,9 @@ duplex application relay made from two one-way paths; it is not WebRTC, raw
 UDP, or a persistent Chat-history stream.
 
 The voice route keeps the initiating application wallet inside the
-recipient-user-PGP offer. `voice_listen` and wake-up metadata expose only
+recipient-user-PGP offer. An outgoing `voice_listen` also carries that
+ciphertext as `offerArmor`. The caller's mailbox forwards `offerArmor` to the
+callee mailbox and does not decrypt it. Wake-up metadata still exposes only
 opaque session/call identifiers plus the callee routing target. “Both systems
 use a relay” is not a privacy comparison; compare which identity, IP, content,
 timing, and session fields each role actually receives.

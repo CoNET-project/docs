@@ -166,6 +166,21 @@ This changes an important relationship between the user and the communication sy
 
 The social relationship no longer needs to originate inside a platform-owned account database.
 
+### Inbound identity is the recovered signature
+
+This rule applies to **every inbound chat message** (plain text, voice-message attachments, files, and any Messages bubble), not only voice-call offers. A decrypted Chat object may contain a wallet address or a `@BeamioTag`. Those fields are **claims**. They are not the sender. The session peer and the bubble sender are the recovered signer.
+
+The recipient proves the sender only by recovering an EOA from an EIP-191 signature made with that wallet’s private key:
+
+1. Decrypt the user-PGP envelope locally.
+2. Recover the outer-envelope signer with `verifyMessage(text, signMessage)`.
+3. Accept the message only when that signer equals the envelope’s claimed `from`.
+4. Display that recovered address. Look up `@BeamioTag` for **that address** (local profile first, then an exact-address search). Never take a tag out of the message body, and never use `search-users` `results[0]`.
+
+A typed payload such as `voice_call_offer_v1` adds a second signature, `callerSignature`, over a canonical text that **excludes** identity fields (`from`, tag, and the signature itself). The callee displays the caller only when that recovery succeeds and matches the outer-envelope signer. If either check fails, the client must not present the body’s claimed address or tag as the caller. A claim that disagrees with the recovered key is not the caller; the client may show it on an extra line as an unverified claim with a warning.
+
+Entry nodes and mailbox nodes never see this proof in plaintext. The sender wallet address and the sender PGP key stay inside the recipient user-PGP ciphertext for the whole path. Only the recipient, after decryption, can read them. The sender PGP private key never leaves the sender device. The only key id a hop may see is the **recipient** key id used for routing. An outgoing `voice_listen` may also carry that ciphertext as `offerArmor`; the caller's mailbox forwards it to the callee mailbox and does not decrypt it. Wake-up push and `POST /post` still carry only opaque session fields or a single `{ "data" }` armor.
+
 ---
 
 ## Zero-trust communication infrastructure
@@ -561,21 +576,25 @@ only that a frame entered the peer SSE queue, not that it was played.
 The voice privacy profile separates call discovery from mailbox transport:
 
 ```text
-recipient-user-PGP offer:
+recipient-user-PGP offer (also attached as voice_listen.offerArmor):
   initiating application wallet + callee wallet + session key + call policy
 
 caller mailbox voice_listen:
-  separate routing wallet + random sessionId + opaque call capability
+  opaque callId + random sessionId + callee target + offerArmor ciphertext
 
 voice relay:
   random session/capability identifiers + encrypted frames
 ```
 
 The caller mailbox attaches the temporary SSE using the encrypted route and
-opaque session identifier. It does not receive the initiating application
-wallet as `walletAddress`, `callerEoa`, `callId`, or another reversible field.
-The recipient learns the initiating wallet only after decrypting and verifying
-the call offer. The callee route remains an operational delivery target.
+opaque session identifier. In the same command it forwards `offerArmor` to
+the callee mailbox and does not decrypt it. It does not receive the initiating
+application wallet as `walletAddress`, `callerEoa`, `callId`, or another
+reversible field. The recipient learns the initiating wallet only after
+decrypting the call offer and recovering the caller from `callerSignature`.
+The offer body’s address or tag is not that proof. `@BeamioTag` is looked up
+for the recovered address. The callee route remains an operational delivery
+target.
 
 The current wire shape excludes the initiating application wallet from
 mailbox-visible voice commands, wake-up push metadata, and voice-frame relay

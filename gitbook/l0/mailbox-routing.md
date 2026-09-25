@@ -6,22 +6,25 @@ Mailbox routing is the specified Layer Minus **forwarding** protocol. It separat
 
 L0 stops at “deliver this OpenPGP armor to the mailbox of this key.” Chat schemas, POS permission types, acknowledgements, and UI are [application combinations](using-l0.md) of the same path.
 
-Voice-call wake-up is also an application combination. The caller first sends
-a route-encrypted `voice_listen` command to its own mailbox B. The command may
-carry an opaque, metadata-only `{ callId, sessionId, calleeEoa, expiresAt }`
-record. After B attaches the voice SSE and writes `voice_ready`, B
-calls the Beamio push API. The caller PWA never calls that API directly, and
-the callee mailbox is not used as a push proxy. `callId` is a random wake-up
-reference; `sessionId` uniquely identifies one call.
-The command and push path must not carry the user-PGP session key, private key,
-audio, or call plaintext. APNs/FCM wake-up is only a native ringing hint; the
-actual offer still follows the normal recipient-user-PGP mailbox path.
+Voice-call wake-up is also an application combination. The caller sends one
+route-encrypted `voice_listen` to its own mailbox B. That command carries the
+opaque wake-up fields and `offerArmor`: the call offer already encrypted to
+the callee **user PGP**. B does not decrypt `offerArmor`. Before it calls the
+push API, B forwards that ciphertext to the callee mailbox by recipient key
+id (store it when the route is local, otherwise one SI hop). The caller does
+not POST the offer as a second message. After B attaches the voice SSE and
+writes `voice_ready`, B calls the Beamio push API. The caller PWA never calls
+that API directly, and the callee mailbox is not used as a push proxy.
+`callId` is a random wake-up reference; `sessionId` uniquely identifies one
+call. The command and push path must not carry the session key, private key,
+audio, or call plaintext. Those stay inside `offerArmor`. APNs/FCM wake-up is
+only a native ringing hint; the callee reads the offer from its mailbox.
 
-Initiator-hidden voice is enforced in the route command: the
-recipient-user-PGP call offer carries the initiating application wallet, while
-`voice_listen` carries only opaque session data and the callee routing target.
-The mailbox never receives the initiating application wallet in a
-mailbox-decryptable command, relay frame, push request, or log.
+Initiator-hidden voice stays in force: the plaintext initiating application
+wallet exists only inside the user-PGP offer. `voice_listen` may carry that
+ciphertext plus opaque session data and the callee routing target. The
+mailbox must not decrypt the offer, and must not put the caller wallet or
+`@BeamioTag` in the command, the push request, or logs.
 
 ## Roles
 
@@ -50,8 +53,10 @@ For the intended route, `A ≠ B` and `C ≠ B`. A and C may be different entrie
 6. A reads `getEncryptionKeyIDs()`. If the key is not local, A forwards the **same armor** and signs the SI hop header. If the key **is** local, A decrypts **once**. When the plaintext is still OpenPGP and the inner side-channel key ID is not this node, A forwards the **inner** armor if hop signatures stay at or below **3**. Same-node inner PGP is an attack (`end`). A does **not** read user-PGP business plaintext.
 7. B stores the inbound armor before attempting live SSE delivery. B does not
    decrypt the **user-PGP** business envelope and therefore cannot read the
-   sender wallet carried inside it. Only R learns that wallet after local
-   decrypt and EIP-191 verification. When B ends the socket, A frees that
+   sender wallet or the sender PGP key carried inside it. Only R learns those
+   after local decrypt and EIP-191 verification. The recovered signer is R's view of the
+   sender. A wallet or `@BeamioTag` inside the plaintext is a claim, not that
+   proof. When B ends the socket, A frees that
    connection. SI hop signatures are the credential the last decrypting hop
    uses to meter prior-hop bytes against the **user** wallet for **GB**.
 

@@ -72,35 +72,40 @@ Do **not** encrypt business Chat to an AA Smart Wallet unless that AA has its ow
 ## Voice-call wake-up push
 
 Voice calls keep the media path end-to-end encrypted, but a device may need a
-native wake-up before its Chat SSE is active. The caller first opens its
-voice-specific SSE through its own mailbox route B. The `voice_listen` command
-may carry an opaque, metadata-only wake-up request for the callee:
+native wake-up before its Chat SSE is active. The caller opens its
+voice-specific SSE through its own mailbox route B in one command. That
+`voice_listen` carries the opaque wake-up fields and `offerArmor`, the call
+offer already encrypted to the callee user PGP:
 
 ```json
 {
   "command": "voice_listen",
   "targetWallet": "0xCallee",
-  "callId": "@callerTag-or-callerEOA",
+  "callId": "opaque-call-id",
   "sessionId": "voice-session-opaque-id",
   "expiresAt": 1710000123456,
-  "pushTimestamp": 1710000000
+  "pushTimestamp": 1710000000,
+  "offerArmor": "-----BEGIN PGP MESSAGE-----\n...\n-----END PGP MESSAGE-----"
 }
 ```
 
 `callId` is a random wake-up reference and must not contain the caller's
 `@BeamioTag` or wallet address. `sessionId` is the per-call unique identifier
-and must be used for deduplication. After the
-caller's mailbox has accepted the voice SSE and sent its `voice_ready`
-handshake, that mailbox calls `/api/voiceCallPush` with only the signed
-metadata. The caller PWA never calls this endpoint, and it does not send a
-second `voice_call_push` command to the callee mailbox. This keeps the caller's
-network address outside the push API path while preserving the existing
-entry-to-mailbox routing.
+and must be used for deduplication. Before push, the caller's mailbox forwards
+`offerArmor` to the callee mailbox by the armor's recipient key id. It stores
+the ciphertext when that mailbox is itself, and otherwise sends one SI hop.
+It does not decrypt `offerArmor`, and the caller does not POST the offer
+again. After the caller's mailbox has accepted the voice SSE and sent its
+`voice_ready` handshake, that mailbox calls `/api/voiceCallPush` with only the
+signed metadata. The caller PWA never calls this endpoint, and it does not
+send a second `voice_call_push` command to the callee mailbox. This keeps the
+caller's network address outside the push API path while preserving the
+existing entry-to-mailbox routing.
 
 The mailbox must verify that the voice session belongs to its route, validate
 the target and expiry, and forward only the minimal metadata to the API. It
-must never forward the PGP session key, private key, audio, or the user-PGP
-call offer.
+must never decrypt or log the user-PGP offer, and it must never forward the
+PGP session key, private key, or audio.
 
 The API sends the metadata-only wake-up to registered native devices:
 `ios_voip` uses APNs PushKit/CallKit and `android` uses high-priority FCM.
@@ -123,20 +128,27 @@ The mailbox-visible shape is:
   "command": "voice_listen",
   "callId": "opaque-call-id",
   "sessionId": "opaque-session-id",
+  "targetWallet": "0xCallee",
   "expiresAt": 1710000123456,
-  "pushTimestamp": 1710000000
+  "pushTimestamp": 1710000000,
+  "offerArmor": "-----BEGIN PGP MESSAGE-----\n...\n-----END PGP MESSAGE-----"
 }
 ```
 
-The real caller wallet remains only in the signed call offer encrypted to the
-callee user PGP. `callId` is generated solely for native wake-up and is
-unrelated to the caller's BeamioTag or EOA. The session authority is the
-opaque `sessionId`, scoped by expiry and mailbox route.
+`offerArmor` is the signed call offer already encrypted to the callee user
+PGP. The caller's mailbox forwards that ciphertext and does not decrypt it.
+The plaintext caller wallet remains only inside that offer. The callee does
+not trust `from` or a tag inside that offer. It recovers the caller with
+`callerSignature` (see [Inbound identity verification](#inbound-identity-verification))
+and looks up `@BeamioTag` for that address. `callId` is generated solely for
+native wake-up and is unrelated to the caller's BeamioTag or EOA. The session
+authority is the opaque `sessionId`, scoped by expiry and mailbox route.
 
-The initiating application EOA is absent from mailbox-decryptable
-`voice_listen`, frame commands, SSE frames, and push metadata. The mailbox
-authenticates the route, checks the opaque session and expiry, and relays
-encrypted frames without learning the initiating application wallet.
+The plaintext initiating application EOA is absent from `voice_listen`, frame
+commands, SSE frames, and push metadata. The mailbox authenticates the route,
+forwards `offerArmor` without decrypting it, checks the opaque session and
+expiry, and relays encrypted frames without learning the initiating
+application wallet.
 Comparisons with other relays must use the actual fields visible to each role.
 
 ## Native push and call-UI capability registration
@@ -176,9 +188,10 @@ controls the permission and may revoke it.
 | Protocol identity | **EOA** + user OpenPGP + mailbox route |
 | User PGP `keyID` | Encryption **subkey**: `getKeyIDs()[1]`, uppercase hex |
 | Mailbox | A Guardian node. Current register API field `routeKeyID` is that node’s **domain** |
-| `@BeamioTag` | Discovery aid only. Resolve with **exact** username / `accountName` match, then use that EOA |
+| `@BeamioTag` | Display label only. Look it up **after** signature recovery, by the recovered EOA. Exact username match when searching by tag. Never read a tag from the message body, and never use `search-users` `results[0]` |
 | Presence | Mailbox listen-pool via `wallet_online_query`. Ignore `searchKey.routeOnline` (SI no longer writes it) |
 | Optional split | **Routing EOA** for AddressPGP + listen / ACK / presence; **sender / recipient EOA** only inside the encrypted envelope |
+| Sender confidentiality | Sender wallet address and sender PGP key stay inside the recipient user-PGP ciphertext until the recipient decrypts. Sender PGP private key never leaves the sender. Hops may see only the **recipient** key id |
 
 Current Beamio clients often use one EOA for all of the above. A new app can split them: register and listen with a routing wallet, encrypt to that row’s inbox user PGP, and put the product `from` / display wallet only in layer ②/③. Mailbox B then sees the routing EOA. Do not also write the product wallet into listen JSON or hop-sigs. See [Routing wallet versus sender / recipient wallets](wallet-address-p2p.md#routing-wallet-versus-sender--recipient-wallets).
 
@@ -212,7 +225,33 @@ Live `sendMessage` signs the **inner application string** (`text`), then OpenPGP
    and [Native push badge and `NoPush`](../applications/depin-chat.md#native-push-badge-and-nopush).
 ```
 
-Inbound: decrypt with the recipient user PGP private key → parse ③ → `ethers.verifyMessage(text, signMessage)` must recover `from` → unwrap nested `text` for typed payloads.
+Inbound: decrypt with the recipient user PGP private key → parse ③ → `ethers.verifyMessage(text, signMessage)` must recover `from`. The **recovered address is the sender**. The JSON `from` field is only a claim that must match that recovery; a nested `from: "me"` is a direction flag, not an address. Drop the message when recovery fails or the addresses differ. Then look up `@BeamioTag` for the recovered EOA. Do not display a tag or wallet copied out of ① or ②.
+
+### Inbound identity verification
+
+| Check | What the recipient trusts | What it must not trust |
+| --- | --- | --- |
+| **Inbound chat message** (text, `voice_message_v1`, file, any Messages bubble) | `verifyMessage(text, signMessage)` equals claimed `from`. That address is the session peer and the bubble sender | `from`, a wallet, a display name, or `@BeamioTag` inside the JSON. Pending-row `from: "me"` is only a direction flag |
+| Display name | BeamioTag record for the **recovered** EOA (local mirror, then exact-address search) | Any tag string in the message body |
+| `voice_call_offer_v1` | `callerSignature` over the canonical offer text below, and that signer equals the outer-envelope signer | `from` or a tag inside the offer |
+
+`voice_call_offer_v1` canonical text (newline-joined, identity fields excluded):
+
+```text
+CoNET voice_call_offer_v1
+callId:<opaque>
+sessionId:<opaque>
+to:<callee EOA lowercase>
+createdAt:<ms>
+expiresAt:<ms>
+timestamp:<ms>
+sessionKey:<or empty>
+tempWalletAddress:<lowercase or empty>
+entryDomains:<comma-joined or empty>
+codec:<or empty>
+```
+
+The caller signs that string with the same EOA private key (`signMessage`). The callee recovers the address and only then looks up the tag. If recovery fails, or it disagrees with the outer-envelope signer, do not present the offer’s claimed identity. A body claim that disagrees with the recovered key may be shown only as an extra unverified line with a warning. Native wake-up stays generic until this on-device check finishes.
 
 POS terminal authorization nests another object inside ① (`type: "beamio_pos_terminal_permission_v1"`). Merchant OS must unwrap along `text` and put it on **Staff pending**, not Messages. See [CoNET Chat](../applications/depin-chat.md).
 
@@ -532,15 +571,18 @@ peer's temporary voice SSE. Two one-way mailbox paths form the duplex channel;
 there is no peer-to-peer socket and no WebRTC candidate exchange.
 
 ```text
-Caller ── voice_listen(session A) ──> caller mailbox
+Caller ── voice_listen(session A + offerArmor) ──> caller mailbox
+Caller mailbox ── forward offerArmor ──> callee mailbox
 Caller ── voice_uplink(target session B) ──> callee mailbox ──> callee voice SSE
 Callee ── voice_downlink(target session A) ──> caller mailbox ──> caller voice SSE
 ```
 
+The outgoing `voice_listen` includes `offerArmor`. The caller's mailbox
+forwards that user-PGP ciphertext to the callee mailbox in the same step.
 The audio payload is AES-256-GCM ciphertext. The session key is delivered only
 inside the recipient-only, signed Chat offer/accept envelope. It must never
-appear in `voice_listen`, `voice_uplink`, HTTP JSON, SSE plaintext, logs or
-mailbox storage. The SI node validates the signed command, route ownership,
+appear in `voice_listen` plaintext, `voice_uplink`, HTTP JSON, SSE plaintext,
+logs, or mailbox storage outside the encrypted offer. The SI node validates the signed command, route ownership,
 session ownership, timestamp, sequence and size, but never decrypts the audio.
 
 Caller session authentication uses the encrypted mailbox route and an opaque
