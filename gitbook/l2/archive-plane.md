@@ -91,7 +91,16 @@ The specification lists open production blockers:
 
 Until those blockers close, the normative specification states that no archive signer may be enabled for production.
 
-A public isolated lab and [DLE explorer](explorer.md) do **not** close those gates. Observed 2026-08-14: `/health` reports `producesBlocks: false` and `hasTipVm: false`; 7×7 mesh health is heartbeat quorum, not Archive Certificate; the 30-day qualification counters remain at zero.
+A public isolated lab and [DLE explorer](explorer.md) do **not** close those gates.
+The `2026-09-23` post-window scrape was taken after the nominal 30-day endpoint:
+formal seating was `QUALIFIED` 7/7, but `pilotQualified=false` remained 7/7,
+heartbeat quorum was only 3/7, and terminal evidence did not close the required
+rotations / re-homes / takeovers. The inventory freeze blocks new hash-catalogue
+writes; it does not freeze the roster or replay/catch-up locator writes. Roster
+views had expanded to 9–10, while `officialStandbyReadyCount=4` reflected
+classification drift from extra standby roles rather than four official
+standbys. BFT start, AC hash-index commitment, and production verifier `C_G`
+availability remained 0/7.
 
 Dual TypeScript Archive A/B in [CoNET-DLE](https://github.com/CoNET-project/CoNET-DLE) is in-repo evidence. It does **not** satisfy the independent second-language production blocker.
 

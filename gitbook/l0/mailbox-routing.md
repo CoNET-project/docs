@@ -174,6 +174,24 @@ Chat clients send the mailbox acknowledgement and a sender-facing receipt after 
 
 Presence is local to the destination mailbox. A signed `wallet_online_query`, encrypted to B's route key and sent through C, asks whether the target has a non-stale listen session in B's pool. The historical on-chain `routeOnline` field is not current presence truth.
 
+### Native shell status (`wallet_native_wake_query`)
+
+This command is part of the **CoNET Chat** protocol. A client sends it only after `wallet_online_query` for the same contact.
+
+| Rule | Requirement |
+| --- | --- |
+| Encrypt to | The contact mailbox **B route PGP** |
+| HTTP | `POST /post` with body `{ "data": "<OpenPGP armor>" }` only |
+| Path | A healthy **entry node C**, and **C must not be B**. C forwards the armor to B |
+| Querier IP | The querier **must not** open a socket to mailbox B. Entry C is the only client-facing hop, so B learns the query and not the querier's IP address |
+| Answer | `{ ok: true, wallet, nativeWakeable }` |
+| `nativeWakeable: true` | The mailbox-registered wallet has a registered native shell on iOS, Android, Windows, Linux, or macOS that push can wake |
+| `nativeWakeable: false` | No such registered shell |
+| Secrets | The response contains no device token, push credential, or private key |
+| Failure | `{ ok: false, … }` is untrusted. Keep the last trusted boolean |
+
+A direct `POST` to B is not a compliant query. It would show the querier's IP to the destination mailbox and is forbidden for the same reason listen and presence are forbidden to dial B.
+
 ## Voice media carried by Chat
 
 `voice_message_v1` is not a mailbox media primitive. It is a typed business

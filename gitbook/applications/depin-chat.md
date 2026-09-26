@@ -18,6 +18,17 @@ The native shell presents the system call UI, while the encrypted offer and
 media continue through the normal Chat mailbox path. Push delivery is only a
 ringing hint and does not mean that the call was answered.
 
+A caller first learns whether the contact is online, then asks that contact’s
+mailbox the CoNET Chat command `wallet_native_wake_query`. The signed command
+is encrypted to the contact mailbox route key and posted only to an entry
+node that is not that mailbox. The entry forwards it. The caller does not
+connect to the mailbox, so the mailbox does not learn the caller’s IP
+address. A trusted `nativeWakeable: true` means a registered iOS, Android,
+Windows, Linux, or macOS shell can be rung, so the call control stays
+available while the listen session is offline. The answer is a boolean and
+contains no device token. A failed lookup does not clear the last trusted
+value, and the green presence dot still follows online state only.
+
 The upgraded voice route removes the initiating application EOA from
 `voice_listen`, frame commands, push metadata, and relay logs. The mailbox
 receives only the encrypted route command, opaque session identifiers, and the
@@ -518,7 +529,7 @@ L0 duplex mailbox work must omit Chat/APNs `NoPush`. See [Persistent application
 
 Online state is **mailbox listen-pool state**, not an on-chain `routeOnline` flag.
 
-A contact query uses `wallet_online_query`, encrypted to that contact’s mailbox route PGP and submitted through an entry that is not B. Failed queries must not overwrite a previously trusted online/offline value.
+A contact query uses `wallet_online_query`, encrypted to that contact’s mailbox route PGP and submitted through an entry that is not B. Failed queries must not overwrite a previously trusted online/offline value. After that answer, `wallet_native_wake_query` uses the same entry path and reports whether a registered native shell can be woken. Posting either query straight to the mailbox would expose the querier's IP; the entry hop is mandatory, including when no other entry is listed. The client keeps tag, image, online, and native-shell answers in one local BeamioTag record and shows that record first. It refreshes a field from the network when the field is older than 180 seconds. An open conversation takes over the online query and repeats it every 6 seconds. The wake boolean is separate from the green dot.
 
 ---
 

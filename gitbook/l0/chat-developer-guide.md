@@ -18,7 +18,8 @@ Public packages: [CoNET-project/chat-sdk](https://github.com/CoNET-project/chat-
 | Send a message | Recipient **EOA user PGP** | `POST /post` to healthy entries **A ≠ B** |
 | Listen | Own mailbox **B route PGP** | SSE via entry **C ≠ B**, preferred `command: "mailbox_listen"`; legacy `command: "mining"` + `listenKind: "chat"` remains supported |
 | After inbound ingest | (1) **B route PGP** ACK · (2) sender user PGP receipt, then mailbox-work wrap `NoPush` to sender mailbox B | ACK and receipt both via entries ≠ B; HTTP still `{ data }` only. `NoPush` is **Chat/APNs only**. L0 duplex mailbox work must omit it; see [duplex-forward](duplex-forward.md) |
-| Presence (green dot) | Contact mailbox **B route PGP** | `wallet_online_query` via **C ≠ B** |
+| Presence (green dot) | Contact mailbox **B route PGP** | `wallet_online_query` via **entry C ≠ B** (never dial B; that hides the querier's IP) |
+| Native shell status | Contact mailbox **B route PGP** | `wallet_native_wake_query` via the **same entry C ≠ B**, after presence |
 | Optional recover history | — | Encrypted IPFS fragments + `ChatIndexRegistry` head pointer |
 
 ## Relationship-privacy field contract
@@ -189,7 +190,8 @@ controls the permission and may revoke it.
 | User PGP `keyID` | Encryption **subkey**: `getKeyIDs()[1]`, uppercase hex |
 | Mailbox | A Guardian node. Current register API field `routeKeyID` is that node’s **domain** |
 | `@BeamioTag` | Display label only. Look it up **after** signature recovery, by the recovered EOA. Exact username match when searching by tag. Never read a tag from the message body, and never use `search-users` `results[0]` |
-| Presence | Mailbox listen-pool via `wallet_online_query`. Ignore `searchKey.routeOnline` (SI no longer writes it) |
+| Presence | Mailbox listen-pool via `wallet_online_query` through entry C ≠ B. Ignore `searchKey.routeOnline` (SI no longer writes it) |
+| Native shell status | `wallet_native_wake_query` through the same entry, after presence. Boolean `nativeWakeable`. Direct-to-B is forbidden because it would show the querier's IP to mailbox B |
 | Optional split | **Routing EOA** for AddressPGP + listen / ACK / presence; **sender / recipient EOA** only inside the encrypted envelope |
 | Sender confidentiality | Sender wallet address and sender PGP key stay inside the recipient user-PGP ciphertext until the recipient decrypts. Sender PGP private key never leaves the sender. Hops may see only the **recipient** key id |
 
@@ -453,8 +455,14 @@ On entering the chat list:
 1. Refresh route fields (`routersArmoreds` / route PGP) from `searchKey`. **Do not** copy `routeOnline` into the green dot.
 2. For each contact that has a mailbox route, send `wallet_online_query` (SI guide sample).
 3. Merge `online` only when `ok === true`. Failures keep the last trusted value.
+4. Then send `wallet_native_wake_query` through an **entry node that is not mailbox B**. Merge `nativeWakeable` only when `ok === true`. A failed lookup keeps the last trusted flag.
+5. The green dot stays online-only. A voice-call control may be offered when `online || nativeWakeable`.
+
+Store the trusted tag, image, names, `online`, and `nativeWakeable` in the local BeamioTag record and show that record first. Refresh a field from the network when it is older than 180 seconds. A failed lookup keeps the last trusted value. While a conversation is open, that screen owns the online query and repeats `wallet_online_query` every 6 seconds through an entry that is not the mailbox. If no such entry is available, skip the query. Do not POST it to mailbox B.
 
 Online means: that wallet is in **this mailbox’s** `livenessListeningPool` and the listen socket is not stale. It is not a chain write.
+
+`wallet_native_wake_query` is a CoNET Chat protocol command. Encrypt it to the contact mailbox **B route PGP** and POST `{ "data": "<armor>" }` to entry **C**. **C must not be B**, and the client must not open a connection to B. That entry hop is what keeps the querier's IP address off the destination mailbox. B answers `{ ok: true, wallet, nativeWakeable }`. `nativeWakeable` is `true` when that mailbox-registered wallet has a registered iOS, Android, Windows, Linux, or macOS shell that push can wake, including while the listen session is offline. The answer carries no device token.
 
 ## Resolve `@BeamioTag`
 
@@ -662,7 +670,8 @@ Walk this order. Do not skip to “the parser is broken.”
 - [ ] `@tag` resolution is exact; no `results[0]`
 - [ ] Inbound verify recovers `from`; typed unwrap walks `text`
 - [ ] Dual receipts after ingest; receipts and POS permission are not Messages rows
-- [ ] Presence is `wallet_online_query`; failures do not clear a trusted green dot
+- [ ] Presence is `wallet_online_query` via entry C ≠ B; failures do not clear a trusted green dot
+- [ ] Native shell status is `wallet_native_wake_query` via that same entry, after presence, so mailbox B never sees the querier's IP
 - [ ] Recover creates missing sessions before merge
 - [ ] No private keys, full private PGP, or `Securitykey` in logs
 

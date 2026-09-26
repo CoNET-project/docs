@@ -245,7 +245,7 @@ Partial anti-replay exists only on some **route-key commands**:
 | Object | Current binding | Replay store |
 | --- | --- | --- |
 | Generic `/post` business armor | OpenPGP integrity + client-defined inner fields | Mailbox `saveLocal` **appends**; identical armor can be stored again |
-| `wallet_online_query` / `gossip_delivery_ack` | EIP-191 + `timestamp` within ±600 s | No durable nonce set |
+| `wallet_online_query` / `wallet_native_wake_query` / `gossip_delivery_ack` | EIP-191 + `timestamp` within ±600 s. Both wallet queries must enter through an entry that is not B, so mailbox B does not observe the querier's IP | No durable nonce set |
 | UDP listen / relay / uplink | EIP-191 + `timestamp` within ±600 s; payload size cap | No replay window beyond the skew |
 | Duplex listen / relay / unlisten | EIP-191 + `timestamp` within ±600 s; payload cap 24000 b64 | No replay window beyond the skew |
 | Chat `sendId` | Application field; clients may drop duplicates | Not an SI mailbox invariant |
@@ -273,7 +273,7 @@ If a future Fetch-and-Close client uses TLS 1.3 0-RTT for performance, 0-RTT has
 
 ## Mailbox isolation fails under collusion
 
-A/B/C separation prevents an ordinary mailbox from seeing the client’s direct IP. It is a **role** split, not a proof that A, B, and C are independent operators.
+A/B/C separation prevents an ordinary mailbox from seeing the client’s direct IP. CoNET Chat presence (`wallet_online_query`) and native shell status (`wallet_native_wake_query`) both require that entry hop: the querier posts to C, and C forwards to B. A direct post to B would hand B the querier's IP and is non-compliant. The split is a **role** split, not a proof that A, B, and C are independent operators.
 
 | Collusion | Combined view |
 | --- | --- |

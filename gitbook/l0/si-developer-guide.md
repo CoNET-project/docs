@@ -117,7 +117,7 @@ Encrypt `{ message, signMessage }` to **B’s route PGP**. `message` is `JSON.st
 
 That `walletAddress` is the **routing** EOA (`isMyRoute`, listen pool, last-hop GB). It does **not** have to be the sender or recipient EOA inside a user-PGP Chat body. Apps that want a stronger split register AddressPGP on a dedicated routing wallet. See [wallet-addressed peer identity](wallet-address-p2p.md#routing-wallet-versus-sender--recipient-wallets).
 
-Typical use: Chat listen, mining listen, `gossip_delivery_ack`, `wallet_online_query`, UDP listen/relay (no `Securitykey`), SilentPass / SOCKS commands.
+Typical use: Chat listen, mining listen, `gossip_delivery_ack`, `wallet_online_query`, `wallet_native_wake_query`, UDP listen/relay (no `Securitykey`), SilentPass / SOCKS commands.
 
 ```text
 command object  (includes walletAddress)
@@ -175,6 +175,7 @@ Source: CoNET-SI `localNodeCommandSocket`. Encrypt the command family to **route
 | `mining` (omit `listenKind`) | Target SI route PGP | Infrastructure SSE | LayerMinus mining. SI defaults `listenKind` to `"mining"`. Not a Chat shortcut |
 | `gossip_delivery_ack` | **B** route PGP | Entry **C ≠ B** | After the client ingested user-PGP armor. Fields: `walletAddress`, `armorHash` (`keccak256(utf8(full armor))`), `timestamp` (unix seconds, ±600s), optional `sendId` |
 | `wallet_online_query` | Contact’s mailbox **B** route PGP | Entry **C ≠ B** | Presence. Fields: `walletAddress` (signer), `targetWallet`, `timestamp` (±600s). Success: `{ ok: true, wallet, online, listenAgeMs, nodeWallet }`. Do **not** use chain `routeOnline` |
+| `wallet_native_wake_query` | Contact’s mailbox **B** route PGP | **Entry C ≠ B only.** Never dial B | CoNET Chat native-shell status, sent after presence. Same signer, target, and ±600s timestamp. The entry hop hides the querier's IP from mailbox B. Success: `{ ok: true, wallet, nativeWakeable }`. `true` means a registered iOS, Android, Windows, Linux, or macOS shell can be woken. No device token. Failure `{ ok: false, error, nativeWakeable: false }` is untrusted and must not clear the last trusted flag |
 | `udp_subscribe` | UDP server **user** PGP | Entry **A ≠ B** | Contains `Securitykey`. SI rejects encryption to B (`encrypt_to_udp_server_user_pgp`) |
 | `udp_listen` / `udp_server_listen` / `udp_relay` / `udp_uplink` / `udp_unlisten` | **B** route PGP | Entry ≠ B | No `Securitykey`. See [UDP frame forwarding](udp-forward.md) |
 | `l0_listen` or `mining` + `listenKind: "l0"` | Own mailbox **B** route PGP | Long SSE via **C ≠ B** | Exclusive occupancy pipe. **No** overlay `Securitykey`. Field `userPgpKeyId` (encryption subkey, 16-hex) **must** be stored in `l0ListenByPgp` so later mailbox work can match this SSE. Handshake `{ ok, kind:"l0", wallet, nodeWallet }`. Idle L0 may receive user-PGP gossip without occupying. Temporary wallets are not AddressPGP; do not index only via `getWalletFromKeyID`. Separate from Chat / mining / UDP. Replacement while **live** occupied → **409** |
@@ -523,6 +524,39 @@ export async function queryMailboxOnline(opts: {
 
 Treat only `ok === true` as trusted. On timeout or `not_my_route`, **keep** the last trusted `online` value. Do not write chain `routeOnline` into the UI.
 
+### Native shell status
+
+CoNET Chat protocol command, sent after the presence query above. Use the same route-PGP encryption and the same entry. Refusing `entryDomain === mailboxDomain` is required: a direct post would give mailbox B the querier's IP.
+
+```ts
+export async function queryMailboxNativeWakeable(opts: {
+  wallet: ethers.Wallet
+  targetWallet: string
+  targetRoutePublicKeyArmored: string
+  mailboxDomain: string
+  entryDomain: string
+}): Promise<{ ok: boolean; nativeWakeable: boolean; error?: string }> {
+  if (opts.entryDomain === opts.mailboxDomain) {
+    throw new Error('entry C must not be mailbox B; that would expose the querier IP')
+  }
+  const armored = await encryptRouteCommand(
+    opts.wallet,
+    {
+      command: 'wallet_native_wake_query',
+      walletAddress: opts.wallet.address,
+      targetWallet: ethers.getAddress(opts.targetWallet),
+      timestamp: Math.floor(Date.now() / 1000),
+    },
+    opts.targetRoutePublicKeyArmored,
+  )
+  const res = await postArmor(opts.entryDomain, armored)
+  const json = await res.json().catch(() => ({ ok: false, nativeWakeable: false, error: 'parse' }))
+  return json
+}
+```
+
+Trust the boolean only when `ok === true`. `nativeWakeable: true` means the mailbox-registered wallet has a registered iOS, Android, Windows, Linux, or macOS shell that push can wake. The JSON has no device token.
+
 ### Mailbox delivery ACK
 
 ```ts
@@ -626,6 +660,7 @@ Node samples above use `Buffer`. In browsers use `btoa` / `atob` or a UTF-8 help
 - [ ] Failures do not log private keys, full PGP private armor, or `Securitykey`
 - [ ] HTTP 200 / SSE Connected is not treated as application delivery
 - [ ] Presence uses `wallet_online_query`, not `searchKey.routeOnline`
+- [ ] Native shell status uses `wallet_native_wake_query` after presence, posted only to entry C ≠ B so mailbox B does not see the querier's IP; a failed lookup does not clear the last trusted `nativeWakeable`
 
 ## Related
 

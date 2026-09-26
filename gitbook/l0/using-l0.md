@@ -33,7 +33,7 @@ correlate their observations.
 | Offline-capable messages | Chat envelope + mailbox delivery | [CoNET Chat developer guide](chat-developer-guide.md) |
 | Voice messages | Recipient-only Chat manifest + AES-GCM IPFS fragment | [CoNET Chat developer guide](chat-developer-guide.md) |
 | Real-time voice MVP | Random temporary voice SSE per wallet + encrypted uplink/downlink frames | [CoNET Chat developer guide](chat-developer-guide.md) |
-| Presence and delivery receipt | Mailbox query and acknowledgement | [CoNET Chat developer guide](chat-developer-guide.md) |
+| Presence, native shell status, and delivery receipt | `wallet_online_query`, then `wallet_native_wake_query`, plus acknowledgement. Both queries go through an entry that is not the destination mailbox, so that mailbox does not see the querier's IP | [CoNET Chat developer guide](chat-developer-guide.md) |
 | UDP frames | End-to-end AES frames over mailbox relay | [UDP forwarding](udp-forward.md) |
 | Wallet-addressed Web/API request | `web3://` caller-signed request + correlated encrypted response | [`web3://` Application Protocol](web3-application-protocol.md) |
 | Persistent application stream | `web3://` bidirectional session | [`web3://` Application Protocol](web3-application-protocol.md) |

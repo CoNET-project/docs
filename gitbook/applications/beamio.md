@@ -115,7 +115,7 @@ Share and install links on `https://beamio.app/app-download` open **Consumer onl
 
 ### Consumer
 
-The Consumer PWA derives a signing wallet from device-local recovery material, reads account state from the relevant chain, and uses application relays for gas-sponsored writes. The same EOA can register an AddressPGP identity for CoNET Chat. Smart Wallet state is on-chain; the interface and recoverable local cache are application concerns.
+The Consumer PWA derives a signing wallet from device-local recovery material, reads account state from the relevant chain, and uses application relays for gas-sponsored writes. The same EOA can register an AddressPGP identity for CoNET Chat. After mailbox presence, Chat asks `wallet_native_wake_query` whether that contact has a wakeable native shell (iOS, Android, Windows, Linux, or macOS). The query is encrypted to the contact mailbox and posted only through an entry node, so the mailbox does not see the querier's IP. A trusted `true` keeps the voice-call control available while the contact is offline. Smart Wallet state is on-chain; the interface and recoverable local cache are application concerns.
 
 ### Merchant
 

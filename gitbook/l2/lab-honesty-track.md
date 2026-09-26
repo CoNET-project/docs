@@ -1,14 +1,14 @@
 # Lab honesty track
 
-**Evidence level: laboratory review.** This page records the 2026-08-17 CoNET-DLE MVP review, the 2026-08-18 clock + Explorer clock overlay, and read-only runtime scrapes through **2026-08-20T07:43:59Z** (~45.8h into the clock). It is **not** a production SDK, **not** a production signing specification, and **not** 30-day qualification.
+**Evidence level: laboratory review.** This page records the 2026-08-17 CoNET-DLE MVP review, the 2026-08-18 clock + Explorer clock overlay, and read-only runtime scrapes through the **post-window assessment at 2026-09-23T15:16:45.701Z**. It is **not** a production SDK, **not** a production signing specification, and the final result is **not** 30-day qualification.
 
 Public site: [https://gitbook.conet.network/l2/lab-honesty-track.html](https://gitbook.conet.network/l2/lab-honesty-track.html)
 
-Developer how-to: [L2 development](../developers/l2.md). Explorer facts: [DLE explorer](explorer.md). Controlling design: whitepaper revision **2026-08-18**.
+Developer how-to: [L2 development](../developers/l2.md). Explorer facts: [DLE explorer](explorer.md). Controlling design: whitepaper revision **2026-09-23**.
 
 ## Status in one sentence
 
-The laboratory **control plane** (P0–P11, M6–M7, P5) is live. The laboratory **honesty track** (P12–P22) is landed in the repository engine and unit tests (`npm run runtime:test` **159/159**). **P23** keep-data deploy evidence is landed: **6/7 `LIVE_OK`**, fd-01 new-chain **409 → accept**, official standby **fd-06 HTTP unstable** (later remapped). **P24** wires isolated `node.ts` to the same `officialStandbysReady` callback as `lab-cli`. **P25** lands Explorer Certificates + Home **non-green** overlays for `officialStandbysReady` / `hashIndexCommittedInAc`. The public SPA on [dle.conet.network](https://dle.conet.network/) now serves `index-C8IdTq4H.js` (published 2026-08-18T10:15:00Z; `explorer:test` **10/10**; replaced pre-clock `index-U1o9ul_I.js`). **Clock started 2026-08-18T09:53:58.092Z** (`pilotRunning=true`, `pilotQualified=false`, `clockIsNotQualification=true`). Home + Certificates show a **non-green** clock chip. Green pills stay `seatingQualified === true` only. **Latest runtime scrape, 2026-08-20T07:43:59Z (~45.8h / ~6.37% of 30d):** official **7/7** HTTP OK + clock-aligned + seating `QUALIFIED`, while `pilotQualified` remains false; official `lastQuorumOk` is **6/7** because active fd-05 reported `peer=1`. Extra fd-08 is not an official seat and also reported quorum false. All replies omitted `leafCount` / `officialStandbysReady` / AC roots — **missing fields ≠ zero / empty inventory**. This is **not** 30-day qualification. Next: **continue 30-day wait / review**. Do **not** invent P26.
+The 30-day wall clock elapsed, but the qualification gate did not pass. The post-window scrape at `2026-09-23T15:16:45.701Z` found the formal seven **7/7** HTTP-reachable, clock-aligned, sticky operator-inventory-frozen, `leafCount=9750`, and seating `QUALIFIED`; however, `pilotQualified` was **0/7**, heartbeat quorum was only **3/7**, and no terminal evidence closed the required rotation / re-home / takeover counters. The operator health facade intentionally never asserts qualification. The inventory freeze blocks new hash-catalogue writes; it does **not** freeze roster membership or replay/catch-up locator writes. Formal nodes reported 9–10 roster entries and `officialStandbyReadyCount=4`; this is a **boundary drift**, not evidence that four official standbys exist. The current helper excludes only extra `fd-08`, allowing extra Seoul standby roles to enter the “official” count. `bftProcessStarted`, `hashIndexCommittedInAc`, and production \(C_G\) availability remained **0/7**. Final assessment: **partial success, not qualified**. Do not unfreeze, promote a standby, enable production signing, claim production readiness, or invent P26.
 
 ## What is live
 
@@ -124,9 +124,34 @@ The changed heartbeat witness is a reachability observation only. It does not ev
 
 Evidence JSON: CoNET-DLE `pilot/evidence/conet-dle-p23-live-2026-08/runtime-review-2026-08-20T074359Z.json`. Canvas archive: BeamioContract `src/canvas/dle-mvp-runtime-review-2026-08-20.md`.
 
-## Next laboratory gates
+## Post-window freeze assessment (2026-09-23)
 
-No further serial Explorer overlay gate is open. Remaining work is **30-day wait / review** (wall clock toward about `2026-09-17T09:53:58.092Z`). Do **not** invent P26. Do **not** claim qualification.
+The nominal 30-day endpoint was `2026-09-17T09:53:58.092Z`. The final read-only scrape was taken about 6.22 days later.
+
+| Check | Formal seven result |
+| --- | --- |
+| HTTP / aligned clock / `pilotRunning` | **7/7** |
+| Sticky operator inventory freeze | **7/7** |
+| `leafCount` | **9750 on 7/7** |
+| Seating `QUALIFIED` / `seatingQualified` | **7/7** |
+| `pilotQualified` | **0/7** true |
+| `lastQuorumOk` | **3/7** — `fd-01`, `fd-04`, `fd-06`; `fd-05` had `peer=0` |
+| Reported `officialStandbyReadyCount` | **4 on 7/7** — invalid as proof of the frozen two-standby boundary |
+| `bftProcessStarted` / `hashIndexCommittedInAc` / production \(C_G\) | **0/7** true or available |
+
+### Why elapsed time is not qualification
+
+`operatorPilotClockHealth()` deliberately returns `pilotQualified: false`. The separate `PilotQualificationGate` requires at least `100` rotations, `30` re-homes, and `100` takeovers after the continuous window. The terminal scrape does not provide completion evidence for those counters. A completed wall clock is therefore necessary evidence of elapsed time, not a sufficient qualification verdict.
+
+### Why the freeze did not preserve the 5+2 boundary
+
+`InventoryFreeze` prevents **new hash catalogue writes** but permits replay/catch-up `putLocator` operations. It does not freeze `syncRoster`. The formal nodes reported 9–10 roster entries, including extra `fd-08`, `fd-09`, and `fd-10`, and their views were not identical. `isOfficialStandbyRole` currently excludes only `fd-08`; extra Seoul standby roles can therefore inflate `officialStandbyReadyCount` to four. That count must not be shown or consumed as “four official standbys ready.”
+
+Evidence JSON: CoNET-DLE `pilot/evidence/conet-dle-p23-live-2026-08/runtime-review-2026-09-23Tpostwindow.json`. Canvas archive: BeamioContract `src/canvas/dle-30d-freeze-final-assessment-2026-09-23.md`.
+
+## Result and follow-up
+
+The review is closed as **partial success / not qualified**. There is no automatic next serial gate. Before any new operational authorization, correct and test the roster / official-standby classification boundary, restore an agreed formal roster view, and collect explicit counter evidence for the actual `PilotQualificationGate`. Do **not** auto-unfreeze, auto-promote, enable production signers, or claim production readiness. Do **not** invent P26.
 
 ## Parked
 
