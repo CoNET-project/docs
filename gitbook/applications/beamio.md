@@ -235,6 +235,7 @@ The public surfaces and source show that the suite and its major integration pat
 - Publish measured availability and performance expectations for RPC, relay, mailbox, metadata, and index-backed views.
 - Continue simplifying boundaries between user-facing state, trusted chain reads, cached application data, and asynchronous settlement.
 - Stripe Onramp Base USDC still depends on operator configuration (Crypto Onramp enabled; webhook secret; `crypto.onramp_session.updated`). A live create-session route is not by itself a guarantee that USDC has arrived.
+- Membership KYC: when a merchant turns on member-information collection, issuing or upgrading membership (Consumer top-up, gift claim that mints membership, POS Check Balance membership, POS top-up that mints a first membership) pauses for a “Become a member” form. The client encrypts the form to every card admin who has a registered AddressPGP user public key, uploads the ciphertext to CoNET IPFS, and records only `keccak256` of that ciphertext on the merchant card against the customer wallet. The card stores no plaintext. This on-chain memory is in the AdminStats module (`KycLinkOps`) and takes effect only after that module is factory-bound. Source design is in the repository; this page does not claim a mainnet bind.
 
 ## Trust and security boundary
 

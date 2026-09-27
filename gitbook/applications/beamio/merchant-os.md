@@ -160,6 +160,10 @@ Top-up `#13` percentages use **actual payment** only. Promotion bonus `#0` is no
 | **Overview KPI** | Chain-first. A failed RPC must not overwrite the last trusted value with zero |
 | **Wallet USDC** | Overview and Wallets show **one** merchant-owned **USDC** total: Base USDC + canonical CONET-USDC, summed per EOA and Smart Wallet. The UI does not split those chains. **Every merchant-started USDC transfer or payment** (Pay / Send, escrow deposit, Fuel Pack USDC debit) is an **offline signature** + Cluster → Master / Paymaster; the merchant EOA must not broadcast `USDC.transfer` or hold CNET / ETH for gas. Program-card **USDC Reserve / Diff** is a separate KPI: **Reserve** = `min(rewardEscrowUsdc6, CONET-USDC.balanceOf(card))`; **Diff** = Reserve − `quoteUsdcWithdrawForFiat6(totalSupply(13))`. Deposit funds the `#13` redeem pool via owner EOA EIP-2612 `permit` (when allowance is insufficient) + `fundSocialExchangeUsdcEscrow`; Master Settle_Conet sponsors CNET gas. On-card CONET-USDC that is not in escrow does not count toward Reserve. See [Cash and USDC](cash-and-usdc.md). |
 
+### Member information collection (KYC)
+
+Programs includes **KYC**, directly under Basic Info. The merchant chooses, per field, whether full name, phone, and email are required, optional, or not collected, and publishes that policy into card metadata (`shareTokenMetadata.kyc`). Publishing does not store customer answers. Customer answers are encrypted to the public keys of card admins who have registered an AddressPGP user key, stored on IPFS, and referenced from the card by hash only. The on-chain link is part of the AdminStats module and is active only after that module is factory-bound.
+
 ### Fuel and cash (merchant view)
 
 Merchants buy **Fuel Packs** (B-Units) for protocol fees. Pack merchandising shows price and **total B-Units** only.

@@ -101,6 +101,10 @@ Shells load the POS PWA. Process death must reload the WebView (no blank black s
 
 iOS POS must **not** register the Consumer custom scheme `beamio://` or Associated Domains on `beamio.app`. POS uses `beamiopos://` and `applinks:pos.beamio.app` only. Consumer share URLs (`/app`, `/app-download`) must never open BeamioPOS.
 
+## Membership information (KYC)
+
+POS does not hold the customer’s private key. When membership issue or upgrade requires member information, the terminal shows the same **Become a member** form. The terminal wallet (a card admin) signs the on-chain link; the mapping key is the customer wallet from the scan. The ciphertext is still encrypted to admin user public keys and uploaded to IPFS. A gift or top-up for someone who already holds a valid membership NFT does not reopen the form.
+
 ## Trust boundary
 
 - A compromised authorized terminal can charge, top-up, and claim until revoked.
