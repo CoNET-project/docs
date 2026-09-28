@@ -125,7 +125,11 @@ The following gates remain:
    The checkpoint stored in the already-finalized state lags fork choice by
    about two epochs. `beacon-agreed` compares geth `finalized` with the head
    checkpoint payload only. `alias-matches-geth yes` does not make
-   `beacon-agreed yes`. It does not feed the production shadow decision;
+   `beacon-agreed yes`. `state-root-binding yes` means the parent slot's
+   beacon state hashes to the signed header's `state_root` and its sync
+   committee verifies the aggregate. That state still comes from the same
+   beacon, so `trusted-committee` stays `no`. It does not feed the production
+   shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
    `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
