@@ -1,6 +1,6 @@
 # AAC proof-driven cross-chain settlement
 
-**Evidence level: mixed.** The `bridgeAAC` repository contains the AAC reference state machine and a production-approved **read-only Shadow observer**. Shadow `v0.16.0` is deployed, but it is **not** a Base or CoNET light client, controls no custody, emits no settlement transaction, and has not replaced the live miner-vote bridge.
+**Evidence level: mixed.** The `bridgeAAC` repository contains the AAC reference state machine and a production **read-only Shadow observer**. Shadow `v0.21.0` is deployed, but it is **not** a Base or CoNET light client, controls no custody, emits no settlement transaction, and has not replaced the live miner-vote bridge.
 
 Source: [CoNET-project/bridgeAAC](https://github.com/CoNET-project/bridgeAAC)
 
@@ -72,8 +72,8 @@ The Rust project deliberately exposes a `FinalityVerifier` interface. Its execut
 
 ## Production read-only Shadow
 
-Release `bridge-aac-v0.16.0` runs on `38.102.126.30` as
-`bridge-aac-shadow-prod.service`. Its production readers are:
+Release `bridge-aac-v0.21.0` runs the production read-only Shadow on
+`38.102.126.30` as `bridge-aac-shadow-prod.service`. Its production readers are:
 
 - Base: independent execution clients on `.30:8547` and `.58:8547`;
 - CONET: the local `.30:8889` archive and the
@@ -113,10 +113,11 @@ The following gates remain:
    that anchor, the report stays `covered no`. This command does not replay
    the fault proof and does not feed the production shadow decision;
 2. verify CONET finality from consensus signatures.
-   `conet-consensus` only compares the beacon finalized execution payload
-   with the execution client's `finalized` tag. The report stays
-   `signature-check no` because this command does not verify a BLS
-   signature. It does not feed the production shadow decision;
+   `conet-consensus` compares the beacon finalized execution payload with the
+   execution client's `finalized` tag and records whether a sync-committee
+   aggregate is present. The report stays `signature-check no` because this
+   command does not verify a BLS signature. It does not feed the production
+   shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
    `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
