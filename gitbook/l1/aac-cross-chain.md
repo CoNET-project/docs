@@ -115,10 +115,13 @@ The following gates remain:
 2. verify CONET finality from consensus signatures against an independently
    trusted committee. `conet-consensus` compares the beacon finalized
    execution payload with the execution client's `finalized` tag and checks
-   the sync-committee aggregate with FastAggregateVerify. A match prints
-   `aggregate-verify yes` and `signature-check yes`, and still prints
-   `trusted-committee no` and `custody-gate no`, because the committee came
-   from that same beacon. It does not feed the production shadow decision;
+   the sync-committee aggregate with FastAggregateVerify against the committee
+   at the parent slot. A match prints `aggregate-verify yes`,
+   `committee-state parent-slot`, and `signature-check yes`. `sync-quorum yes`
+   requires two-thirds participation. The report still prints
+   `trusted-committee no`, `state-root-binding unread`, and `custody-gate no`,
+   because the committee came from that same beacon and the beacon does not
+   serve a light-client update. It does not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
    `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
