@@ -121,9 +121,11 @@ The following gates remain:
    requires two-thirds participation. The report still prints
    `trusted-committee no`, `state-root-binding unread`, and `custody-gate no`,
    because the committee came from that same beacon and the beacon does not
-   serve a light-client update. `beacon-agreed` compares geth `finalized`
-   with the FFG checkpoint payload only. `alias-matches-geth yes` does not
-   make `beacon-agreed yes`. It does not feed the production shadow decision;
+   serve a light-client update. The checkpoint is read from the head state.
+   The checkpoint stored in the already-finalized state lags fork choice by
+   about two epochs. `beacon-agreed` compares geth `finalized` with the head
+   checkpoint payload only. `alias-matches-geth yes` does not make
+   `beacon-agreed yes`. It does not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
    `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
