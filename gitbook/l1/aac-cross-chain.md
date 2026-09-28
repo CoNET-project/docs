@@ -112,12 +112,13 @@ The following gates remain:
    `isGameClaimValid`. While the Base execution `finalized` tag is ahead of
    that anchor, the report stays `covered no`. This command does not replay
    the fault proof and does not feed the production shadow decision;
-2. verify CONET finality from consensus signatures.
-   `conet-consensus` compares the beacon finalized execution payload with the
-   execution client's `finalized` tag and records whether a sync-committee
-   aggregate is present. The report stays `signature-check no` because this
-   command does not verify a BLS signature. It does not feed the production
-   shadow decision;
+2. verify CONET finality from consensus signatures against an independently
+   trusted committee. `conet-consensus` compares the beacon finalized
+   execution payload with the execution client's `finalized` tag and checks
+   the sync-committee aggregate with FastAggregateVerify. A match prints
+   `aggregate-verify yes` and `signature-check yes`, and still prints
+   `trusted-committee no` and `custody-gate no`, because the committee came
+   from that same beacon. It does not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
    `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
