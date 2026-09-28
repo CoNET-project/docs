@@ -72,7 +72,7 @@ The Rust project deliberately exposes a `FinalityVerifier` interface. Its execut
 
 ## Production read-only Shadow
 
-Release `bridge-aac-v0.26.0` runs the production read-only Shadow on
+Release `bridge-aac-v0.27.0` runs the production read-only Shadow on
 `38.102.126.30` as `bridge-aac-shadow-prod.service`. Its production readers are:
 
 - Base: independent execution clients on `.30:8547` and `.58:8547`;
