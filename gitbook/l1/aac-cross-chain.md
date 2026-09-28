@@ -118,8 +118,8 @@ The following gates remain:
    the sync-committee aggregate with FastAggregateVerify against the committee
    at the parent slot. A match prints `aggregate-verify yes`,
    `committee-state parent-slot`, and `signature-check yes`. `sync-quorum yes`
-   requires two-thirds participation. The report still prints
-   `trusted-committee no`, `state-root-binding unread`, and `custody-gate no`,
+   requires two-thirds participation.    The report still prints
+   `trusted-committee no` and `custody-gate no`,
    because the committee came from that same beacon and the beacon does not
    serve a light-client update. The checkpoint is read from the head state.
    The checkpoint stored in the already-finalized state lags fork choice by
@@ -128,8 +128,11 @@ The following gates remain:
    `beacon-agreed yes`. `state-root-binding yes` means the parent slot's
    beacon state hashes to the signed header's `state_root` and its sync
    committee verifies the aggregate. That state still comes from the same
-   beacon, so `trusted-committee` stays `no`. It does not feed the production
-   shadow decision;
+   beacon, so `trusted-committee` stays `no`. `committee-handoff yes` means one
+   earlier period's aggregate authenticated a state whose `next_sync_committee`
+   matches the current committee. That earlier committee is still served by
+   the same beacon. Production Shadow remains `bridge-aac-v0.27.0`. It does
+   not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
    `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
