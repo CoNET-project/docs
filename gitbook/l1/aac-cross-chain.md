@@ -107,10 +107,32 @@ consume denied
 Production Shadow approval is not approval of decentralized burn/mint custody.
 The following gates remain:
 
-1. verify Base finality from Ethereum L1 output/fault-proof evidence;
-2. verify CONET finality from consensus signatures;
-3. deploy and audit the destination consume-once AAC contracts;
-4. close the unrestricted paid-GB admin-mint path;
+1. verify Base finality from Ethereum L1 output/fault-proof evidence.
+   `base-l1-output` only reads the OptimismPortal anchor and
+   `isGameClaimValid`. While the Base execution `finalized` tag is ahead of
+   that anchor, the report stays `covered no`. This command does not replay
+   the fault proof and does not feed the production shadow decision;
+2. verify CONET finality from consensus signatures.
+   `conet-consensus` only compares the beacon finalized execution payload
+   with the execution client's `finalized` tag. The report stays
+   `signature-check no` because this command does not verify a BLS
+   signature. It does not feed the production shadow decision;
+3. deploy and audit the destination consume-once AAC contracts.
+   `destination-consumer` only records PUSH4 selector presence for
+   `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
+   `aacConsumeMintDeveloper`. `selector-observation present` still prints
+   `semantic-proof no`, `consume-once no`, `consumer observation-only`,
+   `audit no`, and `custody-gate no`. A 4-byte collision is not treated as
+   an entrypoint. This command does not deploy or call a consumer and does
+   not feed the production shadow decision;
+4. close the unrestricted paid-GB admin-mint path and the upgrade authority
+   that could restore it. `gb-mint-authority` only reads GBToken
+   `0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`. `mint`, `mintPaid`, and
+   `voteBridgeMint` are on that token. While those selectors remain, the
+   report stays `admin-mint open`. If they disappear, the report is
+   `selectors-absent yes`, `upgrade-authority unread`, and `mint-closed no`.
+   This command does not send a mint or a vote and does not feed the
+   production shadow decision;
 5. complete end-to-end adversarial tests and an independent security audit; and
 6. perform a separately approved miner-vote cutover.
 
