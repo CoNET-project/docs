@@ -72,7 +72,7 @@ The Rust project deliberately exposes a `FinalityVerifier` interface. Its execut
 
 ## Production read-only Shadow
 
-Release `bridge-aac-v0.22.0` runs the production read-only Shadow on
+Release `bridge-aac-v0.24.0` runs the production read-only Shadow on
 `38.102.126.30` as `bridge-aac-shadow-prod.service`. Its production readers are:
 
 - Base: independent execution clients on `.30:8547` and `.58:8547`;
@@ -121,7 +121,10 @@ The following gates remain:
    requires two-thirds participation. The report still prints
    `trusted-committee no`, `state-root-binding unread`, and `custody-gate no`,
    because the committee came from that same beacon and the beacon does not
-   serve a light-client update. It does not feed the production shadow decision;
+   serve a light-client update. `beacon-agreed` compares geth `finalized`
+   with the FFG checkpoint payload. Prysm `blocks/finalized` can match geth
+   while that checkpoint payload does not; the alias is not the checkpoint.
+   It does not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
    `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
