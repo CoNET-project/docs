@@ -1,6 +1,6 @@
 # AAC proof-driven cross-chain settlement
 
-**Evidence level: mixed.** The `bridgeAAC` repository contains the AAC reference state machine and a production **read-only Shadow observer**. Shadow `v0.22.0` is deployed, but it is **not** a Base or CoNET light client, controls no custody, emits no settlement transaction, and has not replaced the live miner-vote bridge.
+**Evidence level: mixed.** The `bridgeAAC` repository contains the AAC reference state machine and a production **read-only Shadow observer**. Shadow `v0.28.0` is deployed, but it is **not** a Base or CoNET light client, controls no custody, emits no settlement transaction, and has not replaced the live miner-vote bridge.
 
 Source: [CoNET-project/bridgeAAC](https://github.com/CoNET-project/bridgeAAC)
 
@@ -72,7 +72,7 @@ The Rust project deliberately exposes a `FinalityVerifier` interface. Its execut
 
 ## Production read-only Shadow
 
-Release `bridge-aac-v0.27.0` runs the production read-only Shadow on
+Release `bridge-aac-v0.28.0` runs the production read-only Shadow on
 `38.102.126.30` as `bridge-aac-shadow-prod.service`. Its production readers are:
 
 - Base: independent execution clients on `.30:8547` and `.58:8547`;
@@ -131,7 +131,7 @@ The following gates remain:
    beacon, so `trusted-committee` stays `no`. `committee-handoff yes` means one
    earlier period's aggregate authenticated a state whose `next_sync_committee`
    matches the current committee. That earlier committee is still served by
-   the same beacon. Production Shadow remains `bridge-aac-v0.27.0`. It does
+   the same beacon. Production Shadow is `bridge-aac-v0.28.0`. It does
    not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
