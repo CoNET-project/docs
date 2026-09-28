@@ -122,9 +122,8 @@ The following gates remain:
    `trusted-committee no`, `state-root-binding unread`, and `custody-gate no`,
    because the committee came from that same beacon and the beacon does not
    serve a light-client update. `beacon-agreed` compares geth `finalized`
-   with the FFG checkpoint payload. Prysm `blocks/finalized` can match geth
-   while that checkpoint payload does not; the alias is not the checkpoint.
-   It does not feed the production shadow decision;
+   with the FFG checkpoint payload only. `alias-matches-geth yes` does not
+   make `beacon-agreed yes`. It does not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
    `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
