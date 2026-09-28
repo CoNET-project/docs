@@ -26,6 +26,7 @@
   * [RPC and Explorer](l1/rpc-explorer.md)
   * [Core L1 assets](l1/assets.md)
   * [Decentralized cross-chain Treasury](l1/cross-chain-treasury.md)
+  * [AAC proof-driven cross-chain settlement](l1/aac-cross-chain.md)
 * [L2 — CoNET-DLE](l2/README.md)
   * [Design thesis](l2/design-thesis.md)
   * [Archive plane and finality](l2/archive-plane.md)

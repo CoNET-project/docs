@@ -1,12 +1,14 @@
 # Bring an ERC-20 into CoNET
 
-**Evidence level: mixed.** `TreasuryBridgeV3` and the listed canonical CoNET assets are production references. Route policy, miner quorum, and replay controls are implemented capabilities. Hand-off from a bridged asset into CoNET-DLE is a **normative design** and is not a production L2 service.
+**Evidence level: mixed.** `TreasuryBridgeV3` and the listed canonical CoNET assets are production references. Route policy, miner quorum, and replay controls are implemented capabilities. The AAC read-only Shadow is production-approved, while AAC custody and hand-off from a bridged asset into CoNET-DLE remain closed.
 
 Public site: [https://gitbook.conet.network/developers/l1-erc20-bridge.html](https://gitbook.conet.network/developers/l1-erc20-bridge.html)
 
 An ERC-20 issued on another chain is **not** a CoNET asset. It enters the ecosystem only through the **one** production Treasury, `TreasuryBridgeV3`, on an **already enabled** route. A caller-supplied token address does not create that route.
 
 Architecture detail: [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md).
+
+The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a production custody integration guide. Its deployed Shadow is read-only and is not a Base or CoNET light client.
 
 ## The only Treasury
 
@@ -68,6 +70,8 @@ execute exactly once
 The destination contract rejects a disabled route, conflicting payloads, duplicate miner votes, failed quorum, beneficiary sums that do not match the gross amount, and a replayed `operationId`.
 
 These controls decentralize **authorization** across the configured miner set. They do not prove operator independence, source-chain finality, or that upgrade keys cannot be compromised.
+
+The proposed AAC route replaces this per-deposit vote only after the destination chain can verify both inclusion and source finality. A Merkle path against a relayer-supplied header is insufficient. Until an audited Base adapter, CONET adapter, asset adapters, and cutover exist, applications must continue using the enabled Treasury V3 route above.
 
 ## Use a current product path (Base USDC)
 
@@ -174,6 +178,7 @@ That second transition is specified, not deployed. See [L2 development](l2.md) a
 ## Related
 
 - [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md)
+- [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md) — production read-only Shadow, not a production custody API
 - [Core L1 assets](../l1/assets.md)
 - [RPC and Explorer](../l1/rpc-explorer.md)
 - [Miner-matched order-book exchange](../applications/miner-orderbook-dex.md) — design study on top of canonical assets

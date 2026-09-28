@@ -1,6 +1,6 @@
 # Decentralized cross-chain Treasury
 
-**Evidence level: mixed.** The deployed `TreasuryBridgeV3` proxy and its canonical CoNET assets are production references. The bridge policy, quorum, and replay controls are implemented capabilities. The hand-off from a bridged asset into CoNET-DLE remains a normative design and is not a production L2 service.
+**Evidence level: mixed.** The deployed `TreasuryBridgeV3` proxy and its canonical CoNET assets are production references. The bridge policy, quorum, and replay controls are implemented capabilities. The AAC read-only Shadow is production-approved, but AAC custody and the hand-off from a bridged asset into CoNET-DLE remain closed.
 
 Public site: [https://gitbook.conet.network/l1/cross-chain-treasury.html](https://gitbook.conet.network/l1/cross-chain-treasury.html)
 
@@ -76,6 +76,26 @@ The operation identity commits to the source and destination chains, Treasuries 
 - consumes `operationExecuted[operationId]` before distribution, preventing replay.
 
 These controls decentralize authorization across the configured miner set. They do not prove that every miner is operationally independent, that source-chain finality cannot reorganize, or that governance and upgrade keys cannot be compromised.
+
+## AAC read-only production Shadow
+
+[AAC proof-driven settlement](aac-cross-chain.md) is the proposed deterministic successor to per-operation miner votes. It separates source inclusion, source-header authenticity, finality, route constraints, and destination replay protection.
+
+`bridge-aac-v0.16.0` now runs a production read-only Shadow on `.30`. It scans
+two independent Base readers and two CONET reader paths, agrees block hash,
+state root, and receipts root at the lower finalized height, verifies receipt
+inclusion, persists its cursor, and pages on divergence. Both chains completed
+the required 256-block lower-head stability hold.
+
+This is operational evidence for the observer, not a custody cutover. The
+Shadow reports `broadcast no`, `settled no`, `custody closed`, and
+`light-client no`. It does not verify Base Ethereum-L1 output/fault-proof
+finality or CONET consensus signatures. Therefore:
+
+- a miner vote is not described as a Merkle or finality proof;
+- `isReserved` does not replace source locking or burning;
+- live `voteBridgeOperation` and GB validator voting remain active until an audited adapter and explicit cutover exist; and
+- AAC additionally covers paid GB and unbound developer-token burn/mint routes, while free GB and GB-bound developer tokens remain non-bridgeable.
 
 ## Onboarding an ERC-20 from another chain
 
@@ -160,6 +180,7 @@ See [Cross-chain assets in CoNET-DLE](../l2/cross-chain-assets.md) for that seco
 
 - [Bring an ERC-20 into CoNET](../developers/l1-erc20-bridge.md) — developer how-to
 - [Core L1 assets](assets.md)
+- [AAC proof-driven cross-chain settlement](aac-cross-chain.md)
 - [Cross-chain assets in CoNET-DLE](../l2/cross-chain-assets.md)
 - [Miner-matched order-book exchange](../applications/miner-orderbook-dex.md)
 - [CoNET-DLE ledger classes](../l2/tip-classes.md)

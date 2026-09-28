@@ -50,6 +50,7 @@ deployment note.
 | Build a wallet-addressed application | [`web3://` Application Protocol](l0/web3-application-protocol.md) |
 | Use the Linux `web3://` runtime | [`conet-l0d`](developers/conet-l0d.md) |
 | Implement a browser/native `web3://` client | [`web3://` application](applications/web3-url.md) |
+| Understand the AAC proof-driven bridge work | [AAC cross-chain settlement](l1/aac-cross-chain.md) |
 | Run an L1 node | [Run an L1 node](developers/l1-node.md) |
 | Participate in mining | [L1 mining](developers/l1-mining.md) |
 | Build against DLE specifications | [L2 development](developers/l2.md) |
@@ -70,6 +71,7 @@ documentation repositories is maintained in the
 | Linux `web3://` runtime | [CoNET-project/CoNET-L0D](https://github.com/CoNET-project/CoNET-L0D) |
 | Browser `web3://` client | [CoNET-project/web3Url](https://github.com/CoNET-project/web3Url) |
 | CoNET DLE | [CoNET-project/CoNET-DLE](https://github.com/CoNET-project/CoNET-DLE) |
+| AAC Rust reference gateway | [CoNET-project/bridgeAAC](https://github.com/CoNET-project/bridgeAAC) |
 | Documentation | [CoNETProject/docs](https://github.com/CoNETProject/docs) |
 
 ## Maturity
@@ -81,6 +83,7 @@ documentation repositories is maintained in the
 | L1 chain, RPC, Explorer, validators, and assets | Production reference |
 | CoNET Chat delivery, receipt, presence, and encrypted-history components | Implemented capability |
 | `web3://` locator, Linux runtime, caller-signed gateway, and early browser client | Under development |
+| AAC proof-driven cross-chain settlement | Production-approved read-only Shadow (`v0.16.0`); no production light client, custody, mint/release, or miner-vote cutover |
 | CoNET-DLE specifications | Normative design; lab evidence is separate from production |
 
 These labels are not security-audit, uptime, or anonymity guarantees.

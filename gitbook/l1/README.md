@@ -37,6 +37,7 @@ Network-layer privacy and censorship resistance are transport objectives. Wallet
 5. [RPC and Explorer](rpc-explorer.md)
 6. [Assets](assets.md)
 7. [Decentralized cross-chain Treasury](cross-chain-treasury.md)
+8. [AAC proof-driven cross-chain settlement](aac-cross-chain.md)
 
 Developer how-tos for this layer: [Run an L1 node](../developers/l1-node.md), [Participate in mining](../developers/l1-mining.md), and [Bring an ERC-20 into CoNET](../developers/l1-erc20-bridge.md).
 
@@ -46,6 +47,7 @@ Developer how-tos for this layer: [Run an L1 node](../developers/l1-node.md), [P
 - [Decentralization and verifiability](decentralization.md) — reproducible validator, Guardian, stake, client, and governance views
 - [RPC and Explorer](rpc-explorer.md) — connection and verification examples
 - [Decentralized cross-chain Treasury](cross-chain-treasury.md) — current Treasury proxy, route modes, miner quorum, and the conditional hand-off to DLE
+- [AAC proof-driven cross-chain settlement](aac-cross-chain.md) — production read-only Shadow and still-closed proof/finality/custody boundary
 - [Resources](../resources.md) — public git map and live-service index
 
 ## Next

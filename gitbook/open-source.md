@@ -18,6 +18,7 @@ separately.
 | CoNET L0D — Linux `web3://` runtime | [CoNET-project/CoNET-L0D](https://github.com/CoNET-project/CoNET-L0D) |
 | `web3://` browser client | [CoNET-project/web3Url](https://github.com/CoNET-project/web3Url) |
 | CoNET DLE — L2 specifications, runtime, and Explorer | [CoNET-project/CoNET-DLE](https://github.com/CoNET-project/CoNET-DLE) |
+| bridgeAAC — Rust reference state machine for proof-driven cross-chain settlement | [CoNET-project/bridgeAAC](https://github.com/CoNET-project/bridgeAAC) |
 | CoNET Chat SDK | [CoNET-project/chat-sdk](https://github.com/CoNET-project/chat-sdk) |
 
 ## Beamio

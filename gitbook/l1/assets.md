@@ -23,6 +23,8 @@ All assets below are associated with CoNET L1, **`chainId 224422`**.
 
 The Treasury controls explicit cross-chain route and canonical-asset policy. A foreign ERC-20 does not become canonical merely because it has been wrapped or assigned matching metadata. See [Decentralized cross-chain Treasury](cross-chain-treasury.md).
 
+The [AAC settlement track](aac-cross-chain.md) specifies proof-driven movement for canonical USDC, **paid GB**, and unbound developer ERC-20s. Its production read-only Shadow is deployed, but AAC custody is not. It does not permit free GB or a developer token bound to a GB exchange rate to cross, and it has not replaced the live Treasury or GB validator-vote paths.
+
 CoNET-USDC uses 6 decimals. Issued-NFT social exchange payouts must use this
 canonical token; the legacy USDC factory address
 `0xfD0D7B0706AaB5E4351bcED37bC3C77ed6813907` is deprecated. In that exchange,
@@ -41,6 +43,7 @@ Read balances and token metadata from `https://rpc1.conet.network`, with `https:
 - [Chain identity](chain-identity.md) — network identity and RPC authority
 - [RPC and Explorer](rpc-explorer.md) — query guidance
 - [Decentralized cross-chain Treasury](cross-chain-treasury.md) — route, quorum, and asset-admission boundary
+- [AAC proof-driven cross-chain settlement](aac-cross-chain.md) — production read-only Shadow and still-closed custody model
 
 ## Next
 
