@@ -144,10 +144,14 @@ The following gates remain:
    `audit no`, and `custody-gate no`. A 4-byte collision is not treated as
    an entrypoint. This command does not deploy or call a consumer and does
    not feed the production shadow decision. A separate specification
-   consumer, proxy `0x02C98ACc2CFDE505013B8518Bd73283cB2C8eCD5` on CoNET,
-   records consume ids only. Mainnet transactions rejected a second consume,
-   a reentrant consume, a failed effect, and a reordered upgrade, and an
-   append-only upgrade kept the consumed id. It does not mint or release.
+   consumer, proxy `0xA13843C75f68F726e1DC4dbA75d07597EE18d999` on CoNET,
+   records consume ids only. It is compiled with `bytecodeHash: ipfs`, and
+   Blockscout reports `is_fully_verified` for the proxy, both implementations,
+   the rejected reorder implementation, the gateway, and the revert effect.
+   An earlier `bytecodeHash: none` deployment stayed partial and is superseded.
+   Mainnet transactions rejected a second consume, a reentrant consume, a
+   failed effect, and a reordered upgrade, and an append-only upgrade kept
+   the consumed id. It does not mint or release.
    Independent audit is still absent, so `consume-once` and custody gate 3
    stay closed;
 4. close the unrestricted paid-GB admin-mint path and the upgrade authority
