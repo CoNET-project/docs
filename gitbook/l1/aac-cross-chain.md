@@ -130,8 +130,8 @@ The following gates remain:
    committee verifies the aggregate. That state still comes from the same
    beacon, so `trusted-committee` stays `no`. `committee-handoff yes` and
    `handoff-periods` count how many earlier periods authenticate the next
-   committee. A read that linked two periods still used this same beacon.
-   Production Shadow is `bridge-aac-v0.28.0`. It does
+   committee. A read that linked four periods, back to epoch 47358, still
+   used this same beacon. Production Shadow is `bridge-aac-v0.28.0`. It does
    not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
