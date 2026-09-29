@@ -137,8 +137,10 @@ The following gates remain:
    `trusted-committee` stays `no`. `forward-committee` starts at that same
    genesis pin and accepts the next period only from a supermajority signature
    by the committee already trusted for the current period.    A period without a two-thirds aggregate still advances by its best valid
-   signature after the period timeout. That step is a `forced-updates` count,
-   not a skipped period. `trusted-committee` stays `no`. It does not feed the production shadow
+   signature after the period timeout. Eight such steps were required. The
+   chain then reached beacon head period 189, and the stored committee's
+   finalized execution hash matched geth. `trusted-committee` stays `no`
+   because those eight steps were not a supermajority. It does not feed the production shadow
    decision. Production Shadow is `bridge-aac-v0.31.0`. It does
    not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
