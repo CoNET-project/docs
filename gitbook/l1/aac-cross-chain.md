@@ -143,7 +143,13 @@ The following gates remain:
    `semantic-proof no`, `consume-once no`, `consumer observation-only`,
    `audit no`, and `custody-gate no`. A 4-byte collision is not treated as
    an entrypoint. This command does not deploy or call a consumer and does
-   not feed the production shadow decision;
+   not feed the production shadow decision. A separate specification
+   consumer, proxy `0x02C98ACc2CFDE505013B8518Bd73283cB2C8eCD5` on CoNET,
+   records consume ids only. Mainnet transactions rejected a second consume,
+   a reentrant consume, a failed effect, and a reordered upgrade, and an
+   append-only upgrade kept the consumed id. It does not mint or release.
+   Independent audit is still absent, so `consume-once` and custody gate 3
+   stay closed;
 4. close the unrestricted paid-GB admin-mint path and the upgrade authority
    that could restore it. `gb-mint-authority` only reads GBToken
    `0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`. `mint`, `mintPaid`, and
