@@ -545,6 +545,8 @@ The local and remote index manifests are union-merged by `sendId` (or fragment `
 
 A restore that finds no local conversations must still create missing sessions from recovered history. An empty local list is not proof that the user never communicated. After history initialization, the worker performs serialized background head synchronization through a non-overlapping `setTimeout` chain and clears that timer on destroy.
 
+The Consumer client keeps those decrypted records in a Worker-local corpus keyed by fragment hash. The UI reads that corpus through the chat module (`readDecryptedChatHistory`, `searchDecryptedChatHistory`). A fragment that is already decrypted is not fetched from IPFS again. Search matches every whitespace-separated token against rendered message text across the stored history. The chain pointer and the encrypted fragments remain the cross-device record; the plaintext corpus never leaves the device and is not written to Local Storage, logs, or the API.
+
 That is how history recovery reconstructs **communication context**, not only message text.
 
 ---
@@ -554,7 +556,7 @@ That is how history recovery reconstructs **communication context**, not only me
 - Wallet-to-wallet encrypted messages in Beamio Consumer
 - Merchant listening and POS authorization envelopes
 - Dual receipts, mailbox ACK, and best-effort offline flush
-- Encrypted-history append and recover on the Consumer path
+- Encrypted-history append and recover on the Consumer path, with a Worker-local decrypted corpus and full-corpus text search
 - Published SDK: `@conet.project/chat-sdk`
 
 ## Real-time voice calls

@@ -636,6 +636,18 @@ Keys are derived in a Worker from an EIP-191 domain over the EOA. Without the EO
 
 History synchronization is a union merge, not a length-based table replacement. Records are deduplicated by `sendId`, or by `cid` when no `sendId` exists, preserving unique appends from both devices. A conflicting `seq`/`cid` or `prevCid` fork is repaired by decrypting the records, ordering them by timestamp and `sendId`, re-encrypting them with a new linear chain, uploading the fragments, and publishing the new pointer. Network failure or an incomplete pull must preserve the trusted local mirror. The Worker serializes mutations and runs background `syncFromHead()` on a non-overlapping `setTimeout` chain, which is cleared when the Worker is destroyed; `setInterval` is not used.
 
+The same Worker keeps a **local plaintext corpus** of fragments it has already decrypted. Each record is keyed by fragment `cid` and stored in Worker memory and Worker IndexedDB (`beamio.chat.history.plain:{eoa}:{cid}`), together with a search string taken from the rendered message (text, call status, file name, a voice-message marker, payment title). Read order for a `cid` is memory, local plaintext, local ciphertext, then IPFS. A `cid` already in the corpus is not downloaded again. A newly sent message is stored as plaintext when it is encrypted. When the chain head hash is unchanged, the Worker skips the index download.
+
+UI code does not fetch history itself. It calls the module:
+
+| Host function | SDK call | Behavior |
+| --- | --- | --- |
+| `readDecryptedChatHistory(options?)` | `history.read` | Full local corpus, optional `peer` and `limit`. No chain or IPFS round trip |
+| `searchDecryptedChatHistory(query, options?)` | `history.read({ query })` | Whitespace-separated tokens, all required, case-insensitive, over the rendered text of the whole corpus |
+| `onDecryptedChatHistory(cb)` | corpus published after `history.load` | UI merges newly materialized rows into sessions |
+
+`history.read` does not sync the chain. When the Worker is not ready the host bridge returns `null`. That is an untrusted miss, not an empty history. Do not log the query string or message bodies. Cross-device recover still uses RPC `getPointer` and IPFS when local plaintext for a `cid` is missing. HTTP `/post` stays `{ "data" }` only; this corpus adds no wire field.
+
 ## Using `@conet.project/chat-sdk`
 
 Prefer the SDK Worker over copying OpenPGP onto the UI thread. Host responsibilities the SDK still expects:
