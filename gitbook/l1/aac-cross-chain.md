@@ -136,9 +136,9 @@ The following gates remain:
    The handoff chain has not reached that genesis committee, so
    `trusted-committee` stays `no`. `forward-committee` starts at that same
    genesis pin and accepts the next period only from a supermajority signature
-   by the committee already trusted for the current period. One forward step
-   is `period 1` of head period `188`, with `witness yes` against a second
-   beacon and `trusted-committee no`. It does not feed the production shadow
+   by the committee already trusted for the current period.    The forward chain reached period 10 of head period 188. The next period
+   has no two-thirds aggregate, so the update stops at `fault quorum` and
+   does not skip ahead. `trusted-committee` stays `no`. It does not feed the production shadow
    decision. Production Shadow is `bridge-aac-v0.31.0`. It does
    not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
