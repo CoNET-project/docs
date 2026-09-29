@@ -134,7 +134,12 @@ The following gates remain:
    used this same beacon. `genesis-pin yes` means the genesis beacon state
    hashes to its header and its validators root is the published CoNET pin.
    The handoff chain has not reached that genesis committee, so
-   `trusted-committee` stays `no`. Production Shadow is `bridge-aac-v0.31.0`. It does
+   `trusted-committee` stays `no`. `forward-committee` starts at that same
+   genesis pin and accepts the next period only from a supermajority signature
+   by the committee already trusted for the current period. One forward step
+   is `period 1` of head period `188`, with `witness yes` against a second
+   beacon and `trusted-committee no`. It does not feed the production shadow
+   decision. Production Shadow is `bridge-aac-v0.31.0`. It does
    not feed the production shadow decision;
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
