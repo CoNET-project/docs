@@ -59,6 +59,7 @@
   * [`web3://` Linux runtime (`conet-l0d`)](developers/conet-l0d.md)
     * [L1 overlay lab (wallet-addressed geth / Prysm)](developers/conet-l0d-l1-overlay-lab.md)
   * [L1 — Run a node](developers/l1-node.md)
+    * [Confirm the period-18 checkpoint](developers/l1-independent-confirmation.md)
   * [L1 — Participate in mining](developers/l1-mining.md)
   * [L1 — Bring an ERC-20 into CoNET](developers/l1-erc20-bridge.md)
   * [L2 development](developers/l2.md)

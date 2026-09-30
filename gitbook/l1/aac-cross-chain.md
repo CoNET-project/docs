@@ -140,9 +140,26 @@ The following gates remain:
    signature after the period timeout. Eight such steps were required. The
    chain then reached beacon head period 189, and the stored committee's
    finalized execution hash matched geth. `trusted-committee` stays `no`
-   because those eight steps were not a supermajority. It does not feed the production shadow
-   decision. Production Shadow is `bridge-aac-v0.31.0`. It does
-   not feed the production shadow decision;
+   because those eight steps were not a supermajority. `0.33.0`
+   `weak-subjectivity` does not invent those missing supermajorities. It froze
+   a period-18 candidate at slot 155646 and checked the next-sync-committee
+   branch and the finalized-root branch against that state root. A second
+   beacon returned the same state root. Three other full nodes, at
+   `216.225.202.22`, `216.225.197.3`, and `216.225.202.82`, recomputed that
+   same header from their own beacons. The checkpoint now has three
+   confirmations and `safety weak-subjectivity-trusted`. Those nodes share
+   one operator and one consensus client, so `trusted-committee` stays `no`.
+   Stock Lighthouse v5.3.0 and v8.2.2 hash a CoNET checkpoint with the mainnet
+   eth1 vote limit and stop on a different block root. On `70.35.205.77`, a
+   Lighthouse v5.3.0 build with a 4-epoch eth1 voting period recomputed slot
+   155646 from hub SSZ: block root `0x442a5f8c…91336` and state root
+   `0x70001a2f…1410`. That host runs its own geth and does not use a production
+   Engine API. The operator is still the same, and periods 18 through 189 are
+   not replayed into the weak-subjectivity store, so `trusted-committee` stays
+   `no`. This check does not feed the production shadow decision. Production
+   Shadow remains `bridge-aac-v0.31.0`. An operator who does not administer
+   these hosts follows
+   [Confirm the period-18 checkpoint](../developers/l1-independent-confirmation.md).
 3. deploy and audit the destination consume-once AAC contracts.
    `destination-consumer` only records PUSH4 selector presence for
    `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and

@@ -25,6 +25,7 @@ itself proof of production availability or an audit.
 | **`web3://` applications** | Wallet-addressed request/response or persistent application streams | Under development | [Protocol](../l0/web3-application-protocol.md) |
 | **Linux `web3://` runtime** | Publish or open services with `conet-l0d` | Under development | [`conet-l0d`](conet-l0d.md) |
 | **L1 node** | A permissionless geth + Prysm full node and optional validator | Production reference | [Run an L1 node](l1-node.md) |
+| **L1 checkpoint confirmation** | An independent operator reproduces slot 155646 from a local beacon | Production reference | [Confirm the period-18 checkpoint](l1-independent-confirmation.md) |
 | **L1 mining** | Guardian / LayerMinus participation and verified mining gossip | Implemented capability | [Participate in mining](l1-mining.md) |
 | **L1 ERC-20 ingress** | Implement the specified admission path for a foreign ERC-20 through TreasuryBridgeV3; deployed Treasury references are documented separately | Normative design | [Bring an ERC-20 into CoNET](l1-erc20-bridge.md) |
 | **L2 development** | Implement or review the CoNET-DLE specifications; lab evidence is separate from production | Normative design | [L2 development](l2.md) |

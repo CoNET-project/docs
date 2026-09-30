@@ -4,7 +4,9 @@
 addresses, and ports below describe CoNET L1 (`chainId` **224422**). Fetch
 live ENRs when joining and verify all downloaded genesis artifacts.
 
-Anyone may run a **geth + Prysm beacon** full node. After depositing
+Anyone may run a **geth + Prysm beacon** full node. A separate operator
+can follow the complete commands in
+[Confirm the period-18 checkpoint](l1-independent-confirmation.md). After depositing
 **32 CNET** per validator into the Beacon deposit contract, an operator may
 also run a Prysm validator.
 
@@ -290,6 +292,7 @@ private keys, the mnemonic, keystore passwords, JWT, or validator RPC.
 
 ## Related
 
+- [Confirm the period-18 checkpoint](l1-independent-confirmation.md)
 - [Validators](../l1/validators.md)
 - [Network identity](../l1/chain-identity.md)
 - [RPC and Explorer](../l1/rpc-explorer.md)

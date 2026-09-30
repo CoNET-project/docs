@@ -39,7 +39,7 @@ Network-layer privacy and censorship resistance are transport objectives. Wallet
 7. [Decentralized cross-chain Treasury](cross-chain-treasury.md)
 8. [AAC proof-driven cross-chain settlement](aac-cross-chain.md)
 
-Developer how-tos for this layer: [Run an L1 node](../developers/l1-node.md), [Participate in mining](../developers/l1-mining.md), and [Bring an ERC-20 into CoNET](../developers/l1-erc20-bridge.md).
+Developer how-tos for this layer: [Run an L1 node](../developers/l1-node.md), [Confirm the period-18 checkpoint](../developers/l1-independent-confirmation.md), [Participate in mining](../developers/l1-mining.md), and [Bring an ERC-20 into CoNET](../developers/l1-erc20-bridge.md).
 
 ## Source anchors
 

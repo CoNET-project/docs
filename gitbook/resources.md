@@ -52,6 +52,7 @@ deployment note.
 | Implement a browser/native `web3://` client | [`web3://` application](applications/web3-url.md) |
 | Understand the AAC proof-driven bridge work | [AAC cross-chain settlement](l1/aac-cross-chain.md) |
 | Run an L1 node | [Run an L1 node](developers/l1-node.md) |
+| Confirm the period-18 checkpoint | [Confirm the period-18 checkpoint](developers/l1-independent-confirmation.md) |
 | Participate in mining | [L1 mining](developers/l1-mining.md) |
 | Build against DLE specifications | [L2 development](developers/l2.md) |
 | Read the CoNET Chat product thesis | [CoNET Chat](applications/depin-chat.md) |
