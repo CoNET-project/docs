@@ -162,6 +162,75 @@ The inviting operator sees a new consensus node when that `peer_id` appears
 in a public beacon's peer list and is absent from the operator table above.
 The two JSON documents are the checkpoint confirmation.
 
+## Engine API isolation for a parallel Lighthouse node
+
+Prysm and Lighthouse are separate consensus clients. They must not share an
+execution client, Engine API, JWT secret, or execution datadir. The
+`127.0.0.1` address is local-only, but it is not an isolation boundary when
+both consensus clients use the same port.
+
+The Prysm example above owns:
+
+```text
+execution datadir: $HOME/conet-l1/execution
+Engine API:        http://127.0.0.1:8551
+JWT:               $HOME/conet-l1/jwtsecret
+execution P2P:     8400/tcp + 8400/udp
+HTTP RPC:          127.0.0.1:8545
+```
+
+Before starting Lighthouse, deploy a second execution client on the same
+chain with its own datadir, database, JWT, and P2P/discovery identity. For
+example:
+
+```bash
+cd "$HOME/conet-l1"
+openssl rand -hex 32 > jwtsecret-lighthouse
+chmod 600 jwtsecret-lighthouse
+geth init --datadir ./execution-lighthouse --state.scheme=hash ./genesis.json
+```
+
+Run that second geth with unused execution P2P/discovery, HTTP, and Engine API
+ports:
+
+```bash
+geth \
+  --datadir ./execution-lighthouse \
+  --state.scheme=hash \
+  --networkid 224422 \
+  --syncmode full \
+  --gcmode full \
+  --port 8401 \
+  --discovery.port 8401 \
+  --nat extip:<YOUR_PUBLIC_IP> \
+  --bootnodes "<same live CoNET execution bootnodes>" \
+  --http --http.addr 127.0.0.1 --http.port 8546 --http.api eth,net,web3 \
+  --authrpc.addr 127.0.0.1 --authrpc.port 8552 \
+  --authrpc.jwtsecret ./jwtsecret-lighthouse \
+  --authrpc.vhosts localhost
+```
+
+The second execution client must be fully wired and syncing before
+Lighthouse is considered deployed. Point Lighthouse only to its own endpoint
+and JWT:
+
+```bash
+LIGHTHOUSE_EXECUTION_ENDPOINT=http://127.0.0.1:8552
+LIGHTHOUSE_EXECUTION_JWT="$HOME/conet-l1/jwtsecret-lighthouse"
+```
+
+Use those values in the Lighthouse command:
+
+```bash
+--execution-endpoint "$LIGHTHOUSE_EXECUTION_ENDPOINT" \
+--execution-jwt "$LIGHTHOUSE_EXECUTION_JWT"
+```
+
+Changing only Lighthouse's endpoint is not a completed deployment. If no
+second geth is running on `8552`, Lighthouse will report `el_offline=true` or
+fail its Engine API connection. Do not point Lighthouse at Prysm's `8551`,
+reuse Prysm's JWT, or reuse Prysm's execution datadir.
+
 ## Optional Lighthouse build
 
 Stock Lighthouse hashes this chain with a 64-epoch eth1 voting period and
@@ -178,7 +247,8 @@ type SlotsPerEth1VotingPeriod = U128; // 4 epochs * 32 slots
 
 Leave `MinimalEthSpec` unchanged. Build `lighthouse`, then run it with
 `--testnet-dir` containing `genesis.ssz` and `config.yml`,
-`--execution-endpoint http://127.0.0.1:8551`, `--execution-jwt ./jwtsecret`,
+`--execution-endpoint http://127.0.0.1:8552`,
+`--execution-jwt ./jwtsecret-lighthouse`,
 `--checkpoint-sync-url http://216.225.202.22:4100`, `--genesis-backfill`,
 and a live `--boot-nodes` ENR. Read the same local REST paths on port 5052
 if you keep Lighthouse's default HTTP port.
