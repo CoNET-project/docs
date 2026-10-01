@@ -183,6 +183,36 @@ Leave `MinimalEthSpec` unchanged. Build `lighthouse`, then run it with
 and a live `--boot-nodes` ENR. Read the same local REST paths on port 5052
 if you keep Lighthouse's default HTTP port.
 
+### Operating a Lighthouse node on this chain
+
+These points come from a node that sat at `peers: 0` while a second node with
+the same binary held 16 peers.
+
+- **Keep default discovery and the default peer count.** Use one boot ENR.
+  Do not pin a short peer list with `--libp2p-addresses` or `--trusted-peers`.
+  Pinning concentrates sync load on a few Prysm peers.
+- **Backfill is paced by Prysm, not by you.** After checkpoint sync Lighthouse
+  backfills history, with or without `--genesis-backfill`. A Prysm peer
+  answers `rate limited` when asked for more than about one 32-block batch per
+  30 s, counts that against your peer id, and then replies `Goodbye` on every
+  later connection. Spread backfill over many peers. If you run few peers, cap
+  the outbound rate, for example
+  `--self-limiter-protocols beacon_blocks_by_range:32/30`. The protocol name
+  must be `beacon_blocks_by_range`; the binary refuses other spellings.
+- **Do not restart in a loop or delete the peer key to "fix" it.** Every restart
+  repeats the start-up request burst. The peer id is kept in
+  `<datadir>/beacon/network/key`; a fresh id is struck again if the load is the
+  cause.
+- **Share an IP with Prysm and expect some refusals.** A Prysm instance that
+  does not list your IP in `--p2p-colocation-whitelist` rejects a second peer
+  from that IP with `Goodbye(Fault)`. That is harmless while you keep at
+  least eight other peers. Ask the hub operator to whitelist the IP.
+- **Read the debug log.** The reasons for a dropped peer are in
+  `<datadir>/beacon/logs/beacon.log`, not in the journal.
+- **Judge a change over 15 minutes.** Peers can rise at start and fall minutes
+  later. Healthy means peers stay at eight or more, `sync_distance` is 0 to 2,
+  and there are no `rate limited` replies.
+
 ## Do not
 
 - Copy another operator's chain data, JWT, or beacon database.
