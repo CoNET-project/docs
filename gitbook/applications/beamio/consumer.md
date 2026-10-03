@@ -7,7 +7,7 @@ coverage.
 
 Parent: [Beamio whitepaper](../beamio.md).
 
-Revision: **2026-09-21**.
+Revision: **2026-10-03**.
 
 ## Product role
 
@@ -21,6 +21,17 @@ gas-sponsored submission without receiving the customer's private key or
 issuing a pooled balance that replaces the merchant program. Store Credit
 remains issuer-specific; only eligible Reward PT participates in documented
 cross-store use.
+
+Home **Explore Offers** opens Discover filtered to merchants that exchange
+Reward PT for USDC and already award Reward PT on Top-up or Charge for the
+actor or Referrer. Inclusion requires `convertReward13ToUsdcRatioE6` greater
+than zero, and at least one of `topupActorRewardRatioE6`,
+`chargeRewardRatioE6`, `referrerTopupAmountRatioE6`, or
+`referrerChargeAmountRatioE6` greater than zero. Opening a row opens that
+merchant in Discover. The read is Cluster `GET /api/rewardPtUsdcMerchants`,
+using the same Featured Brands visibility gate as Discover. A failed read
+keeps the last successful list. On this filtered Discover view the bottom
+menu and search stay tappable whether the list has rows or is empty.
 
 ## What exists today
 
