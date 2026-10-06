@@ -7,7 +7,7 @@ coverage.
 
 Parent: [Beamio whitepaper](../beamio.md).
 
-Revision: **2026-10-03**.
+Revision: **2026-10-05**.
 
 ## Product role
 
@@ -88,11 +88,11 @@ The Consumer Home hub shows **Universal Cash** (USDC) plus **Store Credits** and
 
 | Fund Wallet row | What it does | Not |
 | --- | --- | --- |
+| **Coinbase** | One tap fetches the Onramp session and opens Coinbase in the system browser (or native `openURL`). No second confirmation sheet. Fulfillment stays Coinbase `walletDeposit` — CONET-USDC via Treasury LockMint. | Stripe `eoaUsdcStripe` |
 | **Debit card** | Stripe Crypto Onramp (`eoaUsdcStripe`) — native **USDC on Base** to the owner **EOA** | Coinbase `walletDeposit` |
-| **Receive via QR** | EIP-681 QR `ethereum:<EOA>@8453` for MetaMask / Coinbase Wallet scanners. Peer-to-peer send to this EOA on Base. | A Beamio deposit API or `walletDeposit` |
-| **Receive from a wallet** | Native CashTrees / CaehTrees: catalog (`queryInstalledApps`) then `openURL` with the **PWA-built** EIP-681 send link (Base USDC to the owner EOA). Native must not invent the URL. **Desktop browser:** EIP-6963 injected wallet → `eth_requestAccounts`, switch/add Base (`0x2105`), then `eth_sendTransaction` USDC `transfer` to the owner EOA (**amount required** so the extension confirmation appears). Connect-and-switch alone is not enough. Mobile browser: HTTPS / custom-scheme send links. Not a Beamio deposit API. | Coinbase Onramp / `walletDeposit` |
+| **Receive from a wallet** | Native CashTrees / CaehTrees: four catalog rows (Phantom, MetaMask, OKX Wallet, Trust Wallet) then `openURL` with the **PWA-built** deep link (Base USDC to the owner EOA). Native must not invent the URL. **Ordinary browser (not the native shell):** only already-installed EIP-6963 / injected extensions; if none are present, show the on-panel empty alert (install MetaMask or Coinbase Wallet). Tapping an injected row connects and switches/adds Base (`0x2105`); there is no USDC amount field and no “Receive Funds” row. Not a Beamio deposit API. | Coinbase Onramp / `walletDeposit` |
 
-The middle Fund row is **Receive via QR**, not Coinbase. Coinbase `walletDeposit` remains a separate Add Cash path (CONET-USDC via Treasury LockMint). Stripe Onramp opens in the system browser (or native `openURL` bridge). Return lands on `https://beamio.app/app/?eoa_usdc_stripe=…`.
+**Receive via QR** is a follow-on view (EIP-681 `ethereum:<EOA>@8453`), not a Fund Wallet row and not a deposit rail. Stripe Onramp opens in the system browser (or native `openURL` bridge). Return lands on `https://beamio.app/app/?eoa_usdc_stripe=…`.
 
 The client should pass the **EOA** (`keyID`), not the AA address. If an AA address is submitted, Master resolves the owner EOA **when creating** the Onramp session and locks that wallet. Success is Stripe `fulfillment_complete`, not a Beamio `USDC.transfer`.
 

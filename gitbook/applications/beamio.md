@@ -6,7 +6,7 @@ suite is, which surfaces exist today, and how cash rails are placed. It is not
 a claim that every workflow is complete, independently audited, or covered
 by a published SLA.
 
-Revision: **2026-09-16**.
+Revision: **2026-10-05**.
 
 Public site: [https://gitbook.conet.network/applications/beamio.html](https://gitbook.conet.network/applications/beamio.html)
 

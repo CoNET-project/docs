@@ -8,7 +8,7 @@ session has already settled.
 
 Parent: [Beamio whitepaper](../beamio.md).
 
-Revision: **2026-09-11**.
+Revision: **2026-10-05**.
 
 ## Product role
 
@@ -137,7 +137,7 @@ Base RPC for these reads: `https://base-rpc.conet.network`. Beamio does **not** 
 
 ## Coinbase / Treasury (`walletDeposit`)
 
-Coinbase `walletDeposit` is still the CONET-USDC LockMint path. Home **Fund Wallet** no longer uses a Coinbase row for that rail: the middle card is **Receive via QR** (peer-to-peer EIP-681 to the owner EOA on Base). That QR is **not** a third deposit rail and must not share fulfillment with `walletDeposit` or `eoaUsdcStripe`. The third Fund row (**Receive from a wallet**) asks the native shell which catalog apps are installed (MetaMask, Coinbase Wallet, OKX, TokenPocket, Phantom), then opens the **PWA-built** deep link so that app can send Base USDC to the same EOA. In a **desktop browser**, the same row uses the injected provider: it must `eth_sendTransaction` a Base USDC `transfer` to the owner EOA (after connect + switch/add Base). A connect-or-switch-only path does not open the extension send UI. Neither the deep link nor the injected transfer is a third deposit rail. Coinbase Onramp remains a separate Add Cash entry when the client opens `WALLET_USDC_DEPOSIT_WORKFLOW = 'walletDeposit'`.
+Coinbase `walletDeposit` is still the CONET-USDC LockMint path. Home **Fund Wallet** includes a **Coinbase** row: one tap fetches the Onramp session and opens Coinbase in the system browser or native `openURL`, with no second confirmation sheet. That row does not share fulfillment with **Debit card** (`eoaUsdcStripe`) or **Receive from a wallet**. **Receive via QR** remains a follow-on view (peer-to-peer EIP-681 to the owner EOA on Base), not a deposit rail. The **Receive from a wallet** sheet has no USDC amount field and no “Receive Funds” row. In the **native shell**, it always lists Phantom, MetaMask, OKX Wallet, and Trust Wallet, then opens the **PWA-built** deep link so that app can send Base USDC to the same EOA. In an **ordinary browser**, it lists only already-installed EIP-6963 / injected extensions; if none are present, the sheet shows an on-panel empty alert. Tapping an injected row connects and switches/adds Base. Neither the deep link nor the injected connect is a deposit rail. Clients must keep `WALLET_USDC_DEPOSIT_WORKFLOW = 'walletDeposit'` for the Coinbase row.
 
 1. User completes Coinbase / x402 settle.
 2. Master occupies the **Base** settle pool for the lock step.
