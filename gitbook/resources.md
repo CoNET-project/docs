@@ -31,7 +31,8 @@ network. Do not use it as CoNET L1 truth.
 | EpochMiningInfo | `0x648f1a17269627C3d465fEa40b3C229f7CacE5cA` |
 | TreasuryBridgeV3 | `0xa208982212978550594A7FEEB70a61665d129003` |
 | ChatIndexRegistry | `0x1511Caa71081C84d8a591490D1b83879088EED72` |
-| BeamioAgentReferrerRegistry (UUPS proxy) | `0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A` |
+| BeamioAgentReferrerRegistry (UUPS proxy; canonical) | `0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A` |
+| BeamioAgentReferrerRegistry implementation | `0xb3535499aBAA9369681e092eAA8d84555eB3fbDe` |
 | GBToken | `0xC3EF02DaE632b4C10abB66e07d92a387c10838D8` |
 
 Canonical CoNET-USDC for CoNET L1 application settlement:

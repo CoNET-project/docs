@@ -46,6 +46,7 @@
     * [Merchant OS](applications/beamio/merchant-os.md)
     * [POS terminal](applications/beamio/pos.md)
     * [Cash and USDC](applications/beamio/cash-and-usdc.md)
+    * [Merchant card custody handoff](applications/beamio/merchant-card-custody-handoff.md)
   * [CoNET Chat](applications/depin-chat.md)
   * [Privacy-first Decentralized AI](applications/privacy-first-ai.md)
     * [Whitepaper](applications/privacy-first-ai-whitepaper.md)

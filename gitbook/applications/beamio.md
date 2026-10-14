@@ -6,7 +6,7 @@ suite is, which surfaces exist today, and how cash rails are placed. It is not
 a claim that every workflow is complete, independently audited, or covered
 by a published SLA.
 
-Revision: **2026-10-05**.
+Revision: **2026-10-14**.
 
 Public site: [https://gitbook.conet.network/applications/beamio.html](https://gitbook.conet.network/applications/beamio.html)
 
@@ -14,10 +14,11 @@ Chapters in this whitepaper:
 
 | Chapter | What it covers |
 | --- | --- |
-| [Consumer PWA](beamio/consumer.md) | Wallet, Discover (Top Up + Gifting), coupons, Chat, mining tools, and how users add USDC |
-| [Merchant OS](beamio/merchant-os.md) | Onboarding (website, marketplace seller page, business name, or attached PDF/Word/image lookup fills the cover; marketplace platform chrome is excluded from merchant fields), programs, staff, terminals, catalogs, coupons, and merchant treasury |
+| [Consumer PWA](beamio/consumer.md) | Wallet, Discover (Top Up + Gifting), coupons, Chat, mining tools, USDC rails, and Agent invite referrer bind (`?invite=0x…`) |
+| [Merchant OS](beamio/merchant-os.md) | Onboarding (website, marketplace seller page, business name, or attached PDF/Word/image lookup fills the cover; marketplace platform chrome is excluded from merchant fields), programs, staff, terminals, catalogs, coupons, merchant treasury, and Agent workspace (live `BeamioAgentReferrerRegistry` on CoNET) |
 | [POS terminal](beamio/pos.md) | In-store charge, physical-card top-up through native Stripe Terminal, membership, claim, and redeem |
 | [Cash and USDC](beamio/cash-and-usdc.md) | Distinct deposit rails (Coinbase / Treasury CONET-USDC vs Stripe Onramp Base USDC to EOA) **and** Beamio-initiated USDC transfers / payments (offline sign + sponsored gas) |
+| [Merchant card custody handoff](beamio/merchant-card-custody-handoff.md) | Live identity/invite registry (`BeamioAgentReferrerRegistry`); normative card-custody handoff (`BeamioAgentRegistry` + sponsored `transferOwnership` not yet deployed) |
 
 Cursor rule: when a Beamio product capability is added or changed, update the matching chapter in the same task (`beamio-gitbook-whitepaper-sync.mdc`).
 
@@ -115,7 +116,7 @@ Share and install links on `https://beamio.app/app-download` open **Consumer onl
 
 ### Consumer
 
-The Consumer PWA derives a signing wallet from device-local recovery material, reads account state from the relevant chain, and uses application relays for gas-sponsored writes. The same EOA can register an AddressPGP identity for CoNET Chat. After mailbox presence, Chat asks `wallet_native_wake_query` whether that contact has a wakeable native shell (iOS, Android, Windows, Linux, or macOS). The query is encrypted to the contact mailbox and posted only through an entry node, so the mailbox does not see the querier's IP. A trusted `true` keeps the voice-call control available while the contact is offline. Smart Wallet state is on-chain; the interface and recoverable local cache are application concerns.
+The Consumer PWA derives a signing wallet from device-local recovery material, reads account state from the relevant chain, and uses application relays for gas-sponsored writes. The same EOA can register an AddressPGP identity for CoNET Chat. After mailbox presence, Chat asks `wallet_native_wake_query` whether that contact has a wakeable native shell (iOS, Android, Windows, Linux, or macOS). The query is encrypted to the contact mailbox and posted only through an entry node, so the mailbox does not see the querier's IP. Inside a native shell, that one-shot POST (and `voice_offer_fetch`, chat send, and delivery receipts) uses `http://{Guardian ip}/post` with body `{ "data" }` only. The shell itself calls `getAllNodes` and keeps `ip_addr` (`node[3]`). It does not need the PWA to supply that list. It picks an entry IP that is not mailbox B, and does not accept an entry URL from the PWA. Browser clients still use `https://{domain}.conet.network/post`. A live listen SSE from the WebView still uses that HTTPS domain until a shell SSE proxy exists. A trusted `true` keeps the voice-call control available while the contact is offline. Smart Wallet state is on-chain; the interface and recoverable local cache are application concerns.
 
 ### Merchant
 
@@ -130,6 +131,21 @@ one payment from minting twice. The card owner may pause Stripe top-ups without
 removing the connection; membership-fee payments remain enabled. Disconnecting
 the account requires a left-to-right confirmation slide and removes only
 Beamio's local Connected Account association, never the Stripe account itself.
+
+An agent may create a card under a disposable temp EOA and hand that card to
+the merchant’s own EOA. Merchant OS onboarding offers an **Agent** role and a
+Temp EOA dashboard
+([Merchant OS — Agent workspace](beamio/merchant-os.md#agent-workspace-in-merchant-os)).
+**Live today** on CoNET: `BeamioAgentReferrerRegistry` UUPS proxy
+[`0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A`](https://mainnet.conet.network/address/0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A)
+(implementation
+[`0xb3535499aBAA9369681e092eAA8d84555eB3fbDe`](https://mainnet.conet.network/address/0xb3535499aBAA9369681e092eAA8d84555eB3fbDe),
+deploy block `1705690`, Blockscout-verified) records agent / temp / merchant
+EOAs and Consumer invite referrer binds via gasless EIP-712. **Still normative**
+(not deployed): card-custody reserve/bind, sponsored `transferOwnership`, and
+POS admin disposition — see
+[Merchant card custody handoff](beamio/merchant-card-custody-handoff.md).
+Consumer invite deep links use `?invite=0x…` (not Discover `ref=`).
 
 ### POS
 
@@ -243,6 +259,7 @@ The public surfaces and source show that the suite and its major integration pat
 | --- | --- |
 | **Consumer and POS wallet storage** | The device can hold recoverable signing material. Device compromise can expose that wallet. Recovery and backup hygiene remain user responsibilities. |
 | **Merchant OS wallet session** | Signing material is intended to remain in session memory. Closing or locking the session requires recovery and unlock again; a compromised active browser session can still sign. |
+| **Temp EOA card handoff** | The temp key can still act as admin until removal confirms. After acceptance it fails `owner()` and `isAdmin` checks and cannot create another card. The merchant chooses whether existing POS admins under that temp are revoked or kept. Factory creation lists are not the live owner. See [custody handoff](beamio/merchant-card-custody-handoff.md). |
 | **L1 contracts** | Enforce account and program state, but contract safety depends on deployed bytecode, upgrade authority, configuration, and audits. |
 | **Cluster / Master / Paymaster** | Can validate, queue, sponsor, delay, or refuse supported writes. They must not receive or store user private keys, and their availability affects gasless UX. |
 | **Layer Minus messaging** | Business plaintext is encrypted to recipient keys, but entries and mailboxes still observe limited routing, timing, and volume metadata. |
@@ -258,6 +275,7 @@ Beamio is self-custody software with supporting relays and application services;
 - [Merchant OS](beamio/merchant-os.md)
 - [POS terminal](beamio/pos.md)
 - [Cash and USDC](beamio/cash-and-usdc.md)
+- [Merchant card custody handoff](beamio/merchant-card-custody-handoff.md)
 - [Applications](README.md)
 - [SilentPass VPN](silentpass-vpn.md) — privacy access on the same L0 substrate
 - [CoNET Chat](depin-chat.md) — relationship-private wallet communication and terminal authorization

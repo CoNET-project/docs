@@ -7,7 +7,7 @@ claim.
 
 Parent: [Beamio whitepaper](../beamio.md).
 
-Revision: **2026-09-11**.
+Revision: **2026-10-14**.
 
 ## Product role
 
@@ -20,6 +20,25 @@ state without operating chain infrastructure. Beamio supplies the control
 plane, authorization checks, routing, and gas sponsorship; it does not pool
 merchant proceeds or replace the merchant as owner of the program and customer
 relationship.
+
+### Custody handoff from an agent temp EOA
+
+A card may be created under a disposable temp EOA and then taken over by the
+merchant’s own EOA. The temp EOA signs `transferOwnership` offline and the
+Beamio API pays the CoNET gas. The merchant EOA then adds itself as top-level
+admin, chooses whether POS terminals already under the temp EOA are all
+revoked or all kept, and removes the temp admin. A used temp EOA cannot create
+another card. An agent registry stores the agent, that temp EOA, the merchant
+EOA, and the card for a later airdrop. Factory `cardsOfOwner` does not follow
+the owner move. The sequence and acceptance checks are
+[Merchant card custody handoff](merchant-card-custody-handoff.md). The temp
+private key stays in session memory only long enough to sign.
+
+Merchant OS exposes an **Agent** onboarding path and a **Temp EOA** dashboard
+(`#/agent`) so an operator can register as an agent, mint disposable merchant
+workspaces, open full program-card management under a temp session, and see
+cards that already moved to **Transferred** (management blocked). See
+[Agent workspace in Merchant OS](#agent-workspace-in-merchant-os) below.
 
 ### Stripe card payments
 
@@ -83,9 +102,75 @@ single-use.
 
 ## Onboarding
 
+First-time Merchant OS onboarding asks the operator to choose a role:
+
+| Choice | Path |
+| --- | --- |
+| **Merchant** | Existing cover → Business Details → Identity → Recovery QR → Merchant OS (`#/native-pos`) |
+| **Agent** | Agent Identity (`@BeamioTag` + Access Password) → **skip Recovery QR** → Temp EOA dashboard (`#/agent`) |
+
 Marketplace listing inputs are treated as seller discovery rather than merchant homepages. Amazon Brand Store URLs such as `/stores/{brand}/page/{uuid}` use the `{brand}` slug as the candidate merchant name; Amazon page chrome, corporate contact details, and the Amazon Store URL are excluded from merchant fields.
 
-Merchant OS onboarding starts on the cover form with the title and **Business Name** only. That field is an **AI composer**: type a **website or business name**, attach a **PDF, Word (`.docx`), or image** (menu, flyer, storefront), then press **Send**. Suggestions come from Cluster `POST https://beamio.app/api/onboardingBusinessLookup`. Lookup is **not** a debounce while typing; it runs on Send. Attachments are JSON `{ filename, mimeType, dataBase64 }` (up to 3 files, 1.5 MB each, 3.5 MB total). Cluster sniffs magic bytes, does **not** persist files, extracts Word text from `.docx`, and sends PDF/images to Gemini as inline data. Legacy `.doc` is rejected. Lookup suggestions stay **lightweight** (name, channel, category, location, snippet). Cluster scrapes the public site (and same-apex language alternates such as `hreflang`) in the **original page language**, then Gemini returns **English** onboarding fields (`name`, `website`, `publicBio`, `channelKind`, `category`, `orgType`, `country`, `city`, `province`). For a website query, Cluster tries `www.{apex}` before a bare host and does **not** follow an HTTP redirect onto a **different** apex (a brand homepage that is not the queried store). After Gemini analyze, Cluster overlays scraped store name, website, city, and snippet **only when that scrape looks like a real venue**. Listing chrome — platform brands, URL category segments, opaque store ids, or generic delivery template blurbs — is detected with host-agnostic heuristics plus Gemini; Cluster does **not** train a parser per marketplace. Weak listing scrapes still hop to discover an official site. A real homepage scrape still overlays so a sister-shop listing cannot replace the queried store. A **delivery, review, freelance, or B2B marketplace URL** (Uber Eats, DoorDash, Yelp, Google Maps place, Zhubajie/zbj.com `/fw/{id}` service pages, 1688.com offers, and similar hosts) is **not** the merchant homepage and is never stored as `website`. When a scrape is empty, blocked, or still listing chrome, Cluster runs a **name-discover hop**: if `OPENAI_API_KEY` is set, it calls the OpenAI Responses API with the `web_search` tool first (model `OPENAI_DISCOVER_MODEL`, default `gpt-4o`, ~45s timeout); otherwise or on empty OpenAI results it uses Gemini. Discover must return the **named merchant or seller** on the listing, never the marketplace company brand and never the marketplace homepage (for example never `https://www.zbj.com/` for a `/fw/{id}` page). Cluster first tries a short HTTP scrape. A bot interstitial, 403, or similar challenge upgrades to a **localhost stealth Chromium sidecar** (`conet-beamio-stealth-browser`, `POST http://127.0.0.1:17331/fetch`) so Cloudflare-style or Aliyun WAF gates are less likely to block the listing. Same-apex `hreflang` extras do **not** upgrade to stealth. HTTP 404, 410, and 400 do **not** upgrade. If stealth still fails, Cluster decodes the venue slug (for example `a%26s-fusion-restro-%2B-bar` → `A&S Fusion Restro + Bar`) and runs the same name-discover hop for an official website. If Gemini still returns no candidates, Cluster still emits one listing stub with that decoded name rather than an empty list. If Gemini returns no candidates for a **website** query, Cluster still emits one candidate from the scraped homepage (JSON-LD / `og:site_name` plus the deterministic street) instead of an empty list. The homepage name prefers `og:site_name` over a generic `<title>` such as `Home`. The first discover hop may also return **city / country / snippet** so similar names can be told apart. If there is no public website to scrape, Cluster may still fill channel, category, organization type, location, and a short bio from public knowledge of **that named venue**. The Merchant OS form also infers channel and category from tokens in the returned English name (for example `Restaurant` → Physical Store / Food & Beverage) when lookup returns a name-only stub. **Country and city stay blank** when they are not known from a public listing; the form never invents Canada, and cuisine words such as Shanghainese or Shanghai Noodle do **not** mean the shop is in Shanghai or in China. **Choosing a suggestion stays on the cover** and expands the remaining fields (channel, category, organization type, location, Terms, and Continue) already filled from that result. After that pick, Cluster `POST https://beamio.app/api/onboardingBusinessCardSetup` prepares **Card Setup** brand assets from **one homepage scrape**: logo (`shareTokenMetadata.image`), Discover background (`merchantImage`), brand color (`backgroundColor`), and Discover copy (`description`, at most 200 characters). The scrape allowlist includes Open Graph images, JSON-LD logo/image, homepage `<img>` / `srcset`, and CSS `url(https…)`. A favicon or `rel=icon` is a **weak logo** and must not win over a wordmark whose filename or alt contains `logo`. Background prefers a hero or banner image and must not reuse the logo URL. Gemini may only pick URLs from that allowlist; it must not invent image URLs. Logo URLs are accepted only when the path or filename matches the business name; partner or supplier logos are skipped even if they appear first in the scrape. If the page has no scrape image, logo and background stay empty. If the page publishes a theme color, brand color must be one of those scraped hex values. Lookup also **deterministically** extracts street, phone, email, and postal code from JSON-LD, `tel:` / `mailto:`, and visible text. Those contact fields seed **Settings** drafts only; they are **not** Card Setup fields and are **not** written to `shareTokenMetadata`. The cover still does **not** auto-check Terms. After a pick, **tap the composer again** to reopen the last matches and choose a different one without retyping the query. **Country** is any ISO 3166-1 alpha-2 code (for example `CN` for a `.com.cn` site). Province/state uses a coded dropdown for `CA`, `US`, `GB`, `AU`, and `DE`, and free text for every other country. Merchants must pick a suggestion before the rest of the form appears. Clearing the business name collapses the extra fields. The cover does **not** auto-check Terms and does **not** skip Identity / @BeamioTag / Master Key. After Continue from the cover, Identity **pre-fills** `@beamioTag` from the chosen business name (3–26 letters, numbers, dots, or underscores — no hyphen). Cluster `isAccountNameAvailable` must succeed before the suggestion is treated as free; a taken handle gets a numeric suffix (up to 24 probes). The merchant can edit the handle. A failed probe still fills the best slug but does **not** mark it available.
+For the **Merchant** role, onboarding continues on the cover form with the title and **Business Name** only. That field is an **AI composer**: type a **website or business name**, attach a **PDF, Word (`.docx`), or image** (menu, flyer, storefront), then press **Send**. Suggestions come from Cluster `POST https://beamio.app/api/onboardingBusinessLookup`. Lookup is **not** a debounce while typing; it runs on Send. Attachments are JSON `{ filename, mimeType, dataBase64 }` (up to 3 files, 1.5 MB each, 3.5 MB total). Cluster sniffs magic bytes, does **not** persist files, extracts Word text from `.docx`, and sends PDF/images to Gemini as inline data. Legacy `.doc` is rejected. Lookup suggestions stay **lightweight** (name, channel, category, location, snippet). Cluster scrapes the public site (and same-apex language alternates such as `hreflang`) in the **original page language**, then Gemini returns **English** onboarding fields (`name`, `website`, `publicBio`, `channelKind`, `category`, `orgType`, `country`, `city`, `province`). For a website query, Cluster tries `www.{apex}` before a bare host and does **not** follow an HTTP redirect onto a **different** apex (a brand homepage that is not the queried store). After Gemini analyze, Cluster overlays scraped store name, website, city, and snippet **only when that scrape looks like a real venue**. Listing chrome — platform brands, URL category segments, opaque store ids, or generic delivery template blurbs — is detected with host-agnostic heuristics plus Gemini; Cluster does **not** train a parser per marketplace. Weak listing scrapes still hop to discover an official site. A real homepage scrape still overlays so a sister-shop listing cannot replace the queried store. A **delivery, review, freelance, or B2B marketplace URL** (Uber Eats, DoorDash, Yelp, Google Maps place, Zhubajie/zbj.com `/fw/{id}` service pages, 1688.com offers, and similar hosts) is **not** the merchant homepage and is never stored as `website`. When a scrape is empty, blocked, or still listing chrome, Cluster runs a **name-discover hop**: if `OPENAI_API_KEY` is set, it calls the OpenAI Responses API with the `web_search` tool first (model `OPENAI_DISCOVER_MODEL`, default `gpt-4o`, ~45s timeout); otherwise or on empty OpenAI results it uses Gemini. Discover must return the **named merchant or seller** on the listing, never the marketplace company brand and never the marketplace homepage (for example never `https://www.zbj.com/` for a `/fw/{id}` page). Cluster first tries a short HTTP scrape. A bot interstitial, 403, or similar challenge upgrades to a **localhost stealth Chromium sidecar** (`conet-beamio-stealth-browser`, `POST http://127.0.0.1:17331/fetch`) so Cloudflare-style or Aliyun WAF gates are less likely to block the listing. Same-apex `hreflang` extras do **not** upgrade to stealth. HTTP 404, 410, and 400 do **not** upgrade. If stealth still fails, Cluster decodes the venue slug (for example `a%26s-fusion-restro-%2B-bar` → `A&S Fusion Restro + Bar`) and runs the same name-discover hop for an official website. If Gemini still returns no candidates, Cluster still emits one listing stub with that decoded name rather than an empty list. If Gemini returns no candidates for a **website** query, Cluster still emits one candidate from the scraped homepage (JSON-LD / `og:site_name` plus the deterministic street) instead of an empty list. The homepage name prefers `og:site_name` over a generic `<title>` such as `Home`. The first discover hop may also return **city / country / snippet** so similar names can be told apart. If there is no public website to scrape, Cluster may still fill channel, category, organization type, location, and a short bio from public knowledge of **that named venue**. The Merchant OS form also infers channel and category from tokens in the returned English name (for example `Restaurant` → Physical Store / Food & Beverage) when lookup returns a name-only stub. **Country and city stay blank** when they are not known from a public listing; the form never invents Canada, and cuisine words such as Shanghainese or Shanghai Noodle do **not** mean the shop is in Shanghai or in China. **Choosing a suggestion stays on the cover** and expands the remaining fields (channel, category, organization type, location, Terms, and Continue) already filled from that result. After that pick, Cluster `POST https://beamio.app/api/onboardingBusinessCardSetup` prepares **Card Setup** brand assets from **one homepage scrape**: logo (`shareTokenMetadata.image`), Discover background (`merchantImage`), brand color (`backgroundColor`), and Discover copy (`description`, at most 200 characters). The scrape allowlist includes Open Graph images, JSON-LD logo/image, homepage `<img>` / `srcset`, and CSS `url(https…)`. A favicon or `rel=icon` is a **weak logo** and must not win over a wordmark whose filename or alt contains `logo`. Background prefers a hero or banner image and must not reuse the logo URL. Gemini may only pick URLs from that allowlist; it must not invent image URLs. Logo URLs are accepted only when the path or filename matches the business name; partner or supplier logos are skipped even if they appear first in the scrape. If the page has no scrape image, logo and background stay empty. If the page publishes a theme color, brand color must be one of those scraped hex values. Lookup also **deterministically** extracts street, phone, email, and postal code from JSON-LD, `tel:` / `mailto:`, and visible text. Those contact fields seed **Settings** drafts only; they are **not** Card Setup fields and are **not** written to `shareTokenMetadata`. The cover still does **not** auto-check Terms. After a pick, **tap the composer again** to reopen the last matches and choose a different one without retyping the query. **Country** is any ISO 3166-1 alpha-2 code (for example `CN` for a `.com.cn` site). Province/state uses a coded dropdown for `CA`, `US`, `GB`, `AU`, and `DE`, and free text for every other country. Merchants must pick a suggestion before the rest of the form appears. Clearing the business name collapses the extra fields. The cover does **not** auto-check Terms and does **not** skip Identity / @BeamioTag / Master Key. After Continue from the cover, Identity **pre-fills** `@beamioTag` from the chosen business name (3–26 letters, numbers, dots, or underscores — no hyphen). Cluster `isAccountNameAvailable` must succeed before the suggestion is treated as free; a taken handle gets a numeric suffix (up to 24 probes). The merchant can edit the handle. A failed probe still fills the best slug but does **not** mark it available.
+
+## Agent workspace in Merchant OS
+
+An **Agent** workspace is a Merchant OS role for operators who provision merchant
+program cards under disposable **temp EOAs**, then hand custody to a merchant
+EOA. Normative card-custody steps remain in
+[Merchant card custody handoff](merchant-card-custody-handoff.md).
+
+### Live on-chain registry (`BeamioAgentReferrerRegistry`)
+
+Identity and invite relationships are recorded on CoNET L1
+(`chainId` 224422). Canonical address is the **UUPS proxy** (stable across
+logic upgrades). Implementation and proxy are both verified on Blockscout.
+
+| Item | Value |
+| --- | --- |
+| **Proxy (canonical)** | [`0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A`](https://mainnet.conet.network/address/0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A) |
+| **Implementation** | [`0xb3535499aBAA9369681e092eAA8d84555eB3fbDe`](https://mainnet.conet.network/address/0xb3535499aBAA9369681e092eAA8d84555eB3fbDe) |
+| **Deploy block** | `1705690` |
+| **Deploy snapshot** | `deployments/conet-BeamioAgentReferrerRegistry.json` |
+| **EIP-712 domain** | `name` = `BeamioAgentReferrerRegistry`, `version` = `1`, `chainId` = `224422`, `verifyingContract` = proxy |
+
+| Op | Who signs (EIP-712) | Effect |
+| --- | --- | --- |
+| **RegisterAgent** | Agent EOA | Sets `isAgent(agent)` |
+| **RegisterTemp** | Agent EOA | Binds `agentOfTemp[temp] = agent` |
+| **RegisterMerchant** | Agent EOA | Binds `agentOfMerchant[merchant] = agent` (after temp→merchant handoff) |
+| **RegisterReferrer** | New user (referee) EOA | Binds `introducerOf[referee] = introducer` |
+
+Writes are gas-sponsored offline signatures: the Merchant OS / Consumer client
+builds mutable EIP-712 typed data, signs with the session-memory EOA key
+(never sent to the API), then posts
+`{ op, …fields, signature }` to Cluster
+`POST /api/agentReferrerRegister`. Cluster recovers the signer and forwards to
+Master; Master settles on CoNET (`Settle_ConetPool`) without repeating business
+prechecks. Reads: `GET /api/agentReferrerRegistry` or RPC-first views
+(`isAgent`, `tempsOfAgent`, `merchantsOfAgent`, `introducerOf`, `refereesOf`).
+
+Merchant OS Agent login gates `#/agent` on chain `isAgent(eoa)` (RPC-first;
+trusted local cache may hydrate the first paint). This registry is **not** the
+unfinished card-custody `BeamioAgentRegistry` (reserve / bind card / POS
+dispose) described in the custody-handoff chapter.
+
+| Surface | Behavior |
+| --- | --- |
+| **Role choice** | Onboarding first screen: Merchant vs Agent |
+| **Agent Identity** | Register agent `@BeamioTag` + Access Password; offline-sign **RegisterAgent**; no Recovery QR; land on `#/agent` when `isAgent` |
+| **Temp EOA dashboard** | List temp EOAs; **Add Temp EOA** creates a random available `agt…` tag and Access Password via `createRecover`, offline-signs **RegisterTemp**, then restores the agent session (IndexedDB must not remain on the temp wallet) |
+| **Invite link** | Dashboard copies `https://beamio.app/app/?invite=0x…` (agent EOA). Consumer deep-link / app-download `target=` preserves `invite=`. After the invitee registers, Consumer offline-signs **RegisterReferrer** under that introducer |
+| **Reveal credentials** | Show / copy `@BeamioTag` and Access Password for a temp (password is stored in the agent’s local workspace record; private keys stay session-memory-only after unlock) |
+| **Create merchant card** | Shown only when the temp EOA has **no manageable** program cards **and** already holds on-chain **BusinessStartKet #0** (create entitlement) on the temp EOA and/or its AA. If that NFT is missing, the dashboard shows a **redeem-code claim** form instead of Create; the agent pastes a redeem / Start Kit code so the temp claims the entitlement NFT, then Create appears. Create switches Merchant OS to the temp session and opens `#/native-pos` Card Setup |
+| **Open Merchant OS** | Shown only after the temp owns at least one **non-transferred** program card. Switches session to the temp and opens `#/native-pos` to configure cards (tiers, coupons, POS, Programs) |
+| **Open a card** | Same session switch, select that card as the staff program card, then full merchant-card management |
+| **Transferred** | If on-chain `owner()` is no longer the temp EOA, the card shows **Transferred** and cannot be opened for management. Agent then offline-signs **RegisterMerchant** for the merchant EOA under this agent |
+| **Return to agent** | While a temp session is active, a banner restores the agent EOA (requires the agent Access Password still in session memory) and returns to `#/agent` |
+
+Signing material for any unlocked wallet still follows Merchant OS session-memory
+rules. After `createRecover` for a temp, Merchant OS always restores the agent
+with `restoreWithUserPin` so the agent’s IndexedDB profile is not overwritten.
 
 ## What exists today
 
@@ -242,4 +327,5 @@ Snapshot: `deployments/conet-MembershipFeeModules.json`. Blockscout: [mainnet.co
 - [Consumer PWA](consumer.md)
 - [POS terminal](pos.md)
 - [Cash and USDC](cash-and-usdc.md)
+- [Merchant card custody handoff](merchant-card-custody-handoff.md)
 - [CoNET Chat](../depin-chat.md)
