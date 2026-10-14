@@ -70,6 +70,31 @@ A Merkle inclusion path proves only that a leaf belongs to a supplied root. It d
 
 The Rust project deliberately exposes a `FinalityVerifier` interface. Its execution-client adapters and `MockFinality` are explicitly not light clients. Execution tags, an Ethereum receipt proof, and agreement between two RPC readers do not by themselves verify an OP Stack output/fault-proof result or CONET consensus signatures.
 
+## Ethereum sync committee root for Base
+
+**Evidence level: installed checkpoint.** Base proxy `0xcEE3D699df3df07a573f1aFf642888B97B7aA961` stores the period-`1883` committee for finalized beacon slot `15427520`. One two-thirds aggregate in that period verified under those keys. The proxy `headerFinal()` view stays false. This installation does not open custody.
+
+New AAC proofs of Base finality use one Ethereum sync committee stored on Base. The first keys are the `current_sync_committee` of a finalized beacon block chosen at installation. They are not the committee initialized at the Altair fork. The historical 0.01 USDC lock is not a sample for this root. Altair handoff contracts already deployed from `bridgeAAC` stay historical records.
+
+A sync-committee period is `8192` beacon slots, about `27.3` hours. On 2026-10-12 the signing period was `1882`, covering slots `15417344` through `15425535`. An installation after that date uses the period that is current at installation.
+
+Installing the root requires all of the following:
+
+1. A finalized beacon block. The stored keys are the sync committee that signs slots in that block's period, proven by a Merkle branch into its beacon `state_root`. The stored digest is `keccak256` of the compressed keys.
+2. The same beacon block root present in the Ethereum EIP-4788 beacon-roots contract `0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02`, with an account proof for that execution header. This shows the execution layer recorded the root. It does not by itself prove beacon finality.
+3. More than one CoNET observer recomputes that digest from the state proof. The installation record names the observers. One beacon endpoint is not an observer set. Observers agree only on this first root.
+4. After the digest is stored, one sync aggregate from a block in the same period verifies under those keys with at least two-thirds participation. If it fails, the root is rejected.
+
+A Base output root is a commitment to Base execution state, the message-passer storage root, and a Base block hash. It does not contain the 512 committee keys. Base follows Ethereum, so a matching L1 origin does not choose the Ethereum committee.
+
+After installation, Base accepts a committee update only when the stored committee signs the next period, at least two thirds participate, and the update advances exactly one period. An aggregate below two thirds does not rotate the keys. Pairing runs on Base through EIP-2537 precompiles `0x0b` through `0x11`. CoNET execution of those addresses returns an empty result, so CoNET does not host this pairing.
+
+A new lock is eligible only when its beacon slot is in a period the stored committee signs, and only after a finalized beacon header is at least that late. Finality lags by about two epochs. Receipts under one finalized header share that one BLS verification. Each receipt still needs its own inclusion proof and can be consumed once. `headerFinal` in that combined proof means final relative to the installed checkpoint, not final by a chain of signatures back to Altair.
+
+At the gas price measured on Base on 2026-10-12, one rotation cost about `0.000069` ETH (`11,481,348` gas at `0.006` gwei). About `321` rotations fit in a year, about `0.022` ETH at that price. One Base transaction cannot hold two such pairings: the transaction gas cap is `16,777,216`, and one rotation already uses about `11.5` million gas. Skipping the Altair replay removes the historical rotations. It does not remove rotations after the checkpoint.
+
+The checkpoint aggregate has succeeded. Obstacles **1–5 are Accepted** (2026-10-14). Production settlement still stays on miner votes: custody, mint, release, and miner-vote cutover remain closed until independent audit and a separate cutover. Engineering assurance after those gates (Rust tests + fail-closed smoke **PASS**; independent audit **PENDING**): [`PRODUCTION-ASSURANCE.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md). Cutover proposal only (**not executed**): [`CUTOVER-CUSTODY.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md). Shadow remains read-only.
+
 ## Production read-only Shadow
 
 Release `bridge-aac-v0.31.0` runs the production read-only Shadow on
@@ -102,16 +127,41 @@ registry paused
 consume denied
 ```
 
+## Production deployment acceptance
+
+**Status (2026-10-14): Obstacles 1–5 are Accepted.** Custody stays closed:
+`custodyOpen()` / `headerFinal()` remain false; no-arg `settle()` still
+reverts `CustodyClosed`. Role grants, independent audit, and the miner-vote
+cutover are later transactions. The historical Altair committee store and the
+0.01 USDC lock in Base block `52497860` do not pass any of these obstacles.
+Full gate evidence: [`bridgeAAC` PRODUCTION-CUSTODY-GATES](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-CUSTODY-GATES.md).
+Assurance package: [`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md).
+Cutover proposal (not executed): [`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md).
+
+| Order | Deployment | Accepted address / evidence |
+| --- | --- | --- |
+| 1 | New Base checkpoint-root store | Proxy `0xcEE3D699df3df07a573f1aFf642888B97B7aA961` — period-`1883` keys; one two-thirds aggregate verified |
+| 2 | One new AAC message | Cover `0x01506527a4Dab14141038Db15f5341dcF4729233` — new 0.01 USDC lock in Base block `52583500`; finalized beacon slot `15427680` + receipt in one call |
+| 3 | CoNET-source finality, on the destination | Proxy `0xE4f6c834eb63f726cbE65b4F864620e4a6F7a6c9` — `proveAggregate` on Base |
+| 4 | New consume-once consumer | Proxy `0xC6CBcC0c629ac1A80DB95e8b80927e713E82Cf4F` — second consume reverts; not the paused canary / `0xA13843C75f68F726e1DC4dbA75d07597EE18d999` |
+| 5 | Upgrade Base proxy `0x9051e08aBA3EC1A1323f36f0F5c3745C81912aAd` | Impl `0x3085216E8329eF7d10c914cB1C43Cd8168f53442` — cover overloads accept Obstacle 2 sample; no-arg `settle()` still `CustodyClosed` |
+
+A Base-origin message uses obstacles 1, 2, 4, and 5. A CoNET-origin message uses obstacles 3, 4, and 5. An execution `finalized` tag, a parent-hash walk, an output root, a same-block bootstrap, a beacon API `finalized` flag, and `isGameClaimValid` by `eth_call` do not pass obstacle 1 or 2.
+
 ## Custody remains closed
 
-Production Shadow approval is not approval of decentralized burn/mint custody.
-The following gates remain:
+Obstacles 1–5 Accepted does **not** open decentralized burn/mint custody.
+Production Shadow approval is not a cutover. The Shadow commands below are
+observers. Mint, release, settlement broadcasting, Treasury / GB role grants,
+and miner-vote cutover stay closed until an independent audit and a separate
+cutover (see [`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md);
+engineering assurance in [`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md)).
 
-1. verify Base finality from Ethereum L1 output/fault-proof evidence.
-   `base-l1-output` only reads the OptimismPortal anchor and
+1. `base-l1-output` only reads the OptimismPortal anchor and
    `isGameClaimValid`. While the Base execution `finalized` tag is ahead of
    that anchor, the report stays `covered no`. This command does not replay
-   the fault proof and does not feed the production shadow decision;
+   the fault proof, does not install the checkpoint root, and does not feed
+   the production shadow decision;
 2. verify CONET finality from consensus signatures against an independently
    trusted committee. `conet-consensus` compares the beacon finalized
    execution payload with the execution client's `finalized` tag and checks
@@ -186,8 +236,12 @@ The following gates remain:
    `selectors-absent yes`, `upgrade-authority unread`, and `mint-closed no`.
    This command does not send a mint or a vote and does not feed the
    production shadow decision;
-5. complete end-to-end adversarial tests and an independent security audit; and
-6. perform a separately approved miner-vote cutover.
+5. complete end-to-end adversarial tests and an independent security audit
+   ([`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md):
+   local tests and Base fail-closed smoke **PASS**; independent audit **PENDING**); and
+6. perform a separately approved miner-vote cutover
+   ([`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md)
+   proposal only — **not executed**).
 
 Until those gates pass, production USDC remains on `TreasuryBridgeV3.voteBridgeOperation`, GB remains on its validator-vote path, and no documentation or UI should label those votes as AAC or Merkle proof verification.
 

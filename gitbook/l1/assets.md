@@ -43,7 +43,7 @@ Read balances and token metadata from `https://rpc1.conet.network`, with `https:
 - [Chain identity](chain-identity.md) — network identity and RPC authority
 - [RPC and Explorer](rpc-explorer.md) — query guidance
 - [Decentralized cross-chain Treasury](cross-chain-treasury.md) — route, quorum, and asset-admission boundary
-- [AAC proof-driven cross-chain settlement](aac-cross-chain.md) — production read-only Shadow and still-closed custody model
+- [AAC proof-driven cross-chain settlement](aac-cross-chain.md) — production read-only Shadow; Obstacles 1–5 Accepted (2026-10-14); custody still closed
 
 ## Next
 

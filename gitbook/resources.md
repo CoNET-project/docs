@@ -14,6 +14,8 @@ boundaries for CoNET.
 | Beamio application/API origin | `https://beamio.app` |
 | Merchant OS onboarding website / file lookup (Cluster read; optional `files` JSON) | `POST https://beamio.app/api/onboardingBusinessLookup` |
 | Merchant OS onboarding Card Setup assets (Cluster read) | `POST https://beamio.app/api/onboardingBusinessCardSetup` |
+| Agent / referrer registry read (Cluster) | `GET https://beamio.app/api/agentReferrerRegistry` |
+| Agent / referrer registry write (Cluster → Master; EIP-712 ops) | `POST https://beamio.app/api/agentReferrerRegister` |
 | IPFS fragment service | `https://ipfs.conet.network` |
 | Base RPC used by active Treasury and institutional-multisig paths | `https://base-rpc.conet.network` |
 
@@ -29,6 +31,7 @@ network. Do not use it as CoNET L1 truth.
 | EpochMiningInfo | `0x648f1a17269627C3d465fEa40b3C229f7CacE5cA` |
 | TreasuryBridgeV3 | `0xa208982212978550594A7FEEB70a61665d129003` |
 | ChatIndexRegistry | `0x1511Caa71081C84d8a591490D1b83879088EED72` |
+| BeamioAgentReferrerRegistry (UUPS proxy) | `0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A` |
 | GBToken | `0xC3EF02DaE632b4C10abB66e07d92a387c10838D8` |
 
 Canonical CoNET-USDC for CoNET L1 application settlement:
@@ -84,7 +87,7 @@ documentation repositories is maintained in the
 | L1 chain, RPC, Explorer, validators, and assets | Production reference |
 | CoNET Chat delivery, receipt, presence, and encrypted-history components | Implemented capability |
 | `web3://` locator, Linux runtime, caller-signed gateway, and early browser client | Under development |
-| AAC proof-driven cross-chain settlement | Production-approved read-only Shadow (`v0.16.0`); no production light client, custody, mint/release, or miner-vote cutover |
+| AAC proof-driven cross-chain settlement | Production-approved read-only Shadow (`v0.31.0`); Obstacles 1–5 Accepted (2026-10-14); no production light client, custody, mint/release, or miner-vote cutover |
 | CoNET-DLE specifications | Normative design; lab evidence is separate from production |
 
 These labels are not security-audit, uptime, or anonymity guarantees.

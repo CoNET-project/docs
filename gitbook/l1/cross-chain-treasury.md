@@ -81,16 +81,16 @@ These controls decentralize authorization across the configured miner set. They 
 
 [AAC proof-driven settlement](aac-cross-chain.md) is the proposed deterministic successor to per-operation miner votes. It separates source inclusion, source-header authenticity, finality, route constraints, and destination replay protection.
 
-`bridge-aac-v0.16.0` now runs a production read-only Shadow on `.30`. It scans
+`bridge-aac-v0.31.0` runs a production read-only Shadow on `.30`. It scans
 two independent Base readers and two CONET reader paths, agrees block hash,
 state root, and receipts root at the lower finalized height, verifies receipt
 inclusion, persists its cursor, and pages on divergence. Both chains completed
-the required 256-block lower-head stability hold.
+the required 256-block lower-head stability hold. On-chain Obstacles **1–5 are
+Accepted** (2026-10-14); see [AAC proof-driven settlement](aac-cross-chain.md).
 
-This is operational evidence for the observer, not a custody cutover. The
-Shadow reports `broadcast no`, `settled no`, `custody closed`, and
-`light-client no`. It does not verify Base Ethereum-L1 output/fault-proof
-finality or CONET consensus signatures. Therefore:
+This is operational and gate evidence for the observer path, not a custody
+cutover. The Shadow reports `broadcast no`, `settled no`, `custody closed`, and
+`light-client no`. Mint, release, and miner-vote cutover stay closed. Therefore:
 
 - a miner vote is not described as a Merkle or finality proof;
 - `isReserved` does not replace source locking or burning;
