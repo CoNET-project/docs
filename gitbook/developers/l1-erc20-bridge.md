@@ -8,7 +8,7 @@ An ERC-20 issued on another chain is **not** a CoNET asset. It enters the ecosys
 
 Architecture detail: [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md).
 
-The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a production custody integration guide. Its deployed Shadow is read-only; Obstacles 1–5 Accepted does not open mint, release, or production settle. Paid-GB miner `voteBridgeMint` is paused (Phase D, 2026-10-15); USDC still settles on Treasury miner `voteBridgeOperation`. AAC is not a Base or CoNET light client.
+The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a production custody integration guide. Its deployed Shadow is read-only; Obstacles 1–5 Accepted does not open mint, release, or production settle. Paid-GB miner `voteBridgeMint` is paused (Phase D, 2026-10-15); Phase E monitor baseline is HEALTHY (2026-10-15); USDC still settles on Treasury miner `voteBridgeOperation`. AAC is not a Base or CoNET light client.
 
 ## The only Treasury
 
