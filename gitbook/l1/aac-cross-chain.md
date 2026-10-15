@@ -93,7 +93,7 @@ A new lock is eligible only when its beacon slot is in a period the stored commi
 
 At the gas price measured on Base on 2026-10-12, one rotation cost about `0.000069` ETH (`11,481,348` gas at `0.006` gwei). About `321` rotations fit in a year, about `0.022` ETH at that price. One Base transaction cannot hold two such pairings: the transaction gas cap is `16,777,216`, and one rotation already uses about `11.5` million gas. Skipping the Altair replay removes the historical rotations. It does not remove rotations after the checkpoint.
 
-The checkpoint aggregate has succeeded. Obstacles **1–5 are Accepted** (2026-10-14). Production settlement still stays on miner votes: custody, mint, release, and miner-vote cutover remain closed until independent audit and a separate cutover. Engineering assurance after those gates (Rust tests + fail-closed smoke **PASS**; independent audit **PENDING**): [`PRODUCTION-ASSURANCE.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md). How to complete that audit and publish Accepted on GitHub (process draft — does not mark Passed): [`INDEPENDENT-AUDIT.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/INDEPENDENT-AUDIT.md). Cutover Phase A read-only preflight is **recorded** (2026-10-15; AAC proxy still closed; GB `admins(proxy)` false on CoNET and Base); Phases B–D remain **not executed**: [`CUTOVER-CUSTODY.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md). Shadow remains read-only.
+The checkpoint aggregate has succeeded. Obstacles **1–5 are Accepted** (2026-10-14). Custody and production settle remain closed. Paid-GB miner `voteBridgeMint` is **paused** (Phase D, 2026-10-15); USDC remains on Treasury miner `voteBridgeOperation`. Independent audit and third-party acceptance were **waived by owner 2026-10-14**. Engineering assurance after those gates (Rust tests + fail-closed smoke **PASS**; audit **WAIVED**): [`PRODUCTION-ASSURANCE.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md). Optional audit runbook: [`INDEPENDENT-AUDIT.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/INDEPENDENT-AUDIT.md). Cutover Phase A is **recorded** (2026-10-15). Phase B GB `addAdmin(AAC proxy)` is **executed** on CoNET and Base (2026-10-15; `admins(proxy)` true; settler `settle` still reverts). Phase C bounded paid-GB canary is **EXECUTED** on Base (2026-10-15; 0.01 GB = `10_000_000` min-units to owner; SettlerCanary impl `0x9b8DDa3d27473A4EdD351fFD4106c388876A9864`; `canaryMintCompleted` true). Phase D paid-GB `GB.setBridgePaused(true)` is **EXECUTED** on CoNET and Base (2026-10-15; CoNET tx `0x3a0c4757…8040` block `1717104`; Base tx `0xd0732bde…c4f0` block `52619394`; `bridgePaused` true both chains; Treasury USDC vote untouched). Next: Phase E monitor / rollback — [`CUTOVER-CUSTODY.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md). Shadow remains read-only.
 
 ## Production read-only Shadow
 
@@ -129,14 +129,19 @@ consume denied
 
 ## Production deployment acceptance
 
-**Status (2026-10-14): Obstacles 1–5 are Accepted.** Custody stays closed:
+**Status (2026-10-14; Phase D updated 2026-10-15): Obstacles 1–5 are Accepted.** Custody stays closed:
 `custodyOpen()` / `headerFinal()` remain false; no-arg `settle()` still
-reverts `CustodyClosed`. Role grants, independent audit, and the miner-vote
-cutover are later transactions. The historical Altair committee store and the
-0.01 USDC lock in Base block `52497860` do not pass any of these obstacles.
+reverts `CustodyClosed`. Independent audit and third-party acceptance were
+**waived by owner 2026-10-14**. Phase B GB `addAdmin(AAC)` is **executed**
+(2026-10-15). Phase C canary (0.01 paid GB) is **EXECUTED** (2026-10-15).
+Phase D paid-GB `setBridgePaused(true)` is **EXECUTED** (2026-10-15; CoNET + Base;
+USDC `voteBridgeOperation` untouched). Next: Phase E. The historical Altair
+committee store and the 0.01 USDC lock in Base block `52497860` do not pass any
+of these obstacles.
 Full gate evidence: [`bridgeAAC` PRODUCTION-CUSTODY-GATES](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-CUSTODY-GATES.md).
 Assurance package: [`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md).
-Cutover Phase A preflight **recorded** (2026-10-15); Phases B–D **not executed**: [`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md).
+Cutover Phase A **recorded**; Phase B–D **EXECUTED** 2026-10-15:
+[`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md).
 
 | Order | Deployment | Accepted address / evidence |
 | --- | --- | --- |
@@ -152,10 +157,15 @@ A Base-origin message uses obstacles 1, 2, 4, and 5. A CoNET-origin message uses
 
 Obstacles 1–5 Accepted does **not** open decentralized burn/mint custody.
 Production Shadow approval is not a cutover. The Shadow commands below are
-observers. Mint, release, settlement broadcasting, Treasury / GB role grants,
-and miner-vote cutover stay closed until an independent audit and a separate
-cutover (see [`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md);
-engineering assurance in [`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md)).
+observers. Mint, release, and production settle stay closed. Paid-GB
+`voteBridgeMint` is **paused** (Phase D); USDC remains on miner
+`voteBridgeOperation` (independent audit and third-party acceptance **waived by
+owner 2026-10-14**; GB `admins(AAC)` granted in Phase B 2026-10-15; Phase C
+canary **EXECUTED** 2026-10-15 — settler `settle` still reverts; Phase D
+**EXECUTED** 2026-10-15; see
+[`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md)
+Phase E; engineering assurance in
+[`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md)).
 
 1. `base-l1-output` only reads the OptimismPortal anchor and
    `isGameClaimValid`. While the Base execution `finalized` tag is ahead of
@@ -226,24 +236,28 @@ engineering assurance in [`PRODUCTION-ASSURANCE`](https://github.com/CoNET-proje
    Mainnet transactions rejected a second consume, a reentrant consume, a
    failed effect, and a reordered upgrade, and an append-only upgrade kept
    the consumed id. It does not mint or release.
-   Independent audit is still absent, so `consume-once` and custody gate 3
-   stay closed;
-4. close the unrestricted paid-GB admin-mint path and the upgrade authority
+   Obstacles 1–5 Accepted and consume-once evidence are recorded; Phase C
+   canary and Phase D paid-GB pause executed; production settle still closed;
+   4. close the unrestricted paid-GB admin-mint path and the upgrade authority
    that could restore it. `gb-mint-authority` only reads GBToken
    `0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`. `mint`, `mintPaid`, and
-   `voteBridgeMint` are on that token. While those selectors remain, the
-   report stays `admin-mint open`. If they disappear, the report is
-   `selectors-absent yes`, `upgrade-authority unread`, and `mint-closed no`.
-   This command does not send a mint or a vote and does not feed the
-   production shadow decision;
-5. complete end-to-end adversarial tests and an independent security audit
+   `voteBridgeMint` are on that token. Paid-GB `voteBridgeMint` is **paused**
+   (`bridgePaused` true, Phase D). While `mint` / `mintPaid` selectors remain,
+   the report may still show `admin-mint open` for those paths. If they
+   disappear, the report is `selectors-absent yes`, `upgrade-authority unread`,
+   and `mint-closed no`. This command does not send a mint or a vote and does
+   not feed the production shadow decision;
+5. complete end-to-end adversarial tests
    ([`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md):
-   local tests and Base fail-closed smoke **PASS**; independent audit **PENDING**); and
-6. perform a separately approved miner-vote cutover
+   local tests and Base fail-closed smoke **PASS**; independent audit
+   **WAIVED BY OWNER 2026-10-14**); and
+6. perform a separately approved cutover
    ([`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md):
-   Phase A **recorded**; Phases B–D **not executed**).
+   Phase A **recorded**; Phase B–D **EXECUTED** 2026-10-15; next Phase E).
 
-Until those gates pass, production USDC remains on `TreasuryBridgeV3.voteBridgeOperation`, GB remains on its validator-vote path, and no documentation or UI should label those votes as AAC or Merkle proof verification.
+Production USDC remains on `TreasuryBridgeV3.voteBridgeOperation`. Paid-GB
+miner `voteBridgeMint` is paused. No documentation or UI should label miner
+votes as AAC or Merkle proof verification.
 
 ## Related
 
