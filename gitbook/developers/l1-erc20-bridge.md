@@ -178,7 +178,7 @@ That second transition is specified, not deployed. See [L2 development](l2.md) a
 ## Related
 
 - [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md)
-- [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md) — production read-only Shadow; Obstacles 1–5 Accepted (2026-10-14); not a production custody API
+- [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md) — production read-only Shadow; Obstacles 1–5 Accepted (2026-10-14); cutover Phase A recorded (2026-10-15); not a production custody API
 - [Core L1 assets](../l1/assets.md)
 - [RPC and Explorer](../l1/rpc-explorer.md)
 - [Miner-matched order-book exchange](../applications/miner-orderbook-dex.md) — design study on top of canonical assets

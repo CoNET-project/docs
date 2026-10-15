@@ -93,7 +93,7 @@ A new lock is eligible only when its beacon slot is in a period the stored commi
 
 At the gas price measured on Base on 2026-10-12, one rotation cost about `0.000069` ETH (`11,481,348` gas at `0.006` gwei). About `321` rotations fit in a year, about `0.022` ETH at that price. One Base transaction cannot hold two such pairings: the transaction gas cap is `16,777,216`, and one rotation already uses about `11.5` million gas. Skipping the Altair replay removes the historical rotations. It does not remove rotations after the checkpoint.
 
-The checkpoint aggregate has succeeded. Obstacles **1–5 are Accepted** (2026-10-14). Production settlement still stays on miner votes: custody, mint, release, and miner-vote cutover remain closed until independent audit and a separate cutover. Engineering assurance after those gates (Rust tests + fail-closed smoke **PASS**; independent audit **PENDING**): [`PRODUCTION-ASSURANCE.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md). Cutover proposal only (**not executed**): [`CUTOVER-CUSTODY.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md). Shadow remains read-only.
+The checkpoint aggregate has succeeded. Obstacles **1–5 are Accepted** (2026-10-14). Production settlement still stays on miner votes: custody, mint, release, and miner-vote cutover remain closed until independent audit and a separate cutover. Engineering assurance after those gates (Rust tests + fail-closed smoke **PASS**; independent audit **PENDING**): [`PRODUCTION-ASSURANCE.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md). Cutover Phase A read-only preflight is **recorded** (2026-10-15; AAC proxy still closed; GB `admins(proxy)` false on CoNET and Base); Phases B–D remain **not executed**: [`CUTOVER-CUSTODY.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md). Shadow remains read-only.
 
 ## Production read-only Shadow
 
@@ -136,7 +136,7 @@ cutover are later transactions. The historical Altair committee store and the
 0.01 USDC lock in Base block `52497860` do not pass any of these obstacles.
 Full gate evidence: [`bridgeAAC` PRODUCTION-CUSTODY-GATES](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-CUSTODY-GATES.md).
 Assurance package: [`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md).
-Cutover proposal (not executed): [`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md).
+Cutover Phase A preflight **recorded** (2026-10-15); Phases B–D **not executed**: [`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md).
 
 | Order | Deployment | Accepted address / evidence |
 | --- | --- | --- |
@@ -240,8 +240,8 @@ engineering assurance in [`PRODUCTION-ASSURANCE`](https://github.com/CoNET-proje
    ([`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md):
    local tests and Base fail-closed smoke **PASS**; independent audit **PENDING**); and
 6. perform a separately approved miner-vote cutover
-   ([`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md)
-   proposal only — **not executed**).
+   ([`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md):
+   Phase A **recorded**; Phases B–D **not executed**).
 
 Until those gates pass, production USDC remains on `TreasuryBridgeV3.voteBridgeOperation`, GB remains on its validator-vote path, and no documentation or UI should label those votes as AAC or Merkle proof verification.
 
