@@ -9,6 +9,7 @@ All assets below are associated with CoNET L1, **`chainId 224422`**.
 | Asset | Type | Protocol use |
 | --- | --- | --- |
 | **CNET** | Native asset | Pays L1 gas and participates in protocol staking or bond mechanisms where a contract explicitly requires it |
+| **wCNET** | Canonical ERC-20, 18 decimals | 1:1 wrapped native CNET on CoNET. Bridge mint and burn go through TreasuryBridgeV3. Base holds a separate unwrap-disabled representation |
 | **conet-USDC** | Canonical ERC-20 | USD-denominated settlement and accounting asset used by CoNET contracts |
 | **GBToken** (`GB`) | ERC-20, **9 decimals** | Active GB balance and transfer asset for DePIN service and bandwidth-related flows |
 
@@ -19,11 +20,12 @@ All assets below are associated with CoNET L1, **`chainId 224422`**.
 | TreasuryBridgeV3 proxy (sole Treasury) | [`0xa208982212978550594A7FEEB70a61665d129003`](https://mainnet.conet.network/address/0xa208982212978550594A7FEEB70a61665d129003) |
 | ConetTreasuryPeer v4 (module, not a Treasury) | [`0x6093871d8a3EE6EaADc9869451D1693973cFBCC0`](https://mainnet.conet.network/address/0x6093871d8a3EE6EaADc9869451D1693973cFBCC0) |
 | conet-USDC | [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA) |
+| wCNET | [`0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5`](https://mainnet.conet.network/token/0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5) |
 | GBToken | [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) |
 
 The Treasury controls explicit cross-chain route and canonical-asset policy. A foreign ERC-20 does not become canonical merely because it has been wrapped or assigned matching metadata. See [Decentralized cross-chain Treasury](cross-chain-treasury.md).
 
-The [AAC settlement track](aac-cross-chain.md) specifies proof-driven movement for canonical USDC, **paid GB**, and unbound developer ERC-20s. Its production read-only Shadow is deployed, but AAC custody is not. It does not permit free GB or a developer token bound to a GB exchange rate to cross, and it has not replaced the live Treasury or GB validator-vote paths.
+The [AAC settlement track](aac-cross-chain.md) specifies proof-driven movement for canonical USDC, **paid GB**, wCNET, and unbound developer ERC-20s. Its production read-only Shadow is deployed, but AAC custody is not. It does not permit free GB or a developer token bound to a GB exchange rate to cross. Miner completion reverts `VoteBridgeClosed`. Base → CoNET proofs wait on [patch-geth](https://github.com/CoNET-project/patch-geth), which is not the installed execution client.
 
 CoNET-USDC uses 6 decimals. Issued-NFT social exchange payouts must use this
 canonical token; the legacy USDC factory address

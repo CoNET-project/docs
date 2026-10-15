@@ -77,6 +77,7 @@ documentation repositories is maintained in the
 | Browser `web3://` client | [CoNET-project/web3Url](https://github.com/CoNET-project/web3Url) |
 | CoNET DLE | [CoNET-project/CoNET-DLE](https://github.com/CoNET-project/CoNET-DLE) |
 | AAC Rust reference gateway | [CoNET-project/bridgeAAC](https://github.com/CoNET-project/bridgeAAC) |
+| CoNET execution-client BLS patch | [CoNET-project/patch-geth](https://github.com/CoNET-project/patch-geth) |
 | Documentation | [CoNETProject/docs](https://github.com/CoNETProject/docs) |
 
 ## Maturity
@@ -88,7 +89,7 @@ documentation repositories is maintained in the
 | L1 chain, RPC, Explorer, validators, and assets | Production reference |
 | CoNET Chat delivery, receipt, presence, and encrypted-history components | Implemented capability |
 | `web3://` locator, Linux runtime, caller-signed gateway, and early browser client | Under development |
-| AAC proof-driven cross-chain settlement | Production-approved read-only Shadow (`v0.31.0`); Obstacles 1–5 Accepted (2026-10-14); no production light client, custody, mint/release, or miner-vote cutover |
+| AAC proof-driven cross-chain settlement | Production-approved read-only Shadow (`v0.31.0`); Obstacles 1–5 Accepted (2026-10-14); Phases B–E recorded (2026-10-15); custody closed. Base → CoNET pairing needs [patch-geth](https://github.com/CoNET-project/patch-geth), which is not installed |
 | CoNET-DLE specifications | Normative design; lab evidence is separate from production |
 
 These labels are not security-audit, uptime, or anonymity guarantees.

@@ -19,6 +19,7 @@ separately.
 | `web3://` browser client | [CoNET-project/web3Url](https://github.com/CoNET-project/web3Url) |
 | CoNET DLE — L2 specifications, runtime, and Explorer | [CoNET-project/CoNET-DLE](https://github.com/CoNET-project/CoNET-DLE) |
 | bridgeAAC — Rust reference state machine for proof-driven cross-chain settlement | [CoNET-project/bridgeAAC](https://github.com/CoNET-project/bridgeAAC) |
+| patch-geth — Cancun EIP-2537 build for the CoNET execution client | [CoNET-project/patch-geth](https://github.com/CoNET-project/patch-geth) |
 | CoNET Chat SDK | [CoNET-project/chat-sdk](https://github.com/CoNET-project/chat-sdk) |
 
 ## Beamio

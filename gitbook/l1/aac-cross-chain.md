@@ -72,7 +72,7 @@ The Rust project deliberately exposes a `FinalityVerifier` interface. Its execut
 
 ## Ethereum sync committee root for Base
 
-**Evidence level: installed checkpoint.** Base proxy `0xcEE3D699df3df07a573f1aFf642888B97B7aA961` stores the period-`1883` committee for finalized beacon slot `15427520`. One two-thirds aggregate in that period verified under those keys. The proxy `headerFinal()` view stays false. This installation does not open custody.
+**Evidence level: installed checkpoint.** Base proxy `0xcEE3D699df3df07a573f1aFf642888B97B7aA961` was installed with the period-`1883` committee for finalized beacon slot `15427520`. On 2026-10-15 `applyUpdate` rotated that store to period **1884** (`0x47a9574c75a3dd3c8b92270f69fbaaa8dd8bee98fa97a202732033c6d968d9cb`). One two-thirds aggregate verified under the keys of the period being left. The proxy `headerFinal()` view stays false. This installation does not open custody.
 
 New AAC proofs of Base finality use one Ethereum sync committee stored on Base. The first keys are the `current_sync_committee` of a finalized beacon block chosen at installation. They are not the committee initialized at the Altair fork. The historical 0.01 USDC lock is not a sample for this root. Altair handoff contracts already deployed from `bridgeAAC` stay historical records.
 
@@ -87,13 +87,30 @@ Installing the root requires all of the following:
 
 A Base output root is a commitment to Base execution state, the message-passer storage root, and a Base block hash. It does not contain the 512 committee keys. Base follows Ethereum, so a matching L1 origin does not choose the Ethereum committee.
 
-After installation, Base accepts a committee update only when the stored committee signs the next period, at least two thirds participate, and the update advances exactly one period. An aggregate below two thirds does not rotate the keys. Pairing runs on Base through EIP-2537 precompiles `0x0b` through `0x11`. CoNET execution of those addresses returns an empty result, so CoNET does not host this pairing.
+After installation, Base accepts a committee update only when the stored committee signs the next period, at least two thirds participate, and the update advances exactly one period. An aggregate below two thirds does not rotate the keys. Pairing runs on Base through EIP-2537 precompiles `0x0b` through `0x11`. Stock CoNET Geth, which stays on Cancun and does not schedule Prague, returns an empty success for those addresses. That empty result is not a precompile. CoNET does not host this pairing until every execution client runs the [patch-geth](https://github.com/CoNET-project/patch-geth) build. That build is published and is not installed on the fleet.
 
 A new lock is eligible only when its beacon slot is in a period the stored committee signs, and only after a finalized beacon header is at least that late. Finality lags by about two epochs. Receipts under one finalized header share that one BLS verification. Each receipt still needs its own inclusion proof and can be consumed once. `headerFinal` in that combined proof means final relative to the installed checkpoint, not final by a chain of signatures back to Altair.
 
 At the gas price measured on Base on 2026-10-12, one rotation cost about `0.000069` ETH (`11,481,348` gas at `0.006` gwei). About `321` rotations fit in a year, about `0.022` ETH at that price. One Base transaction cannot hold two such pairings: the transaction gas cap is `16,777,216`, and one rotation already uses about `11.5` million gas. Skipping the Altair replay removes the historical rotations. It does not remove rotations after the checkpoint.
 
-The checkpoint aggregate has succeeded. Obstacles **1–5 are Accepted** (2026-10-14). Custody and production settle remain closed. Paid-GB miner `voteBridgeMint` is **paused** (Phase D, 2026-10-15); USDC remains on Treasury miner `voteBridgeOperation`. Independent audit and third-party acceptance were **waived by owner 2026-10-14**. Engineering assurance after those gates (Rust tests + fail-closed smoke **PASS**; audit **WAIVED**): [`PRODUCTION-ASSURANCE.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md). Optional audit runbook: [`INDEPENDENT-AUDIT.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/INDEPENDENT-AUDIT.md). Cutover Phase A is **recorded** (2026-10-15). Phase B GB `addAdmin(AAC proxy)` is **executed** on CoNET and Base (2026-10-15; `admins(proxy)` true; settler `settle` still reverts). Phase C bounded paid-GB canary is **EXECUTED** on Base (2026-10-15; 0.01 GB = `10_000_000` min-units to owner; SettlerCanary impl `0x9b8DDa3d27473A4EdD351fFD4106c388876A9864`; `canaryMintCompleted` true). Phase D paid-GB `GB.setBridgePaused(true)` is **EXECUTED** on CoNET and Base (2026-10-15; CoNET tx `0x3a0c4757…8040` block `1717104`; Base tx `0xd0732bde…c4f0` block `52619394`; `bridgePaused` true both chains; Treasury USDC vote untouched). Phase E monitor baseline is **RECORDED HEALTHY** (2026-10-15; read-only; [`phase-E-monitor-baseline.json`](https://github.com/CoNET-project/bridgeAAC/blob/main/deployments/phase-E-monitor-baseline.json)) — [`CUTOVER-CUSTODY.md`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md). Shadow remains read-only.
+The checkpoint aggregate has succeeded. Custody and production settle remain closed. Shadow remains read-only. Independent audit and third-party acceptance were **waived by owner 2026-10-14**.
+
+## Milestones (2026-10-15)
+
+| Milestone | State |
+| --- | --- |
+| Obstacles 1–5 | **Accepted** (2026-10-14). [PRODUCTION-CUSTODY-GATES](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-CUSTODY-GATES.md) |
+| Assurance | Tests and fail-closed smoke **PASS**. Audit **WAIVED**. [PRODUCTION-ASSURANCE](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md) |
+| Phase A–E | A **recorded**. B GB `addAdmin(AAC)` **executed**. C 0.01 GB canary **executed**. D paid-GB bridge **paused** on both chains. E monitor **recorded healthy**. [CUTOVER-CUSTODY](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md) |
+| F4 | CheckpointRoot rotated to period **1884** |
+| Miner path | `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed` |
+| Destination allowlist | Base chain id `8453` is open on both treasuries. CoNET chain id `224422` is closed. `sourceInitiateOpen` is false. Another chain is `setAacDestinationOpen` only |
+| SettlerF7c | Pending `0xefb038ec81aaBfEe9E5a2625B7e50ee3e1FABE44`. `upgradeTo` only after **2026-10-17T13:25:41Z**. Live implementation remains F7 `0x29e10621fF159422237d2a0B9F020303F9BDdD12` |
+| wCNET | CoNET `0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5`, wrap on. Base `0x0E01ca7a99B38a4E021C25B7BE01356E71158B66`, wrap off. CoNET wCNET completion is release, not an unbacked mint |
+| Base → CoNET contracts | Receipt verifier `0x6B44d8469c902F0BbF74333AAfE7E164D020943f`, checkpoint proxy `0x52b3bc7A8c58EC64A57a62783E2e1F8CB8457b3a` (no committee yet), cover `0xB862FA2351d7910F960eE8e5d2176f89df44b2fa`, settler `0x1C302DE6a6c4d9BE30193A6Bcd65A522C9b9898D`. `AacChainEffect.settler` is still unset |
+| patch-geth | [CoNET-project/patch-geth](https://github.com/CoNET-project/patch-geth) adds EIP-2537 to the Cancun precompile table. The binary is not installed. Probe `0x864896C7dD5CA603AA11C3dC0BA329EB78Cc5F78` still reports the precompile unavailable |
+
+A second `scheduleUpgrade` on the live AAC resets the 48-hour delay. Source initiate stays closed until the destination completer can prove a receipt. `setSettler` stays unset while the probe is false. The L1 join guide is [Run an L1 node](../developers/l1-node.md).
 
 ## Production read-only Shadow
 
@@ -134,8 +151,8 @@ consume denied
 reverts `CustodyClosed`. Independent audit and third-party acceptance were
 **waived by owner 2026-10-14**. Phase B GB `addAdmin(AAC)` is **executed**
 (2026-10-15). Phase C canary (0.01 paid GB) is **EXECUTED** (2026-10-15).
-Phase D paid-GB `setBridgePaused(true)` is **EXECUTED** (2026-10-15; CoNET + Base;
-USDC `voteBridgeOperation` untouched). Phase E monitor baseline is
+Phase D paid-GB `setBridgePaused(true)` is **EXECUTED** (2026-10-15; CoNET + Base).
+Treasury `voteBridgeOperation` was closed later the same day (`voteBridgeClosed=true`). Phase E monitor baseline is
 **RECORDED HEALTHY** (2026-10-15). The historical Altair committee store and
 the 0.01 USDC lock in Base block `52497860` do not pass any of these obstacles.
 Full gate evidence: [`bridgeAAC` PRODUCTION-CUSTODY-GATES](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-CUSTODY-GATES.md).
@@ -146,7 +163,7 @@ Cutover Phase A **recorded**; Phase B–D **EXECUTED**; Phase E **RECORDED HEALT
 
 | Order | Deployment | Accepted address / evidence |
 | --- | --- | --- |
-| 1 | New Base checkpoint-root store | Proxy `0xcEE3D699df3df07a573f1aFf642888B97B7aA961` — period-`1883` keys; one two-thirds aggregate verified |
+| 1 | New Base checkpoint-root store | Proxy `0xcEE3D699df3df07a573f1aFf642888B97B7aA961` — installed at period `1883`; rotated to period **1884** on 2026-10-15 |
 | 2 | One new AAC message | Cover `0x01506527a4Dab14141038Db15f5341dcF4729233` — new 0.01 USDC lock in Base block `52583500`; finalized beacon slot `15427680` + receipt in one call |
 | 3 | CoNET-source finality, on the destination | Proxy `0xE4f6c834eb63f726cbE65b4F864620e4a6F7a6c9` — `proveAggregate` on Base |
 | 4 | New consume-once consumer | Proxy `0xC6CBcC0c629ac1A80DB95e8b80927e713E82Cf4F` — second consume reverts; not the paused canary / `0xA13843C75f68F726e1DC4dbA75d07597EE18d999` |
@@ -159,8 +176,8 @@ A Base-origin message uses obstacles 1, 2, 4, and 5. A CoNET-origin message uses
 Obstacles 1–5 Accepted does **not** open decentralized burn/mint custody.
 Production Shadow approval is not a cutover. The Shadow commands below are
 observers. Mint, release, and production settle stay closed. Paid-GB
-`voteBridgeMint` is **paused** (Phase D); USDC remains on miner
-`voteBridgeOperation` (independent audit and third-party acceptance **waived by
+`voteBridgeMint` is **paused** (Phase D); USDC miner
+`voteBridgeOperation` is **closed** (`voteBridgeClosed=true`, 2026-10-15; independent audit and third-party acceptance **waived by
 owner 2026-10-14**; GB `admins(AAC)` granted in Phase B 2026-10-15; Phase C
 canary **EXECUTED** 2026-10-15 — settler `settle` still reverts; Phase D
 **EXECUTED** 2026-10-15; Phase E monitor **RECORDED HEALTHY** 2026-10-15; see
@@ -258,12 +275,14 @@ engineering assurance in
    Phase A **recorded**; Phase B–D **EXECUTED**; Phase E **RECORDED HEALTHY**
    2026-10-15).
 
-Production USDC remains on `TreasuryBridgeV3.voteBridgeOperation`. Paid-GB
+Production USDC miner `voteBridgeOperation` is **closed** (`voteBridgeClosed=true`, 2026-10-15). Paid-GB
 miner `voteBridgeMint` is paused. No documentation or UI should label miner
 votes as AAC or Merkle proof verification.
 
 ## Related
 
+- [Run an L1 node](../developers/l1-node.md) — public join, and the patch-geth execution build
+- [patch-geth](https://github.com/CoNET-project/patch-geth) — Cancun EIP-2537 source patch
 - [Decentralized cross-chain Treasury](cross-chain-treasury.md)
 - [Core L1 assets](assets.md)
 - [Bring an ERC-20 into CoNET](../developers/l1-erc20-bridge.md)

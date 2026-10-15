@@ -80,7 +80,7 @@ curl -s http://38.102.126.50:4100/eth/v1/beacon/genesis
 | Slot / epoch | `SECONDS_PER_SLOT=6`, `SLOTS_PER_EPOCH=32` |
 | Eth1 follow | `ETH1_FOLLOW_DISTANCE=64`, `EPOCHS_PER_ETH1_VOTING_PERIOD=4` |
 | Electra | Disabled |
-| Recommended clients | geth **1.17.x**, Prysm **v7.1.4+** |
+| Recommended clients | Upstream geth **v1.17.5** for a node joining the chain today; Prysm **v7.1.4+**. The CoNET execution build that exposes EIP-2537 is [patch-geth](https://github.com/CoNET-project/patch-geth) and is **not** the installed fleet binary |
 
 The Beacon deposit contract is `0x4242…4242`. It is not
 [`ValidatorDepositRedeem`](https://mainnet.conet.network/address/0xc71e246DD78B37C2fABc905D340932F28F503433).
@@ -177,6 +177,30 @@ geth init --datadir ./execution ./genesis.json
 
 Do not run `geth init` over an existing production datadir unless you have
 explicitly planned a rebuild.
+
+### CoNET execution client and EIP-2537
+
+Join the chain with **upstream geth v1.17.5**. The running execution clients do not schedule Prague. Stock Cancun Geth answers an empty call to `0x0b`–`0x11` with an empty success. That result is an empty account, not the BLS12-381 precompile.
+
+AAC proofs of a Base receipt on CoNET need those seven precompiles. Prague would also enable EIP-7702, EIP-6110, EIP-7002, and EIP-7251, which this consensus client does not take. Do not set `pragueTime` or `osakaTime`.
+
+Build the CoNET execution binary from upstream Geth plus [patch-geth](https://github.com/CoNET-project/patch-geth). The program inserts the BLS implementations that already exist in that Geth tag into `PrecompiledContractsCancun` only:
+
+```bash
+git clone --depth 1 --branch v1.17.5 https://github.com/ethereum/go-ethereum
+git clone https://github.com/CoNET-project/patch-geth
+cd patch-geth
+go run . apply --src ../go-ethereum
+go run . check --src ../go-ethereum
+cd ../go-ethereum
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o geth ./cmd/geth
+```
+
+`apply` is safe to repeat on a newer Geth tag. If it cannot find the Cancun table, or a `bls12381*` type, it exits without writing a partial patch. Keep the last accepted binary.
+
+As of 2026-10-15 this binary is **not installed** on the CoNET execution fleet. The on-chain probe `0x864896C7dD5CA603AA11C3dC0BA329EB78Cc5F78` still reports the precompile unavailable. Do not replace one live geth with the patched binary while other execution clients still run upstream Geth: calls to `0x0b`–`0x11` would then disagree, and that is an execution fork. A fleet cutover replaces every execution client together, and replacing a producing geth is a restart that needs its own authorization. This page does not restart a node.
+
+After that cutover, confirm an empty call to `0x0b` is no longer an empty success before any Base-receipt settler is wired. An empty return is still not a pairing proof.
 
 ### Start geth
 
@@ -283,6 +307,8 @@ private keys, the mnemonic, keystore passwords, JWT, or validator RPC.
 
 - Joining does not authorize restarting another operator's geth, beacon, or
   validator.
+- Do not install the patch-geth binary on one execution client while the rest
+  of the fleet still runs upstream Geth.
 - Do not wipe execution or beacon data on an active node to troubleshoot an
   unrelated application.
 - Do not expose Engine API or validator secrets.
@@ -292,6 +318,8 @@ private keys, the mnemonic, keystore passwords, JWT, or validator RPC.
 
 ## Related
 
+- [patch-geth](https://github.com/CoNET-project/patch-geth) — Cancun EIP-2537 build; not the installed fleet binary
+- [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md)
 - [Confirm the period-18 checkpoint](l1-independent-confirmation.md)
 - [Validators](../l1/validators.md)
 - [Network identity](../l1/chain-identity.md)

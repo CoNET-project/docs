@@ -8,7 +8,7 @@ An ERC-20 issued on another chain is **not** a CoNET asset. It enters the ecosys
 
 Architecture detail: [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md).
 
-The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a production custody integration guide. Its deployed Shadow is read-only; Obstacles 1–5 Accepted does not open mint, release, or production settle. Paid-GB miner `voteBridgeMint` is paused (Phase D, 2026-10-15); Phase E monitor baseline is HEALTHY (2026-10-15); USDC still settles on Treasury miner `voteBridgeOperation`. AAC is not a Base or CoNET light client.
+The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a production custody integration guide. Its deployed Shadow is read-only; Obstacles 1–5 Accepted does not open mint, release, or production settle. Paid-GB miner `voteBridgeMint` is paused (Phase D, 2026-10-15). Treasury miner `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed` (2026-10-15). Base → CoNET receipt proofs still need the [patch-geth](https://github.com/CoNET-project/patch-geth) execution client, which is not installed. AAC is not a Base or CoNET light client.
 
 ## The only Treasury
 
@@ -17,6 +17,7 @@ The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a product
 | **TreasuryBridgeV3** | [`0xa208982212978550594A7FEEB70a61665d129003`](https://mainnet.conet.network/address/0xa208982212978550594A7FEEB70a61665d129003) | Sole Treasury: route policy, quorum, mint, burn, lock, release |
 | **ConetTreasuryPeer** | [`0x6093871d8a3EE6EaADc9869451D1693973cFBCC0`](https://mainnet.conet.network/address/0x6093871d8a3EE6EaADc9869451D1693973cFBCC0) | Peer module — **not** a second Treasury |
 | **conet-USDC** | [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA) | Canonical six-decimal settlement asset |
+| **wCNET** | [`0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5`](https://mainnet.conet.network/token/0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5) | Canonical 18-decimal wrap of native CNET. CoNET `deposit` / `withdraw` are 1:1. The Base representation `0x0E01ca7a99B38a4E021C25B7BE01356E71158B66` cannot unwrap |
 | **GBToken (`GB`)** | [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) | Canonical nine-decimal DePIN service asset |
 | **Base USDC** | [`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`](https://basescan.org/token/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) | Current source-chain USDC for LockMint product paths |
 
@@ -71,7 +72,7 @@ The destination contract rejects a disabled route, conflicting payloads, duplica
 
 These controls decentralize **authorization** across the configured miner set. They do not prove operator independence, source-chain finality, or that upgrade keys cannot be compromised.
 
-The proposed AAC route replaces this per-deposit vote only after destination verification and an explicit cutover. Obstacles 1–5 Accepted prove the on-chain gate contracts and settler path; they do not open custody. Until independent audit and a cutover proposal exist, applications must continue using the enabled Treasury V3 route above.
+The proposed AAC route replaces this per-deposit vote only after destination verification and an explicit cutover. Obstacles 1–5 Accepted prove the on-chain gate contracts and settler path; they do not open custody. Miner `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed`. Source `initiate*` also requires `aacDestinationOpen[destinationChainId]`. This window opens only Base chain id `8453`. The owner can later open any other chain id with `setAacDestinationOpen` without another treasury upgrade. CoNET `224422` stays closed. The CoNET Base-receipt settler is deployed and is not wired, because stock Geth has no EIP-2537 precompile. The build is [patch-geth](https://github.com/CoNET-project/patch-geth); see [Run an L1 node](l1-node.md). Until that cutover, applications must continue using the enabled Treasury V3 route above.
 
 ## Use a current product path (Base USDC)
 
@@ -178,7 +179,7 @@ That second transition is specified, not deployed. See [L2 development](l2.md) a
 ## Related
 
 - [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md)
-- [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md) — production read-only Shadow; Obstacles 1–5 Accepted (2026-10-14); cutover Phase A recorded (2026-10-15); not a production custody API
+- [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md) — Obstacles 1–5 Accepted; Phases B–E recorded 2026-10-15; custody closed; Base → CoNET waits on patch-geth
 - [Core L1 assets](../l1/assets.md)
 - [RPC and Explorer](../l1/rpc-explorer.md)
 - [Miner-matched order-book exchange](../applications/miner-orderbook-dex.md) — design study on top of canonical assets

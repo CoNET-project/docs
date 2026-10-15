@@ -94,7 +94,7 @@ cutover. The Shadow reports `broadcast no`, `settled no`, `custody closed`, and
 
 - a miner vote is not described as a Merkle or finality proof;
 - `isReserved` does not replace source locking or burning;
-- live `voteBridgeOperation` and GB validator voting remain active until an audited adapter and explicit cutover exist; and
+- live `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed` (2026-10-15). Paid-GB `voteBridgeMint` stays paused. `sourceInitiateOpen` is false. Base chain id `8453` is the only open AAC destination. CoNET `224422` stays closed until the [patch-geth](https://github.com/CoNET-project/patch-geth) execution client is the fleet binary and a Base receipt can be proven; and
 - AAC additionally covers paid GB and unbound developer-token burn/mint routes, while free GB and GB-bound developer tokens remain non-bridgeable.
 
 ## Onboarding an ERC-20 from another chain
