@@ -1,6 +1,6 @@
 # AAC proof-driven cross-chain settlement
 
-**Evidence level: mixed.** The `bridgeAAC` repository contains the AAC reference state machine and a production **read-only Shadow observer**. Shadow `v0.31.0` is deployed, but it is **not** a Base or CoNET light client, controls no custody, emits no settlement transaction, and has not replaced the live miner-vote bridge.
+**Evidence level: mixed.** The `bridgeAAC` repository contains the AAC reference state machine and a production **read-only Shadow observer**. Shadow `0.33.13` is deployed as the production unit (since 2026-10-16), but it is **not** a Base or CoNET light client, controls no custody, emits no settlement transaction, and has not replaced the live miner-vote bridge.
 
 Source: [CoNET-project/bridgeAAC](https://github.com/CoNET-project/bridgeAAC)
 
@@ -114,11 +114,15 @@ A second `scheduleUpgrade` on the live AAC resets the 48-hour delay. `sourceInit
 
 ## Production read-only Shadow
 
-Release `bridge-aac-v0.31.0` runs the production read-only Shadow on
-`38.102.126.30` as `bridge-aac-shadow-prod.service`. Its production readers are:
+Release `bridge-aac-v0.33.13` runs the production read-only Shadow as
+`bridge-aac-shadow-prod.service` on `70.35.205.77` (switched 2026-10-16). Its
+production readers since 2026-10-16:
 
-- Base: independent execution clients on `.30:8547` and `.58:8547`;
-- CONET: the local `.30:8889` archive and the
+- Base: two public execution nodes from different operators, `mainnet.base.org`
+  and `base.publicnode.com`. Both return chain id `8453` and agree on the
+  finalized block hash. The earlier `.30:8547` and `.58:8547` pair shares one
+  network block, so it is no longer used as the two independent readers;
+- CONET: the execution client on the production host and the
   `publicrpc.conet.network` archive cluster.
 
 For each scanned block, both readers must agree on the block hash, state root,
@@ -190,6 +194,12 @@ engineering assurance in
    that anchor, the report stays `covered no`. This command does not replay
    the fault proof, does not install the checkpoint root, and does not feed
    the production shadow decision;
+   Since 2026-10-16, `check-header --l1-rpc` and `verify-receipt --l1-rpc` also
+   recompute the OP output root for the anchored Base block (header rebuild and
+   a message-passer account proof). A block below the anchor is accepted when
+   parent-hash links from the anchored block reach it, up to 4096 blocks. Each
+   link is checked by rebuilding the header. This is an off-chain observer check.
+   It does not replace the on-chain obstacle 1 proof and does not open custody.
 2. verify CONET finality from consensus signatures against an independently
    trusted committee. `conet-consensus` compares the beacon finalized
    execution payload with the execution client's `finalized` tag and checks
@@ -210,7 +220,10 @@ engineering assurance in
    `handoff-periods` count how many earlier periods authenticate the next
    committee. A read that linked four periods, back to epoch 47358, still
    used this same beacon. `genesis-pin yes` means the genesis beacon state
-   hashes to its header and its validators root is the published CoNET pin.
+   hashes to the published genesis state root, its slot-0 header hashes to the
+   published header root, and its validators root is the published CoNET pin.
+   Since 2026-10-16 the sync-committee signing domain uses the published
+   validators root, not the beacon's copy.
    The handoff chain has not reached that genesis committee, so
    `trusted-committee` stays `no`. `forward-committee` starts at that same
    genesis pin and accepts the next period only from a supermajority signature
@@ -224,8 +237,8 @@ engineering assurance in
    branch and the finalized-root branch against that state root. A second
    beacon returned the same state root. Three other full nodes, at
    `216.225.202.22`, `216.225.197.3`, and `216.225.202.82`, recomputed that
-   same header from their own beacons. The checkpoint now has three
-   confirmations and `safety weak-subjectivity-trusted`. Those nodes share
+   same header from their own beacons. Those three confirmations are unsigned. Since 2026-10-16 they no longer change the
+   safety label, so the checkpoint stays `observed`. The nodes share
    one operator and one consensus client, so `trusted-committee` stays `no`.
    Stock Lighthouse v5.3.0 and v8.2.2 hash a CoNET checkpoint with the mainnet
    eth1 vote limit and stop on a different block root. On `70.35.205.77`, a
@@ -234,8 +247,7 @@ engineering assurance in
    `0x70001a2f…1410`. That host runs its own geth and does not use a production
    Engine API. The operator is still the same, and periods 18 through 189 are
    not replayed into the weak-subjectivity store, so `trusted-committee` stays
-   `no`. This check does not feed the production shadow decision. Production
-   Shadow remains `bridge-aac-v0.31.0`. An operator who does not administer
+   `no`. This check does not feed the production shadow decision. Production Shadow is `bridge-aac-v0.33.13` and stays read-only. An operator who does not administer
    these hosts follows
    [Confirm the period-18 checkpoint](../developers/l1-independent-confirmation.md).
 3. deploy and audit the destination consume-once AAC contracts.

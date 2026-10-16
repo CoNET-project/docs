@@ -162,6 +162,11 @@ The inviting operator sees a new consensus node when that `peer_id` appears
 in a public beacon's peer list and is absent from the operator table above.
 The two JSON documents are the checkpoint confirmation.
 
+`bridge-aac accept-confirmations` does not raise the safety label for these files.
+They are unsigned, so the checkpoint stays `observed` however many are accepted.
+Since 2026-10-16 the checkpoint can reach `supermajority-finalized` only from a
+BLS-verified sync aggregate.
+
 ## Engine API isolation for a parallel Lighthouse node
 
 Prysm and Lighthouse are separate consensus clients. They must not share an

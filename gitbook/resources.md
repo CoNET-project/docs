@@ -89,7 +89,7 @@ documentation repositories is maintained in the
 | L1 chain, RPC, Explorer, validators, and assets | Production reference |
 | CoNET Chat delivery, receipt, presence, and encrypted-history components | Implemented capability |
 | `web3://` locator, Linux runtime, caller-signed gateway, and early browser client | Under development |
-| AAC proof-driven cross-chain settlement | Production-approved read-only Shadow (`v0.31.0`); Obstacles 1–5 Accepted (2026-10-14); Phases B–E recorded (2026-10-15); `sourceInitiateOpen` is true on Base and CoNET. Checked execution clients run [patch-geth](https://github.com/CoNET-project/patch-geth); a 0.01 Base USDC receipt in period 1884 is covered and settled |
+| AAC proof-driven cross-chain settlement | Production read-only Shadow `v0.33.13` (switched 2026-10-16; audit fixes H1, H2, M1–M6); Obstacles 1–5 Accepted (2026-10-14); Phases B–E recorded (2026-10-15); `sourceInitiateOpen` is true on Base and CoNET. Checked execution clients run [patch-geth](https://github.com/CoNET-project/patch-geth); a 0.01 Base USDC receipt in period 1884 is covered and settled |
 | CoNET-DLE specifications | Normative design; lab evidence is separate from production |
 
 These labels are not security-audit, uptime, or anonymity guarantees.

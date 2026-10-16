@@ -81,7 +81,7 @@ These controls decentralize authorization across the configured miner set. They 
 
 [AAC proof-driven settlement](aac-cross-chain.md) is the proposed deterministic successor to per-operation miner votes. It separates source inclusion, source-header authenticity, finality, route constraints, and destination replay protection.
 
-`bridge-aac-v0.31.0` runs a production read-only Shadow on `.30`. It scans
+`bridge-aac-v0.33.13` runs the production read-only Shadow as `bridge-aac-shadow-prod.service` on `70.35.205.77` (switched 2026-10-16). Its two Base readers are the public nodes `mainnet.base.org` and `base.publicnode.com`, run by different operators. It scans
 two independent Base readers and two CONET reader paths, agrees block hash,
 state root, and receipts root at the lower finalized height, verifies receipt
 inclusion, persists its cursor, and pages on divergence. Both chains completed
