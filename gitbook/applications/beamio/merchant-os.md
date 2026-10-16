@@ -150,8 +150,13 @@ Master; Master settles on CoNET (`Settle_ConetPool`) without repeating business
 prechecks. Reads: `GET /api/agentReferrerRegistry` or RPC-first views
 (`isAgent`, `tempsOfAgent`, `merchantsOfAgent`, `introducerOf`, `refereesOf`).
 
-Merchant OS Agent login gates `#/agent` on chain `isAgent(eoa)` (RPC-first;
-trusted local cache may hydrate the first paint). This registry is **not** the
+Merchant OS sends `#/agent` when `isAgent(eoa)` is true (RPC-first; a trusted
+local cache may hydrate the first paint) **and** that EOA does not already own
+a merchant program card (`cardsOfOwner`). An EOA that owns program cards always
+lands on `#/native-pos`, including when an earlier login mistakenly submitted
+RegisterAgent. Login does not treat a browser-global workspace role as this
+wallet's agent intent, and it does not call RegisterAgent unless this EOA's own
+workspace is an agent workspace. This registry is **not** the
 unfinished card-custody `BeamioAgentRegistry` (reserve / bind card / POS
 dispose) described in the custody-handoff chapter.
 
