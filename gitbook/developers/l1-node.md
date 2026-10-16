@@ -75,12 +75,19 @@ curl -s http://38.102.126.50:4100/eth/v1/beacon/genesis
 | `genesis_time` | `1781376367` |
 | `genesis_fork_version` | `0x20000089` |
 | `genesis_validators_root` | `0xacac7566fdf384a1ada45c01dcf9030d7eb0e1e5f5302659101d0b2a5bb59092` |
+| Beacon slot-0 header root | `0x37fae6d950f588ef15839dcdf69f4547ee2283d6f2815cf9b9e0ee563abc2fb3` |
+| Beacon genesis state root | `0xbc1524ab2dfb1ac3efe6f7cca7eaebddda67a54fd3d8ceb6afdbfcf626394bb2` |
 | Beacon deposit contract | [`0x4242424242424242424242424242424242424242`](https://mainnet.conet.network/address/0x4242424242424242424242424242424242424242) |
 | Deposit per validator | **32 CNET** |
 | Slot / epoch | `SECONDS_PER_SLOT=6`, `SLOTS_PER_EPOCH=32` |
 | Eth1 follow | `ETH1_FOLLOW_DISTANCE=64`, `EPOCHS_PER_ETH1_VOTING_PERIOD=4` |
 | Electra | Disabled |
 | Recommended clients | Upstream geth **v1.17.5** for a node joining the chain today; Prysm **v7.1.4+**. The CoNET execution build that exposes EIP-2537 is [patch-geth](https://github.com/CoNET-project/patch-geth) and is **not** the installed fleet binary |
+
+The validators-root field is stored inside the genesis state. A beacon can
+copy that field into a different state and a different sync committee. Treat
+a local genesis copy as this chain only when its slot-0 header root and
+genesis state root match the table.
 
 The Beacon deposit contract is `0x4242…4242`. It is not
 [`ValidatorDepositRedeem`](https://mainnet.conet.network/address/0xc71e246DD78B37C2fABc905D340932F28F503433).
