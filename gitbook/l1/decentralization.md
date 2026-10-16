@@ -41,9 +41,9 @@ The following values were read from `https://rpc1.conet.network` at **2026-08-14
 | Registered Guardian IPs (L0 DePIN) | **472** | `getAllNodes(start, 1)` last occupied index + 1 |
 | Unique Guardian owner addresses | **472** | `getUniqueOwnerCount()` |
 | Guardian regions | **7** | `getAllRegions()` |
-| Treasury miner set | **4** addresses | `TreasuryBridgeV3.miners()` |
-| Treasury execution quorum | **3** | `requiredVotes()` = `ceil(2N/3)` for N = 4 |
-| Treasury owner | `0x87cAeD4e51C36a2C2ece3Aaf4ddaC9693d2405E1` | `owner()`; this address is also one of the four miners |
+| Treasury miner set | **1** address (owner only; three node miners removed 2026-10-15) | `TreasuryBridgeV3.miners()` |
+| Treasury execution quorum | **1** | `requiredVotes()` = `(N * 2 + 2) / 3` for N = 1 |
+| Treasury owner | `0x87cAeD4e51C36a2C2ece3Aaf4ddaC9693d2405E1` | `owner()`; this address is the only miner |
 
 **Do not label `totalStakedValidatorCount() = 475` as “Staked L1 validators.”** That was the earlier error on this page.
 
@@ -148,11 +148,11 @@ L1 has several control planes. They are not one committee.
 
 [`TreasuryBridgeV3`](cross-chain-treasury.md) at `0xa208982212978550594A7FEEB70a61665d129003` uses an owner-managed miner list, not the 472 Guardian owners.
 
-At the snapshot above:
+Re-read on 2026-10-15, on both Base and CoNET:
 
-- four miner addresses;
-- quorum **3**;
-- `owner()` equals the first miner.
+- one miner address, the owner `0x87cAeD4e51C36a2C2ece3Aaf4ddaC9693d2405E1`;
+- quorum **1**;
+- the three node miners `0xcbBB1371973D57e6bD45aC0dfeFD493b59F9D76B`, `0x6bF3Aa7261e21Be5Fc781Ac09F9475c8A34AfEea`, and `0xe2E7A68E3D1e50F0Af15d713F90f4992CD19Dfc8` were removed with `removeMiner`.
 
 That quorum governs Treasury policy and bridge operations. It does **not** vote L1 blocks. Do not present the 472 Guardian owners as the live Treasury voter set. The historical `ConetTreasury.requiredVotes` comment on `getUniqueOwnerCount` describes a deprecated treasury path.
 

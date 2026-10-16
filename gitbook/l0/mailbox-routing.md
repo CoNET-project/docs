@@ -11,20 +11,26 @@ route-encrypted `voice_listen` to its own mailbox B. That command carries the
 opaque wake-up fields and `offerArmor`: the call offer already encrypted to
 the callee **user PGP**. B does not decrypt `offerArmor`. Before it calls the
 push API, B forwards that ciphertext to the callee mailbox by recipient key
-id (store it when the route is local, otherwise one SI hop). The caller does
+id (store it when the route is local, otherwise one SI hop) and **indexes** the
+same armor under opaque `callId` + `sessionId` (`voice_offer_store`) so a
+killed-app native shell can later `voice_offer_fetch` it. The caller does
 not POST the offer as a second message. After B attaches the voice SSE and
 writes `voice_ready`, B calls the Beamio push API. The caller PWA never calls
 that API directly, and the callee mailbox is not used as a push proxy.
 `callId` is a random wake-up reference; `sessionId` uniquely identifies one
 call. The command and push path must not carry the session key, private key,
 audio, or call plaintext. Those stay inside `offerArmor`. APNs/FCM wake-up is
-only a native ringing hint; the callee reads the offer from its mailbox.
+only a native ringing hint with opaque ids. The shell (or live PWA) decrypts
+the offer locally with the recipient user PGP private key.
 
 Initiator-hidden voice stays in force: the plaintext initiating application
 wallet exists only inside the user-PGP offer. `voice_listen` may carry that
 ciphertext plus opaque session data and the callee routing target. The
 mailbox must not decrypt the offer, and must not put the caller wallet or
-`@BeamioTag` in the command, the push request, or logs.
+`@BeamioTag` in the command, the push request, or logs. The Consumer PWA
+injects the recipient user PGP private into the native shell at Chat / push
+registration so CallKit / Incoming can show `@BeamioTag` + shortened address
+without a live WebView.
 
 ## Roles
 
@@ -87,6 +93,25 @@ Do **not** put `NoPush` on mailbox work used for L0 streams. `NoPush` is Chat/AP
 2. Look up **this process** `l0ListenByPgp` / idle `l0ListenPool`. If an idle `l0_listen` advertised that `userPgpKeyId`, write the inner armor onto that SSE. Do **not** occupy. Return HTTP 200.
 3. Only if no idle L0 match: `getRoute` for Chat liveness / other SI forward.
 
+The temporary `l0_listen` command is intentionally minimal:
+
+```json
+{
+  "command": "l0_listen",
+  "userPgpKeyId": "<temporary encryption-subkey-id>",
+  "timestamp": 1710000000
+}
+```
+
+It is signed by the temporary EOA, but the EOA is not a wire field. SI
+recovers it from the signature and keeps it only for local authorization and
+lifecycle accounting. The temporary PGP key ID is used only by the destination
+mailbox's in-memory `l0ListenByPgp` matcher; it is not an AddressPGP route,
+entry header, public SSE field, or log field. The SSE handshake returns only a
+random, short-lived `listenId` capability. `l0_connect` addresses that
+capability with `targetListenId`; it does not disclose or use a temporary
+wallet address.
+
 `duplex_accept` is mailbox work + user PGP, **not** an SI command. `l0_listen` / `l0_connect` are signed commands.
 
 Missing B’s route public key is a **failure**. Do not fall back to an HTTP sibling field. `gossip_delivery_ack` is a signed route command, not mailbox work. Chat sender receipts that still use historical `NoPush` are Chat-only; `conet-l0d` duplex does not send `NoPush`.
@@ -117,6 +142,8 @@ R ◀──── encrypted business frames over SSE through C ──── B
 ```
 
 Client-to-entry `/post` may use **HTTP or HTTPS**. Native and censorship-sensitive clients should prefer HTTP so that delivery does not depend on a TLS handshake. Browser pages served over HTTPS may still be forced to HTTPS by mixed-content policy. SI-to-SI forwarding uses HTTP on port 80. An entry's HTTPS certificate failure is therefore not evidence that the forwarding plane is broken, and it is not a reason to require TLS for `/post`.
+
+A **native shell** (iOS / Android) does not use `https://{domain}.conet.network/post` for ciphertext delivery. It reads `GuardianNodesInfoV6.getAllNodes` itself and stores `ip_addr` (field `node[3]`), plus the diagnostic `PGPKey` and region. The PWA does not supply or refresh that list. The shell POSTs `{ "data": "<armor>" }` to `http://{ip}/post` or `http://[{ipv6}]/post` on port 80, picks the entry IP, and excludes mailbox B's IP (`A ≠ B`, `C ≠ B` still apply). It derives mailbox B's IP by matching the stored route public key to a node's PGP. The PWA bridge (`postPgpCiphertext`) must not pass an entry, domain, or URL. Domain strings stay diagnostic. If the roster is empty, the bridge returns `no_si_roster` and the PWA may fall back to the browser HTTPS URL until the shell's own `getAllNodes` refresh succeeds. Once a roster exists, the shell does not fall back to a Guardian hostname. Live listen SSE from the WebView still uses the browser HTTPS domain until a shell SSE proxy exists. This is not a new hostname.
 
 ## Listen namespaces
 
@@ -223,6 +250,18 @@ contacts-only or recipient-only delivery, local retention limits, recording
 limits, and optional padding/delayed upload. These choices do not change the
 A/B/C route or create a new SI command.
 
+For real-time voice/video, the same mailbox boundary applies to opaque
+`voice_uplink` and `voice_downlink` frame ciphertext. The receiving Worker
+must isolate each stream by `sessionId + direction`, authenticate before
+buffering, and deliver by `seq`. Exact duplicates are discarded; a different
+payload or chunk metadata for an already-pending sequence is rejected with
+`voice_conflict_v1`. A missing sequence is held for a bounded interval, then
+reported as `voice_gap_v1` so live playback can continue. Video chunks are
+reassembled only for a complete valid `frameId`/`chunkIndex`/`chunkCount` set.
+Payload, buffer, and reassembly limits are mandatory. AAD binds all of those
+fields. UI code consumes only ordered Worker output; B never decrypts or
+reorders the media.
+
 ## Guarantees and non-guarantees
 
 When routing and encryption rules are followed:
@@ -256,9 +295,24 @@ A/B/C are **roles**. Collusion of A+B, C+B, or one operator running all three re
 
 Direct-to-B requests violate the privacy model even if they function. Other protocol violations include encrypting business data to B's route key, targeting an AA without user PGP material, choosing a non-exact tag result, placing a UDP symmetric key in a route-key command, and putting mailbox instructions (`NoPush` / `beamioNoPush`) on the HTTP JSON instead of inside B-decryptable mailbox work.
 
+### Single recipient key ID (group fan-out)
+
+OpenPGP packets expose every encryption **key ID** needed to unwrap the session key. A multi-recipient armor therefore lists every member’s key ID on the wire. Any entry or mailbox that handles that armor can reconstruct a group membership set without decrypting the body.
+
+**Normative for Layer Minus and Chat group V1:**
+
+| Rule | Requirement |
+| --- | --- |
+| **One armor, one recipient** | Business user-PGP armor and mailbox-work inner armor on `/post` must encrypt to **exactly one** encryption key ID |
+| **SI fail-closed** | If SI observes more than one encryption key ID, it **rejects** the post (`rejected_multi_recipient_armor`) and does not store or forward it |
+| **Group fan-out** | A group message is N independent single-recipient posts (same application object, different user PGP). Prefer distinct healthy entries **A ≠ each recipient’s B** so no single entry sees the full fan-out set |
+| **HTTP shape** | Still only `{ "data": "<armor>" }` — no roster, member list, or group id on the JSON |
+
+Group roster, tombstone, and admin proposal objects live **inside** the recipient-user-PGP ciphertext (Chat application composition). SI does not parse them. See [CoNET Chat developer guide — Group chat V1](chat-developer-guide.md#group-chat-v1-small-groups) and [Security limits](security-limits.md#chat-crypto-profile-roadmap).
+
 ## Implementation anchors
 
-- SI key-ID routing, peel-and-forward, and HTTP :80 forward: `src/CoNET-SI/src/util/localNodeCommand.ts` (`getEncryptionKeyIDs`, local decrypt then inner-key forward, `forwardEncryptedSocket`, `BandwidthCount`)
+- SI key-ID routing, peel-and-forward, and HTTP :80 forward: `src/CoNET-SI/src/util/localNodeCommand.ts` (`getEncryptionKeyIDs`, `getSingleEncryptionKeyId` / `rejected_multi_recipient_armor`, local decrypt then inner-key forward, `forwardEncryptedSocket`, `BandwidthCount`)
 - Mailbox persistence, acknowledgement, presence, and socket health: `src/CoNET-SI/src/util/util.ts`
 - Chat listen command and worker-owned SSE loop: `src/SilentPassUI/src/vendor/beamio-chat-sdk/worker/gossip-core.ts`
 - Route diagnostic: `scripts/testConetDepinMessage.ts`

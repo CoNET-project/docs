@@ -31,6 +31,7 @@ correlate their observations.
 | Need | Application profile | Guide |
 |---|---|---|
 | Offline-capable messages | Chat envelope + mailbox delivery | [CoNET Chat developer guide](chat-developer-guide.md) |
+| Small group messages (≤10) | Chat group V1: one user-PGP armor per member; owner-signed roster / tombstone inside ciphertext | [CoNET Chat developer guide — Group chat V1](chat-developer-guide.md#group-chat-v1-small-groups) |
 | Voice messages | Recipient-only Chat manifest + AES-GCM IPFS fragment | [CoNET Chat developer guide](chat-developer-guide.md) |
 | Real-time voice MVP | Random temporary voice SSE per wallet + encrypted uplink/downlink frames | [CoNET Chat developer guide](chat-developer-guide.md) |
 | Presence, native shell status, and delivery receipt | `wallet_online_query`, then `wallet_native_wake_query`, plus acknowledgement. Both queries go through an entry that is not the destination mailbox, so that mailbox does not see the querier's IP | [CoNET Chat developer guide](chat-developer-guide.md) |
@@ -81,6 +82,11 @@ Content-Type: application/json
 Only `data` belongs in the HTTP JSON. Application fields, mailbox work, and
 delivery policy stay inside the encrypted object. Do not add plaintext
 side-channel fields.
+
+Business and mailbox-work OpenPGP armor must encrypt to **exactly one**
+encryption key ID. Multi-recipient armor leaks a membership set to the
+routing hop; SI rejects it (`rejected_multi_recipient_armor`). Chat group V1
+fans out N independent single-recipient posts instead of one multi-key armor.
 
 Node-to-node forwarding uses the existing SI transport. Applications do not
 select an arbitrary mailbox IP as their direct endpoint.
@@ -161,13 +167,28 @@ participants send AES-GCM ciphertext through `voice_uplink` and
 duplex application relay made from two one-way paths; it is not WebRTC, raw
 UDP, or a persistent Chat-history stream.
 
+For live media, the receiving Worker authenticates each AES-GCM frame and
+maintains a bounded reorder buffer per `sessionId + direction`. It delivers
+frames by `seq`, ignores exact duplicates, rejects conflicting reuse of a
+sequence with `voice_conflict_v1`, and emits `voice_gap_v1` after a bounded
+gap timeout before continuing. Video chunks are reassembled by
+`frameId`/`chunkIndex`/`chunkCount`; invalid or oversized input is discarded.
+The UI consumes only ordered, reassembled Worker events. AAD binds the
+session, direction, sequence, timestamp, and chunk metadata. SI remains an
+opaque relay and does not reorder or decrypt media.
+
 The voice route keeps the initiating application wallet inside the
 recipient-user-PGP offer. An outgoing `voice_listen` also carries that
 ciphertext as `offerArmor`. The caller's mailbox forwards `offerArmor` to the
-callee mailbox and does not decrypt it. Wake-up metadata still exposes only
-opaque session/call identifiers plus the callee routing target. “Both systems
-use a relay” is not a privacy comparison; compare which identity, IP, content,
-timing, and session fields each role actually receives.
+callee mailbox, indexes it under opaque `callId` + `sessionId` for
+`voice_offer_fetch`, and does not decrypt it. Wake-up metadata still exposes
+only opaque session/call identifiers plus the callee routing target. A
+killed-app native shell decrypts locally with the recipient user PGP private
+key injected by the PWA. That shell posts `voice_offer_fetch` to
+`http://{entryIp}/post` from the Guardian IP roster it reads with `getAllNodes` (the PWA does not supply that list) and does not use a
+`*.conet.network` URL for the fetch. “Both systems use a relay” is not a privacy
+comparison; compare which identity, IP, content, timing, and session fields
+each role actually receives.
 
 ## 6. Use exact wallet resolution
 

@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BOOK_DIR="${ROOT}/gitbook"
 REMOTE_HOST="${REMOTE_HOST:-38.102.126.50}"
-REMOTE_USER="${REMOTE_USER:-root}"
+REMOTE_USER="${REMOTE_USER:-peter}"
 REMOTE_WWW="${REMOTE_WWW:-/var/www/gitbook.conet.network}"
 DOMAIN="${DOMAIN:-gitbook.conet.network}"
 NGINX_AVAIL="/etc/nginx/sites-available/${DOMAIN}.conf"
@@ -73,11 +73,11 @@ REMOTE_WWW="$4"
 REMOTE_NGINX_TEMPLATE="$5"
 trap 'rm -f "${REMOTE_NGINX_TEMPLATE}"' EXIT
 
-ln -sfn "${NGINX_AVAIL}" "${NGINX_ENABLED}"
+sudo ln -sfn "${NGINX_AVAIL}" "${NGINX_ENABLED}"
 
-if [[ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
+if ! sudo test -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"; then
   # HTTP-only bootstrap for first cert
-  cat > "${NGINX_AVAIL}" <<EOF
+  sudo tee "${NGINX_AVAIL}" >/dev/null <<EOF
 server {
     listen 80;
     listen [::]:80;
@@ -105,9 +105,9 @@ server {
     }
 }
 EOF
-  nginx -t
-  systemctl restart nginx
-  certbot certonly --webroot -w /var/www/certbot \
+  sudo nginx -t
+  sudo systemctl restart nginx
+  sudo certbot certonly --webroot -w /var/www/certbot \
     -d "${DOMAIN}" \
     --non-interactive --agree-tos \
     --register-unsafely-without-email \
@@ -115,11 +115,11 @@ EOF
 fi
 
 # The checked-in template is the single source for the final TLS vhost.
-install -m 0644 "${REMOTE_NGINX_TEMPLATE}" "${NGINX_AVAIL}"
+sudo install -m 0644 "${REMOTE_NGINX_TEMPLATE}" "${NGINX_AVAIL}"
 
-nginx -t
+sudo nginx -t
 # Full restart: reload alone has left stale workers on this host before
-systemctl restart nginx
+sudo systemctl restart nginx
 echo "nginx OK for ${DOMAIN}"
 REMOTE
 

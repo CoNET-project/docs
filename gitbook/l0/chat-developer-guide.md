@@ -110,9 +110,40 @@ PGP session key, private key, or audio.
 
 The API sends the metadata-only wake-up to registered native devices:
 `ios_voip` uses APNs PushKit/CallKit and `android` uses high-priority FCM.
-The native shell then opens the system call UI and the PWA obtains the
-encrypted offer through its normal Chat mailbox path. A push response is not
-proof that the call offer was delivered or answered.
+A push response is not proof that the call offer was delivered or answered.
+
+#### Killed-app shell identity (CallKit / Incoming)
+
+`offerArmor` is too large for APNs/FCM. While forwarding the user-PGP armor,
+the caller's mailbox also indexes that ciphertext on the callee mailbox under
+opaque `callId` + `sessionId` (`voice_offer_store`). A native shell whose PWA
+is not running:
+
+1. Reports the system incoming UI with a temporary opaque label.
+2. Posts `voice_offer_fetch` (encrypted to the callee mailbox **route PGP**,
+   through entry C ≠ B) using only the push `callId` / `sessionId`.
+   Inside the native shell that POST is `http://{entryIp}/post` from the
+   Guardian IP roster, excluding mailbox B's IP. The shell chooses the entry.
+   Browser clients still use `https://{domain}.conet.network/post`.
+3. Decrypts the returned armor **locally** with the recipient **user PGP**
+   private key that the PWA previously injected into the shell Keychain /
+   EncryptedSharedPreferences (at Chat route register / push bind, and on
+   every PGP key change).
+4. Recovers the caller EOA from `callerSignature`, looks up `@BeamioTag` for
+   that address, and updates CallKit / Incoming to a larger `@tag` plus a
+   smaller shortened address. Mailbox never decrypts the offer.
+
+```json
+{
+  "command": "voice_offer_fetch",
+  "callId": "opaque-call-id",
+  "sessionId": "voice-session-opaque-id",
+  "timestamp": 1710000000
+}
+```
+
+Do **not** inject the EOA mnemonic into the shell for display. Do **not** put
+caller wallet or tag into the push payload.
 
 ### Implemented initiator-hidden voice protocol
 
@@ -151,6 +182,32 @@ forwards `offerArmor` without decrypting it, checks the opaque session and
 expiry, and relays encrypted frames without learning the initiating
 application wallet.
 Comparisons with other relays must use the actual fields visible to each role.
+
+### Real-time media ordering
+
+After AES-GCM authentication, the receiving Worker—not the UI—processes each
+voice or video frame in a buffer isolated by `sessionId + direction`. `seq` is
+the only ordering key:
+
+1. `[2, 1, 3]` is delivered as `[1, 2, 3]` when the gap closes.
+2. An exact duplicate is ignored.
+3. A second frame with the same `seq` but different payload or frame metadata
+   is rejected and emits `voice_conflict_v1`.
+4. A missing sequence is held only for a bounded timeout. The receiver then
+   emits `voice_gap_v1` and continues with the next available frame; it does
+   not invent or silently replay the missing frame.
+5. Late frames behind the delivery cursor are discarded.
+
+Video frames may be split into chunks. A complete set with the same
+`frameId`, valid `chunkIndex`, and `chunkCount` is reassembled before the UI
+event is emitted. Payload size, pending-frame count, chunk count, and
+reassembly memory are bounded. The protocol is real-time best effort: it does
+not promise unlimited retransmission.
+
+The AES-GCM AAD binds the session, direction, sequence, timestamp, and video
+frame/chunk metadata. Do not use a continuous OpenPGP media stream; a lost
+packet must not prevent later frames from being decrypted. The relay remains
+opaque and does not perform ordering or decryption.
 
 ## Native push and call-UI capability registration
 
@@ -652,7 +709,7 @@ UI code does not fetch history itself. It calls the module:
 
 Prefer the SDK Worker over copying OpenPGP onto the UI thread. Host responsibilities the SDK still expects:
 
-- inject `eoa`, user PGP private/public, **own route public key**, and the Guardian node list;
+- inject `eoa`, user PGP private/public, and **own route public key** (the shell uses that route key to recognize mailbox B). The Guardian `ip_addr` list is **not** injected: the shell reads `getAllNodes` itself and POSTs to `http://{ip}/post` (domain stays diagnostic);
 - never send the EOA private key into a Worker if your product forbids it — current CoNET Chat Worker derives listen/send from material the host already holds; keep secrets out of logs either way;
 - implement UI ingest: verify (if not already), classify typed payloads, dual receipts, create-session-on-recover;
 - register coupon / tag / merchant data on your own stores; the SDK is the gossip plane.
@@ -672,10 +729,78 @@ Walk this order. Do not skip to “the parser is broken.”
 7. Sender used entries **A ≠ B**. Direct-to-B is not the product path.
 8. Recipient `isMyRoute` / wallet↔route hash consistency can block listen and presence without blocking user-PGP store.
 
+## Group chat V1 (small groups)
+
+<a id="group-chat-v1-small-groups"></a>
+
+Group chat V1 is an **application composition** over the same single-recipient
+Layer Minus path. It does **not** introduce a multi-recipient OpenPGP armor,
+an SI group command, or a shared group mailbox.
+
+| Constraint | Value |
+| --- | --- |
+| Max members | **10** (`GROUP_V1_MAX_MEMBERS`) |
+| Delivery | One OpenPGP encrypt per recipient **user PGP**; N independent `POST { data }` |
+| SI | Rejects multi-recipient armor (`rejected_multi_recipient_armor`) |
+| Roster authority | **Owner-only** signed `conet_group_roster_v1` |
+| Larger groups / FS | Deferred to Chat crypto **V3** (MLS / epoch) — [security limits](security-limits.md#chat-crypto-profile-roadmap) |
+
+### Typed objects (inside user-PGP ciphertext)
+
+| Type | Who signs | Role |
+| --- | --- | --- |
+| `conet_group_roster_v1` | Owner EOA | Canonical membership + admins; `version`, `prevRosterHash`, `members[]`, `policy`, validity window |
+| `conet_group_admin_proposal_v1` | Admin EOA | Proposal only — does **not** change local roster until the owner issues the next roster |
+| `conet_group_tombstone_v1` | Owner EOA | Ends the group; clients stop accepting new messages for that `groupId` |
+| `conet_group_message_v1` | Sender EOA | Body bound to `groupId`, `rosterHash`, `sendId`, `seq`, expiry |
+| `conet_group_delivery_v1` | (carrier) | Optional padding wrapper around a message before encrypt |
+
+Signatures are EIP-191 over `CoNET <kind> v1\n` + canonical JSON (signature field omitted from the hash). Recipients verify and reject on mismatch.
+
+### Roster chain
+
+1. First roster: `version === 1`, `prevRosterHash === null`.
+2. Next roster: `version === current + 1` and `prevRosterHash === keccak256(utf8(canonicalJSON(current)))`.
+3. Owner must remain a member; admins ⊆ members; no duplicate EOAs; member count ∈ `[1, 10]`.
+4. Clients apply only after `assertNextGroupRosterV1` (or equivalent). Forks and skipped versions fail closed.
+
+### Delivery privacy
+
+```text
+for each member except sender:
+  pad body to fixed bucket (default 4096 bytes)
+  EIP-191 envelope (same Chat outer shape)
+  OpenPGP encrypt to that member’s user PGP  (exactly one key)
+  POST { data } through healthy entry A ≠ that member’s mailbox B
+```
+
+- Prefer **distinct entries** across the fan-out so no single entry observes the full recipient set.
+- Bound concurrency (SDK default ≤ 4, typically 2) and add small jitter between posts.
+- Do **not** compress before encrypt when using fixed-bucket padding.
+- Verify the recipient OpenPGP fingerprint against the active roster before encrypt.
+- Logs must not print roster, member EOAs, fingerprints, body, or armor.
+
+Partial fan-out success is application-visible (`acceptedRecipients` /
+`failedRecipients`). Transport `2xx` on one recipient is not group delivery.
+
+### Client apply order
+
+1. Decrypt + verify outer Chat envelope (`verifyMessage` → sender).
+2. Parse typed group object; verify object signature.
+3. For messages: require `rosterHash` to match the locally accepted roster;
+   reject if tombstoned or expired.
+4. For proposals: store pending; wait for owner roster.
+5. For roster / tombstone: apply only if owner-signed and chain rules pass.
+
+Reference implementation: `vendor/beamio-chat-sdk` (`group.ts`,
+`GossipCore.sendGroup`). SDK is the protocol surface; UI only displays results.
+
 ## Checklist
 
 - [ ] Sender registered (`regiestChatRoute` + `searchKey` shows the local subkey)
 - [ ] Business encrypt-to recipient **EOA user PGP**; listen/ACK/presence encrypt-to **route PGP**
+- [ ] Group V1 uses **one armor per member** (no multi-recipient OpenPGP); SI rejects multi-key armor
+- [ ] Group roster / tombstone are owner-signed; proposals do not mutate roster alone
 - [ ] Listen includes `listenKind: "chat"` and **C ≠ B**
 - [ ] `connect_timeout` starts after `fetch`; `listening` requires `res.ok` + body
 - [ ] Peel / hop-sign failure is diagnosed before “switch C” or “parser broken”

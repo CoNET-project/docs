@@ -5,8 +5,11 @@ over CoNET L0 resources.**
 
 **Maturity: Implemented capability.** Beamio Consumer, Merchant OS, and POS
 already use this infrastructure. It is not a finished public messenger with
-groups or channels. Real-time voice is an implemented encrypted relay
-capability; groups and channels remain outside the current product.
+channels or large groups. Real-time voice is an implemented encrypted relay
+capability. **Group chat V1** (≤10 members, per-recipient OpenPGP fan-out) is
+specified for SDK clients; product UI coverage may lag the wire protocol.
+Larger groups and MLS / epoch key agreement remain a later crypto profile
+([security limits](../l0/security-limits.md#chat-crypto-profile-roadmap)).
 
 ## Native voice-call wake-up
 
@@ -14,9 +17,22 @@ Beamio Chat voice calls can wake a registered native device with an opaque,
 metadata-only VoIP/FCM push. A random `callId` and `sessionId` identify the
 temporary call; neither is derived from the caller's wallet or tag.
 The push never contains private keys, PGP session keys, audio, or plaintext.
-The native shell presents the system call UI, while the encrypted offer and
-media continue through the normal Chat mailbox path. Push delivery is only a
-ringing hint and does not mean that the call was answered.
+The native shell presents the system call UI. Push delivery is only a ringing
+hint and does not mean that the call was answered. When the Consumer PWA is
+killed, the shell still shows caller identity without a live WebView: the PWA
+injects the recipient user PGP private key into the shell at Chat / push
+registration (and updates it when the key changes); the shell fetches the
+indexed `offerArmor` from the callee mailbox with `voice_offer_fetch` (opaque
+`callId` + `sessionId` from the push), decrypts locally, recovers the caller
+from `callerSignature`, and looks up `@BeamioTag`. CallKit / Incoming then
+shows a larger `@tag` and a smaller shortened address. Mailbox nodes never
+decrypt the offer; the push still carries no caller wallet or tag. The shell
+reads Guardian `getAllNodes` itself (no PWA roster), stores `ip_addr`, and posts `voice_offer_fetch` to
+`http://{entryIp}/post` (body `{ "data" }` only), choosing an entry IP that
+is not mailbox B. The PWA delivery bridge uses the same function and must
+not pass an entry URL. Browser clients still use
+`https://{domain}.conet.network/post`. A live listen SSE from the WebView
+still uses that HTTPS domain until a shell SSE proxy exists.
 
 A caller first learns whether the contact is online, then asks that contact’s
 mailbox the CoNET Chat command `wallet_native_wake_query`. The signed command
@@ -601,13 +617,15 @@ voice relay:
 
 The caller mailbox attaches the temporary SSE using the encrypted route and
 opaque session identifier. In the same command it forwards `offerArmor` to
-the callee mailbox and does not decrypt it. It does not receive the initiating
+the callee mailbox and does not decrypt it. It also indexes that ciphertext
+under `callId` + `sessionId` (`voice_offer_store`) so a killed-app shell can
+`voice_offer_fetch` the armor later over `http://{entryIp}/post`. It does not receive the initiating
 application wallet as `walletAddress`, `callerEoa`, `callId`, or another
-reversible field. The recipient learns the initiating wallet only after
-decrypting the call offer and recovering the caller from `callerSignature`.
-The offer body’s address or tag is not that proof. `@BeamioTag` is looked up
-for the recovered address. The callee route remains an operational delivery
-target.
+reversible field. The recipient (PWA or native shell with injected user PGP)
+learns the initiating wallet only after decrypting the call offer and
+recovering the caller from `callerSignature`. The offer body’s address or tag
+is not that proof. `@BeamioTag` is looked up for the recovered address. The
+callee route remains an operational delivery target.
 
 The current wire shape excludes the initiating application wallet from
 mailbox-visible voice commands, wake-up push metadata, and voice-frame relay
@@ -616,7 +634,9 @@ fields. The callee routing target remains an operational destination field.
 ## What remains under development
 
 - Broader client coverage beyond the current Beamio surfaces
-- Groups and channels
+- Product UI for Group chat V1 across Consumer / Merchant / POS (wire + SDK
+  helpers exist; see [Group chat V1](../l0/chat-developer-guide.md#group-chat-v1-small-groups))
+- Channels and large groups (Chat crypto **V3** / MLS — research)
 - Production-grade voice-call media adaptation, congestion control, codec
   portability and stronger traffic-analysis resistance
 

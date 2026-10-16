@@ -87,8 +87,10 @@ the SI pool. `conet-l0d start --debugSI [SI]` pins mailbox B only.
 One local TCP is one incarnation. SI never parses `duplex_*` JSON.
 
 ```text
-1. Initiator: l0_listen (command) on mailbox B for a temporary wallet.
-   Command includes userPgpKeyId. POST via random entry C ≠ B.
+1. Initiator: `l0_listen` (command) on mailbox B. The signed command contains
+   only `userPgpKeyId` and `timestamp`; it does **not** contain the temporary
+   EOA. SI recovers the signer only for local capability bookkeeping. POST via
+   random entry C ≠ B. SI returns a fresh random `listenId` capability.
 2. duplex_offer: encrypt to the destination's **registered** user PGP;
    mailbox-work wrap to that destination's **registered** mailbox.
    JSON announces the initiator temp line (listenWallet, listenUserPgp,
@@ -96,9 +98,10 @@ One local TCP is one incarnation. SI never parses `duplex_*` JSON.
 3. Responder: own temp l0_listen, then duplex_accept encrypted to initiator
    listenUserPgp, mailbox-work wrap to initiator listenRoutePgp.
    POST via random entry A ≠ initiator B.
-4. Mailbox B of the initiator: unwrap work → match idle l0_listen by inner
-   user PGP (not getRoute) → SSE gossip. Initiator decrypts, writes
-   responseChunk, then l0_connect to the responder temp mailbox.
+4. Mailbox B of the initiator: unwrap work → match idle `l0_listen` by inner
+   user PGP (not `getRoute`) → SSE gossip. Initiator decrypts, writes
+   responseChunk, then `l0_connect` to the responder using its opaque
+   `targetListenId`.
 5. Only after the initiator occupies the responder listen may the responder
    reverse-occupy the initiator mailbox. Occupying the initiator SSE first
    turns it into a pipe and **drops** the Chat accept.
@@ -110,9 +113,12 @@ posts one `duplex_reject` (`retryable=true`) to the initiator request listen
 open a new connection (new temporary wallet and offer). Do not occupy the
 initiator SSE only to deliver reject.
 
-`l0_connect` is a signed command to the **peer's** mailbox route PGP
-(`targetWallet` = that peer's temp listen wallet). It must not share a race
-with mailbox-work `duplex_accept` on the same idle SSE.
+`l0_connect` is a signed command to the **peer's** mailbox route PGP. Its
+only target selector is the one-time opaque `targetListenId` returned by the
+peer's `l0_listen` SSE handshake; `targetWallet` is not a wire fallback.
+The command does not carry the temporary connector EOA. SI recovers the
+signer internally after signature verification. It must not share a race with
+mailbox-work `duplex_accept` on the same idle SSE.
 
 ## SI attachment behavior
 
@@ -134,6 +140,11 @@ Once attached, SI treats application bytes as opaque. It must not:
 
 - decrypt the endpoint-to-endpoint stream key;
 - parse the origin application's byte protocol;
+
+The `l0_listen` handshake exposes only the random `listenId`. It must not
+return the temporary EOA, mailbox `nodeWallet`, connector address, or PGP key
+ID. `listenId` is CSPRNG-generated, single-use, scoped to the live SSE, and
+must not be derived from an EOA, timestamp, route key, or PGP key ID.
 - save active stream frames as offline Chat messages;
 - send Chat push notifications for stream frames; or
 - move a failed stream onto another application transport and report success.
@@ -217,6 +228,41 @@ only a bounded queue, resume on drain, and close on overflow or drain timeout.
 A receive-only SSE can remain healthy after its request body has ended.
 `readableEnded` alone is therefore not proof that the line is stale. Use
 write failure, close/error events, and bounded liveness policy.
+
+## Real-time voice and video frames
+
+Voice and video media frames are application ciphertext carried over the
+opaque attached lines. The relay does not reorder, decrypt, or persist them.
+Each participant maintains an independent reorder buffer keyed by
+`sessionId + direction`; a timestamp is metadata only and never replaces the
+sequence number.
+
+The receiver must:
+
+- deliver contiguous `seq` values in order;
+- discard an exact duplicate `(seq, payload, frame metadata)`;
+- reject a pending frame that reuses `seq` with different payload or metadata
+  and emit `voice_conflict_v1`;
+- wait only for a bounded gap interval, then emit `voice_gap_v1` and continue
+  real-time delivery without pretending the missing frame was received;
+- keep late frames behind the delivery cursor from being delivered again;
+- reassemble video chunks only when `frameId`, `chunkIndex`, and `chunkCount`
+  form a complete, valid set.
+
+Implementations must cap payload size, pending frame count, pending chunk
+count, and reassembly memory. Invalid sequence numbers and chunk metadata are
+discarded. These rules provide bounded live playback, not infinite
+retransmission or recovery of lost media.
+
+The end-to-end AES-GCM associated data binds the session, direction, sequence,
+timestamp, and (for video) frame/chunk metadata. A frame must be authenticated
+before it enters the reorder buffer. The Worker performs ordering, duplicate
+suppression, conflict/gap event emission, and chunk reassembly; UI code
+consumes only the resulting ordered events.
+
+The same rules apply to `voice_uplink` and `voice_downlink`. Do not use a
+continuous OpenPGP stream for media frames: one lost packet must not make the
+remaining real-time frames undecryptable.
 
 ## Platform implementations
 

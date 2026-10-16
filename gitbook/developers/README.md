@@ -66,7 +66,9 @@ itself proof of production availability or an audit.
 | TreasuryBridgeV3 | `0xa208982212978550594A7FEEB70a61665d129003` |
 
 Do not use deprecated `https://rpc.conet.network`. Do not invent an SI
-hostname; use existing Guardian domains from the live registry.
+hostname; use existing Guardian domains from the live registry. Native
+shells POST ciphertext to the same nodes by Guardian `ip_addr`
+(`http://{ip}/post`), not by a new hostname.
 
 ## Public source
 

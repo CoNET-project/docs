@@ -167,8 +167,11 @@ The initiator-hidden field boundary is now enforced for voice route commands.
 only an opaque random `callId`, and voice frames target an opaque session ID.
 The initiating application wallet remains inside the recipient-user-PGP offer.
 An outgoing `voice_listen` may attach that offer as `offerArmor`. The
-executing mailbox forwards the ciphertext to the callee mailbox and must not
-decrypt it.
+executing mailbox forwards the ciphertext to the callee mailbox, indexes it
+by opaque `callId` + `sessionId` for killed-app `voice_offer_fetch`, and must
+not decrypt it. Native shells decrypt only with the recipient user PGP private
+key injected by the PWA; do not put EOA mnemonics or caller identity into the
+push payload.
 
 The implemented initiator-hidden profile provides:
 
@@ -193,13 +196,19 @@ media relay actually receives and logs.
 
 ### Chat crypto profile (roadmap)
 
+<a id="chat-crypto-profile-roadmap"></a>
+
 Acknowledging the gap does not raise the live grade. Until a later profile ships, do not describe Chat as forward-secret.
 
 | Profile | Cryptography | Status |
 | --- | --- | --- |
-| **V1** | Long-term recipient OpenPGP (per-message session key wrapped to that key) | **Live** |
+| **V1** | Long-term recipient OpenPGP (per-message session key wrapped to that key). **1:1** and **Group V1** (≤10): one encrypt per recipient; SI rejects multi-recipient armor | **Live** (1:1); Group V1 wire + SDK |
 | **V2** | AddressPGP / OpenPGP handshake → X25519 identity and prekey bundle → Double Ratchet session keys on later messages; L0 still carries the ratchet ciphertext | **Planned** |
-| **V3** | MLS (or equivalent tree-based group key agreement) instead of one PGP encrypt per member | **Research** |
+| **V3** | MLS (or equivalent tree-based group key agreement) instead of one PGP encrypt per member — required for large groups, efficient member remove, and group forward secrecy | **Research** |
+
+**Group V1 is still crypto profile V1.** It improves **routing privacy** (no shared multi-key armor; fan-out across entries) and freezes owner-signed roster state. It does **not** provide MLS-style forward secrecy, post-compromise security, or efficient rekey on member remove. Compromising a member’s long-term OpenPGP private key still exposes that member’s stored V1 group ciphertext. Do not market Group V1 as “MLS-ready” or “forward-secret groups.”
+
+**Evolution gate for Group V2+ / MLS:** define membership epoch, sender keys, and remove semantics so that (a) a removed member cannot decrypt messages after their leave epoch, and (b) ciphertext size and fan-out cost do not grow linearly with membership for large N. Until that profile ships, keep `GROUP_V1_MAX_MEMBERS = 10` and per-recipient OpenPGP.
 
 AddressPGP remains the wallet identity, offline discovery, mailbox route, initial handshake, and session-recovery root. On-demand new wallets reduce *future* correlation after a leak; they do not decrypt-protect already captured V1 armor.
 
@@ -273,7 +282,7 @@ If a future Fetch-and-Close client uses TLS 1.3 0-RTT for performance, 0-RTT has
 
 ## Mailbox isolation fails under collusion
 
-A/B/C separation prevents an ordinary mailbox from seeing the client’s direct IP. CoNET Chat presence (`wallet_online_query`) and native shell status (`wallet_native_wake_query`) both require that entry hop: the querier posts to C, and C forwards to B. A direct post to B would hand B the querier's IP and is non-compliant. The split is a **role** split, not a proof that A, B, and C are independent operators.
+A/B/C separation prevents an ordinary mailbox from seeing the client’s direct IP. CoNET Chat presence (`wallet_online_query`) and native shell status (`wallet_native_wake_query`) both require that entry hop: the querier posts to C, and C forwards to B. A direct post to B would hand B the querier's IP and is non-compliant. Native shells apply the same split by IP: `POST http://{entryIp}/post` must not target mailbox B's `ip_addr`. The split is a **role** split, not a proof that A, B, and C are independent operators.
 
 | Collusion | Combined view |
 | --- | --- |

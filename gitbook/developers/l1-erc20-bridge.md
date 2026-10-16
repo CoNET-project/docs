@@ -8,7 +8,7 @@ An ERC-20 issued on another chain is **not** a CoNET asset. It enters the ecosys
 
 Architecture detail: [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md).
 
-The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a production custody integration guide. Its deployed Shadow is read-only; Obstacles 1–5 Accepted does not open mint, release, or production settle. Paid-GB miner `voteBridgeMint` is paused (Phase D, 2026-10-15). Treasury miner `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed` (2026-10-15). Base → CoNET receipt proofs still need the [patch-geth](https://github.com/CoNET-project/patch-geth) execution client, which is not installed. AAC is not a Base or CoNET light client.
+The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a production custody integration guide. Its deployed Shadow is read-only; Obstacles 1–5 Accepted does not open mint, release, or production settle. Paid-GB miner `voteBridgeMint` is paused (Phase D, 2026-10-15). Treasury miner `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed` (2026-10-15). Checked CoNET execution clients run the [patch-geth](https://github.com/CoNET-project/patch-geth) build. The CoNET checkpoint stores Ethereum period 1884. A 0.01 Base USDC receipt in that period is covered and settled. `sourceInitiateOpen` is true on Base and CoNET. AAC is not a Base or CoNET light client.
 
 ## The only Treasury
 
@@ -130,7 +130,7 @@ cast call $T "requiredVotes()(uint256)" --rpc-url $RPC
 cast call $T "owner()(address)" --rpc-url $RPC
 ```
 
-A reproduced snapshot (re-read for a current figure) is in [L1 decentralization](../l1/decentralization.md): four miner addresses, quorum **3**, and `owner()` equal to one miner.
+A reproduced snapshot (re-read for a current figure) is in [L1 decentralization](../l1/decentralization.md). On 2026-10-15 both chains have one miner, the owner, and quorum **1**.
 
 ```ts
 import { ethers } from 'ethers'

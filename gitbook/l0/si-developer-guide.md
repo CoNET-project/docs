@@ -8,6 +8,19 @@ CoNET-SI is the Layer Minus **service node**. It accepts OpenPGP armor on `POST 
 
 Use this page to build a client against SI. Developer-track index: [L0 development](../developers/l0.md). For a Chat product on top of the same plane, continue with the [CoNET Chat developer guide](chat-developer-guide.md).
 
+## Opaque real-time media relay
+
+SI may carry signed `voice_uplink` and `voice_downlink` commands after the
+application has established its temporary session. SI routes the ciphertext
+but does not decrypt, reorder, persist, or interpret media frames. The client
+Worker authenticates frames, isolates streams by `sessionId + direction`,
+orders by `seq`, suppresses exact duplicates, emits
+`voice_conflict_v1` for conflicting sequence reuse, and emits
+`voice_gap_v1` after a bounded gap timeout. Video chunk reassembly is
+client-side and bounded by payload, buffer, and chunk limits. `/post` remains
+`{ "data": "<armor>" }` only; no media metadata is added as a cleartext
+field.
+
 ## What you are calling
 
 | Piece | Role |
@@ -41,14 +54,21 @@ If mailbox **B** must do extra work (for example skip APNs), put that instructio
 
 Client → entry may use **HTTP or HTTPS**. HTTPS is common in browsers because mixed content forbids `http://` from an `https://` page. **HTTP is sufficient** for confidentiality: the body is already OpenPGP ciphertext. **SI → SI** forwarding is **HTTP on port 80** only. Do not treat an entry TLS certificate problem as “the DePIN mesh is down.”
 
-Typical URLs:
+Typical **browser** URLs:
 
 ```text
 https://{domain}.conet.network/post
 http://{domain}.conet.network/post
 ```
 
-Do not invent a new hostname. Use the Guardian **domain** from `getAllNodes`. Do not default-dial mailbox **B** for Chat, listen, ACK, presence, or UDP. Pick a healthy entry **A** or **C** with `A ≠ B` and `C ≠ B`. LayerMinus mining collectors are the documented exception: they dial the target SI directly.
+**Native shells** (iOS / Android) POST ciphertext directly to the Guardian **IP** from `getAllNodes` field `node[3]` (`ip_addr`):
+
+```text
+http://{ipv4}/post
+http://[{ipv6}]/post
+```
+
+Body remains `{ "data": "<armor>" }` only. The shell owns the roster by calling `getAllNodes` itself (the PWA does not supply `ip_addr`), chooses a healthy entry, and excludes mailbox B's IP. The embedded PWA must not pass an entry URL. The Guardian domain stays diagnostic and is not the HTTP host. Do not invent a new hostname. Browser PWAs keep the domain URLs above (mixed content). Do not default-dial mailbox **B** for Chat, listen, ACK, presence, or UDP. Pick a healthy entry **A** or **C** with `A ≠ B` and `C ≠ B`. LayerMinus mining collectors are the documented exception: they dial the target SI directly. Live listen SSE from a WebView still uses the browser HTTPS domain until a shell SSE proxy exists.
 
 A **404** with a body such as `body has not PGP message` means SI rejected invalid armor. That is an intentional reject, not proof that the node process is down.
 
@@ -95,11 +115,18 @@ Do not mix encryption targets.
 
 Encrypt to the **recipient’s user PGP**. SI only sees the OpenPGP key ID and routes to that key’s mailbox.
 
-Typical use: Chat text, typed application JSON, `udp_subscribe`, and
-application stream offers. UDP subscriptions and stream offers may carry
-endpoint encryption material, so SI forwards their user-PGP armor without
-parsing the application object. Sender delivery receipts use this inner armor,
-then wrap it as
+The armor must expose **exactly one** encryption key ID. If SI reads more than
+one key ID on business armor or on the inner armor of mailbox work, it rejects
+the post (`rejected_multi_recipient_armor`) and does not store or forward it.
+That fail-closed rule prevents a multi-recipient OpenPGP packet from revealing
+a Chat group membership set to an untrusted routing hop. Group V1 fans out N
+single-recipient posts instead — see [Group chat V1](chat-developer-guide.md#group-chat-v1-small-groups).
+
+Typical use: Chat text, typed application JSON, Chat group V1 per-member
+delivery, `udp_subscribe`, and application stream offers. UDP subscriptions and
+stream offers may carry endpoint encryption material, so SI forwards their
+user-PGP armor without parsing the application object. Sender delivery receipts
+use this inner armor, then wrap it as
 [mailbox work](#3-mailbox-work-envelope-mailbox-b-decrypts) with
 `NoPush: true`.
 
@@ -107,7 +134,7 @@ then wrap it as
 application object
   → optional EIP-191 envelope  (Chat uses this)
   → base64(JSON)
-  → OpenPGP encrypt to R userPublicKeyArmored
+  → OpenPGP encrypt to R userPublicKeyArmored   (exactly one recipient key)
   → POST { data } to entry A ≠ B
 ```
 
@@ -168,7 +195,9 @@ Source: CoNET-SI `localNodeCommandSocket`. Encrypt the command family to **route
 | `command` | Encrypt to | HTTP / SSE | Notes |
 | --- | --- | --- | --- |
 | **`mailbox_listen`** | Own mailbox **B** route PGP | Long SSE via entry **C ≠ B** | Preferred Chat mailbox command. Required `walletAddress`; optional opaque `instanceId`. Multiple instances per wallet are retained and receive fan-out copies. |
-| `voice_listen` | Own mailbox **B** route PGP | Separate temporary SSE via entry **C ≠ B** | Random `sessionId`; separate voice pool. Never occupies `mailbox_listen`. An outgoing call includes opaque push metadata and `offerArmor` (callee user-PGP ciphertext). B forwards `offerArmor` to the callee mailbox without decrypting it, then after `voice_ready` calls `/api/voiceCallPush`. |
+| `voice_listen` | Own mailbox **B** route PGP | Separate temporary SSE via entry **C ≠ B** | Random `sessionId`; separate voice pool. Never occupies `mailbox_listen`. An outgoing call includes opaque push metadata and `offerArmor` (callee user-PGP ciphertext). B forwards `offerArmor` to the callee mailbox without decrypting it, indexes it under `callId`+`sessionId`, then after `voice_ready` calls `/api/voiceCallPush`. |
+| `voice_offer_store` | Callee mailbox **B** route PGP | Short POST via entry ≠ B | Index user-PGP `offerArmor` by opaque `callId`+`sessionId`. Capability auth via `sessionId` (≥16). Never decrypt. |
+| `voice_offer_fetch` | Own mailbox **B** route PGP | Short POST via entry **C ≠ B** | Return indexed `offerArmor` for killed-app shell local decrypt. Same capability auth. |
 | `voice_uplink` / `voice_downlink` | Peer mailbox **B** route PGP | Short POST via entry **A ≠ B** | Opaque AES-GCM frame addressed by `targetSessionId`; no session key or plaintext audio. |
 | `voice_unlisten` | Own mailbox **B** route PGP | Short POST via entry **C ≠ B** | Closes one temporary voice session. |
 | `mining` + `listenKind: "chat"` | Own mailbox **B** route PGP | Long SSE via entry **C ≠ B** | Chat / Merchant OS / Alliance mailbox. Required fields: `walletAddress`, `algorithm: "aes-256-cbc"`, `Securitykey` (session key) |
@@ -178,8 +207,8 @@ Source: CoNET-SI `localNodeCommandSocket`. Encrypt the command family to **route
 | `wallet_native_wake_query` | Contact’s mailbox **B** route PGP | **Entry C ≠ B only.** Never dial B | CoNET Chat native-shell status, sent after presence. Same signer, target, and ±600s timestamp. The entry hop hides the querier's IP from mailbox B. Success: `{ ok: true, wallet, nativeWakeable }`. `true` means a registered iOS, Android, Windows, Linux, or macOS shell can be woken. No device token. Failure `{ ok: false, error, nativeWakeable: false }` is untrusted and must not clear the last trusted flag |
 | `udp_subscribe` | UDP server **user** PGP | Entry **A ≠ B** | Contains `Securitykey`. SI rejects encryption to B (`encrypt_to_udp_server_user_pgp`) |
 | `udp_listen` / `udp_server_listen` / `udp_relay` / `udp_uplink` / `udp_unlisten` | **B** route PGP | Entry ≠ B | No `Securitykey`. See [UDP frame forwarding](udp-forward.md) |
-| `l0_listen` or `mining` + `listenKind: "l0"` | Own mailbox **B** route PGP | Long SSE via **C ≠ B** | Exclusive occupancy pipe. **No** overlay `Securitykey`. Field `userPgpKeyId` (encryption subkey, 16-hex) **must** be stored in `l0ListenByPgp` so later mailbox work can match this SSE. Handshake `{ ok, kind:"l0", wallet, nodeWallet }`. Idle L0 may receive user-PGP gossip without occupying. Temporary wallets are not AddressPGP; do not index only via `getWalletFromKeyID`. Separate from Chat / mining / UDP. Replacement while **live** occupied → **409** |
-| `l0_connect` | **Target** mailbox **B** route PGP | Entry ≠ B; keep TCP | First occupy of idle `targetWallet` L0 SSE: write `{ type:"l0_occupied" }` on SSE, **clear idle comment keepalive**, write **HTTP 200 keep-alive** on the occupy TCP (do not `end()`), pipe remaining TCP as SSE `data:` lines, SI stops parsing that socket. Second `l0_connect` → **409**. User-PGP Chat/mining gossip on the same node must **not** 409. Idle L0 needs SSE comment keepalive (no mining epoch); occupied L0 must not write comments. Occupancy is by `targetWallet` after decrypt, not by B route key ID. On teardown while occupied: write `{ type:"l0_pipe_end" }` + `\n` on inbound TCP, optional `{ type:"l0_listen_released" }` on listen SSE, then drop pool entry ([duplex-forward](duplex-forward.md)) |
+| `l0_listen` or `mining` + `listenKind: "l0"` | Own mailbox **B** route PGP | Long SSE via **C ≠ B** | Exclusive occupancy pipe. **No** overlay `Securitykey`. Signed wire fields are only `userPgpKeyId` and `timestamp`; the temporary EOA is recovered for SI-internal authorization and is not sent as a field. `userPgpKeyId` is stored only in the local `l0ListenByPgp` matcher. Handshake is `{ ok, kind:"l0", listenId }`; it must not expose wallet, nodeWallet, connector, or PGP ID. Idle L0 may receive user-PGP gossip without occupying. Temporary wallets are not AddressPGP. Separate from Chat / mining / UDP. Replacement while **live** occupied → **409** |
+| `l0_connect` | **Target** mailbox **B** route PGP | Entry ≠ B; keep TCP | Signed wire fields use opaque `targetListenId` and `timestamp`; the temporary connector EOA is recovered internally and is not sent as a field. First occupy of idle `targetListenId` L0 SSE: write `{ type:"l0_occupied" }` on SSE, **clear idle comment keepalive**, write **HTTP 200 keep-alive** on the occupy TCP (do not `end()`), pipe remaining TCP as SSE `data:` lines, SI stops parsing that socket. Second `l0_connect` → **409**. User-PGP Chat/mining gossip on the same node must **not** 409. Idle L0 needs SSE comment keepalive (no mining epoch); occupied L0 must not write comments. On teardown, close the bound sockets and let the peer observe EOF; SI does not emit application-level `l0_pipe_end` or `l0_listen_released` frames ([duplex-forward](duplex-forward.md)) |
 | `SilentPass` / `SaaS_Sock5` / `SaaS_Sock5_v2` | Egress node route PGP | Product-specific | Paid proxy; not a Chat path |
 
 Old clients that omit `listenKind` on `mining` are treated as mining. During
@@ -649,8 +678,9 @@ Node samples above use `Buffer`. In browsers use `btoa` / `atob` or a UTF-8 help
 
 ## Checklist
 
-- [ ] POST body is `{ data: <armor> }` to `{domain}.conet.network/post`
+- [ ] POST body is `{ data: <armor> }` to `{domain}.conet.network/post` (browser) or `http://{ip}/post` (native shell; shell picks the IP, PWA does not)
 - [ ] Business encrypt-to **user PGP**; commands encrypt-to **route PGP**
+- [ ] Business / mailbox-work armor has **exactly one** encryption key ID (multi-recipient → `rejected_multi_recipient_armor`)
 - [ ] Chat listen includes `listenKind: "chat"` and uses **C ≠ B**
 - [ ] `connect_timeout` starts after `fetch`; `listening` requires `res.ok` + body
 - [ ] SI hop-sign uses a UTF-8 armor string (peel plaintext / `pgpArmorToUtf8String`); hop-sign or C→B failure is a fast 404
