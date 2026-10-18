@@ -34,10 +34,12 @@ the owner move. The sequence and acceptance checks are
 [Merchant card custody handoff](merchant-card-custody-handoff.md). The temp
 private key stays in session memory only long enough to sign.
 
-Merchant OS exposes an **Agent** onboarding path and a **Temp EOA** dashboard
-(`#/agent`) so an operator can register as an agent, mint disposable merchant
-workspaces, open full program-card management under a temp session, and see
-cards that already moved to **Transferred** (management blocked). See
+Merchant OS onboarding does not offer agent registration. A signed-in Consumer
+wallet registers as an agent from Rewards Hub **Invite a business**. A wallet
+that is already an agent still opens the **Temp EOA** dashboard (`#/agent`) to
+mint disposable merchant workspaces, open full program-card management under a
+temp session, and see cards that already moved to **Transferred** (management
+blocked). See
 [Agent workspace in Merchant OS](#agent-workspace-in-merchant-os) below.
 
 ### Stripe card payments
@@ -102,12 +104,11 @@ single-use.
 
 ## Onboarding
 
-First-time Merchant OS onboarding asks the operator to choose a role:
+First-time Merchant OS onboarding continues as a merchant. It does not offer an Agent role:
 
 | Choice | Path |
 | --- | --- |
-| **Merchant** | Existing cover → Business Details → Identity → Recovery QR → Merchant OS (`#/native-pos`) |
-| **Agent** | Agent Identity (`@BeamioTag` + Access Password) → **skip Recovery QR** → Temp EOA dashboard (`#/agent`) |
+| **Merchant** | Cover → Business Details → Identity → Recovery QR → Merchant OS (`#/native-pos`) |
 
 Marketplace listing inputs are treated as seller discovery rather than merchant homepages. Amazon Brand Store URLs such as `/stores/{brand}/page/{uuid}` use the `{brand}` slug as the candidate merchant name; Amazon page chrome, corporate contact details, and the Amazon Store URL are excluded from merchant fields.
 
@@ -162,12 +163,12 @@ dispose) described in the custody-handoff chapter.
 
 | Surface | Behavior |
 | --- | --- |
-| **Role choice** | Onboarding first screen: Merchant vs Agent |
-| **Agent Identity** | Register agent `@BeamioTag` + Access Password; offline-sign **RegisterAgent**; no Recovery QR; land on `#/agent` when `isAgent` |
+| **Role choice** | Merchant OS onboarding shows **Merchant** only. New **RegisterAgent** is Consumer Rewards Hub **Invite a business**, not this screen |
+| **Agent Identity** | A wallet that is already an agent signs in with `@BeamioTag` + Access Password and lands on `#/agent` when `isAgent` (no Recovery QR). Merchant OS onboarding does not start a new agent registration |
 | **Temp EOA dashboard** | List temp EOAs; **Add Temp EOA** creates a random available `agt…` tag and Access Password via `createRecover`, offline-signs **RegisterTemp**, then restores the agent session (IndexedDB must not remain on the temp wallet) |
 | **Invite link** | Dashboard copies `https://beamio.app/app/?invite=0x…` (agent EOA). Consumer deep-link / app-download `target=` preserves `invite=`. After the invitee registers, Consumer offline-signs **RegisterReferrer** under that introducer |
 | **Reveal credentials** | Show / copy `@BeamioTag` and Access Password for a temp (password is stored in the agent’s local workspace record; private keys stay session-memory-only after unlock) |
-| **Create merchant card** | Shown only when the temp EOA has **no manageable** program cards **and** already holds on-chain **BusinessStartKet #0** (create entitlement) on the temp EOA and/or its AA. If that NFT is missing, the dashboard shows a **redeem-code claim** form instead of Create; the agent pastes a redeem / Start Kit code so the temp claims the entitlement NFT, then Create appears. Create switches Merchant OS to the temp session and opens `#/native-pos` Card Setup |
+| **Create merchant card** | Shown when the temp EOA has **no manageable** program cards. Creating a merchant program card does not require BusinessStartKet #0. Create switches Merchant OS to the temp session and opens `#/native-pos` Card Setup |
 | **Open Merchant OS** | Shown only after the temp owns at least one **non-transferred** program card. Switches session to the temp and opens `#/native-pos` to configure cards (tiers, coupons, POS, Programs) |
 | **Open a card** | Same session switch, select that card as the staff program card, then full merchant-card management |
 | **Transferred** | If on-chain `owner()` is no longer the temp EOA, the card shows **Transferred** and cannot be opened for management. Agent then offline-signs **RegisterMerchant** for the merchant EOA under this agent |

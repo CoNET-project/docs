@@ -57,10 +57,11 @@ against **`BeamioAgentReferrerRegistry`** (agent / temp / merchant / invite
 referrer). Full card-custody registry steps below remain normative until
 `BeamioAgentRegistry` and sponsored `transferOwnershipWithSignature` ship:
 
-1. Onboarding role choice: **Merchant** (existing flow) or **Agent**.
-2. Agent Identity registers the agent `@BeamioTag` and Access Password,
-   offline-signs **RegisterAgent**, then opens `#/agent` when chain
-   `isAgent` is true (no Recovery QR).
+1. Merchant OS onboarding is **Merchant** only. New agent registration is
+   Consumer Rewards Hub **Invite a business**, which offline-signs
+   **RegisterAgent**.
+2. A wallet that is already an agent signs in with `@BeamioTag` and Access
+   Password and opens `#/agent` when chain `isAgent` is true (no Recovery QR).
 3. The Temp EOA dashboard creates disposable merchant wallets with random tags
    and passwords, offline-signs **RegisterTemp**, reveals those credentials,
    and opens `#/native-pos` under a temp session for full program-card
