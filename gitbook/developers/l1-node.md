@@ -40,9 +40,9 @@ Keep these files beside your node configuration:
 
 | File | URL | SHA-256 |
 |---|---|---|
-| `genesis.json` | [download](https://gitbook.conet.network/l1/network/genesis.json) | `bc8e77990a5b76d75b6a2041a2ae4d69c9cda03d120b1434b8ce3e11296fde60` |
+| `genesis.json` (Osaka/Fulu) | [download](https://gitbook.conet.network/l1/network/genesis.json) | `e9889e1970251a145a2199caa9b889fd8868ab132372a69ff171b14476ae0b43` |
 | `genesis.ssz` | [download](https://gitbook.conet.network/l1/network/genesis.ssz) | `ae0a63e7bf175bb4312d5b728ff1eced7ceb4286ff5d7074cecbfa21dfd7fb46` |
-| `config.yml` | [download](https://gitbook.conet.network/l1/network/config.yml) | `4bda580c4cfec801ecaed6fa04ad38bb9f1e941833fa7237ed5c6327f3cfbe24` |
+| `config.yml` (Osaka/Fulu) | [download](https://gitbook.conet.network/l1/network/config.yml) | `51c2c4dac8c50b7e3fa7b4be2a68be5ac813da8aa7389193d1785b1bbdae4840` |
 
 Checksum list: [SHA256SUMS](https://gitbook.conet.network/l1/network/SHA256SUMS)
 
@@ -59,6 +59,22 @@ shasum -a 256 -c SHA256SUMS
 
 If a checksum fails, stop and re-download. Do not edit a genesis artifact to
 make a checksum pass.
+
+`genesis.json` and `config.yml` are the Osaka and Fulu files. Osaka activates at
+2026-10-18 13:26:07 UTC and Fulu at epoch `57050`, at the same instant
+([section 8](#8-network-upgrades)). `genesis.ssz` is unchanged. A new node starts
+from these files.
+
+A node that runs an older file set must upgrade before 13:26:07 UTC. The older
+files have these SHA-256 values, so you can check a copy you already have:
+
+| File | Prague SHA-256 | Pre-Prague SHA-256 |
+|---|---|---|
+| `genesis.json` | `894b39e610add4f6d15fc22eadc95d4b5943e0d705aee645a069b45dc7aec7f0` | `bc8e77990a5b76d75b6a2041a2ae4d69c9cda03d120b1434b8ce3e11296fde60` |
+| `config.yml` | `12a5704003329afd84d2b4c891fe6ba51388991894d1331b50e93eeea1d39cf1` | `4bda580c4cfec801ecaed6fa04ad38bb9f1e941833fa7237ed5c6327f3cfbe24` |
+
+All of these files give the same genesis hash. The pre-Prague files do not
+schedule Electra or Prague. The Prague files do not schedule Osaka or Fulu.
 
 ## 3. Confirm chain parameters
 
@@ -81,8 +97,13 @@ curl -s http://38.102.126.50:4100/eth/v1/beacon/genesis
 | Deposit per validator | **32 CNET** |
 | Slot / epoch | `SECONDS_PER_SLOT=6`, `SLOTS_PER_EPOCH=32` |
 | Eth1 follow | `ETH1_FOLLOW_DISTANCE=64`, `EPOCHS_PER_ETH1_VOTING_PERIOD=4` |
-| Electra | Disabled |
-| Recommended clients | Upstream geth **v1.17.5** for a node joining the chain today; Prysm **v7.1.4+**. The CoNET execution build that exposes EIP-2537 is [patch-geth](https://github.com/CoNET-project/patch-geth) and is **not** the installed fleet binary |
+| Execution genesis hash | `0x97cde7aae67599cd6df35a551eb289ace211210a0d91c5456e55f0d3c9d63de1` |
+| Electra (consensus) | `ELECTRA_FORK_EPOCH` **`56902`** (slot `1820864`); `ELECTRA_FORK_VERSION` `0x20000094` |
+| Prague (execution) | `pragueTime` **`1792301551`** = **2026-10-18 05:32:31 UTC**, the same instant as epoch `56902` |
+| Osaka (execution) | `osakaTime` **`1792329967`** = **2026-10-18 13:26:07 UTC** |
+| Fulu (consensus) | `FULU_FORK_EPOCH` **`57050`** (slot `1825600`); `FULU_FORK_VERSION` `0x20000095`; the same instant as Osaka |
+| Blob schedule | `prague` and `osaka`: target `6`, max `9`, `baseFeeUpdateFraction` `5007716` |
+| Recommended clients | The latest official release of Geth, built with the [patch-geth](https://github.com/CoNET-project/patch-geth) patch (section 7); the latest official release of Prysm. Use the release pages, not a version pinned in this document |
 
 The validators-root field is stored inside the genesis state. A beacon can
 copy that field into a different state and a different sync committee. Treat
@@ -187,25 +208,44 @@ explicitly planned a rebuild.
 
 ### CoNET execution client and EIP-2537
 
-Join the chain with **upstream geth v1.17.5**. The running execution clients do not schedule Prague. Stock Cancun Geth answers an empty call to `0x0b`–`0x11` with an empty success. That result is an empty account, not the BLS12-381 precompile.
+Run the **patched build of the latest official Geth release**, and use the same build on every execution client. Stock upstream Geth answers an empty call to `0x0b`–`0x11` with an empty success before the fork. That result is an empty account, not the BLS12-381 precompile, so a mixed fleet forks at the first block that calls those addresses.
 
-AAC proofs of a Base receipt on CoNET need those seven precompiles. Prague would also enable EIP-7702, EIP-6110, EIP-7002, and EIP-7251, which this consensus client does not take. Do not set `pragueTime` or `osakaTime`.
+AAC proofs of a Base receipt on CoNET need those seven precompiles. Before the fork, Cancun has no BLS precompiles, so the patch adds them. From `pragueTime`, Prague includes EIP-2537 itself. Keep the patched build after the fork, because blocks before the fork still replay under Cancun rules. The fork also enables EIP-7702, EIP-6110, EIP-7002, EIP-7251, and EIP-2935. Use the published `genesis.json`; do not edit `pragueTime` or `blobSchedule` in a local copy.
 
-Build the CoNET execution binary from upstream Geth plus [patch-geth](https://github.com/CoNET-project/patch-geth). The program inserts the BLS implementations that already exist in that Geth tag into `PrecompiledContractsCancun` only:
+**Official sources.** The Geth source is the latest official release of [go-ethereum](https://github.com/ethereum/go-ethereum/releases/latest). Binary archives are listed at [geth.ethereum.org/downloads](https://geth.ethereum.org/downloads). Each archive is named `geth-linux-amd64-<version>-<commit>.tar.gz` and has an `.asc` PGP signature beside it. Import the build-server keys linked from that page and verify the signature before you use an archive. Stock archives do not include the CoNET patch, so a CoNET execution client must run the patched build described below.
+
+**Build the patched binary from source.** Run these on a build machine, not on a live node. The patch adds the BLS implementations that already exist in the Geth release into `PrecompiledContractsCancun` only:
 
 ```bash
-git clone --depth 1 --branch v1.17.5 https://github.com/ethereum/go-ethereum
-git clone https://github.com/CoNET-project/patch-geth
+GETH_TAG=$(curl -fsSL https://api.github.com/repos/ethereum/go-ethereum/releases/latest \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
+echo "$GETH_TAG"
+git clone --depth 1 --branch "$GETH_TAG" https://github.com/ethereum/go-ethereum
+git -C go-ethereum rev-parse HEAD
+git clone --depth 1 https://github.com/CoNET-project/patch-geth
 cd patch-geth
 go run . apply --src ../go-ethereum
 go run . check --src ../go-ethereum
 cd ../go-ethereum
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o geth ./cmd/geth
+./geth version
 ```
 
-`apply` is safe to repeat on a newer Geth tag. If it cannot find the Cancun table, or a `bls12381*` type, it exits without writing a partial patch. Keep the last accepted binary.
+Before you build, read the `go` line in `go.mod` in the Geth source, install that Go version or a newer one from [go.dev/dl](https://go.dev/dl/), and run the commands above.
 
-On 2026-10-15 the checked execution clients (`38.102.126.30:8889`, `38.102.126.50` ports `8888`, `8883`, and `8884`, and `38.102.126.58:8885`) run patched Geth 1.17.8. An empty `eth_call` to `0x0b` returns `invalid input length`. `rpc1.conet.network` and `publicrpc.conet.network` return the same error. Probe `0xed2E4B55152A657B43A5065a01B9655dB0033713` reports the precompile available. The earlier probe `0x864896C7dD5CA603AA11C3dC0BA329EB78Cc5F78` still returns false, because a revert with empty return data is not an empty success. Probe `0xbaff644E6C06A277AaDFde016d2eeB87AE18EB6B` is superseded: its uncapped presence check burned the transaction gas. A mixed fleet, where one client still returns empty success, is an execution fork. The CoNET checkpoint `0x52b3bc7A8c58EC64A57a62783E2e1F8CB8457b3a` stores Ethereum period 1884 and `rootReady` is true. A 0.01 Base USDC receipt in that period is covered, and the CoNET settler is installed. An empty call is still not a pairing proof.
+Compare the commit printed by `git rev-parse HEAD` with the commit that the GitHub release page shows for `$GETH_TAG`. They must match. The patch changes source files, not the commit, so a matching commit does not prove the patch is present. Check the patch with the `0x0b` probe in section 9.
+
+`apply` and `check` must both exit with status 0. `apply` is safe to repeat on a newer Geth tag. If it cannot find the Cancun table, or a `bls12381*` type, it exits without writing a partial patch. If either command fails, do not build and do not edit the source by hand. Keep the last accepted binary.
+
+**Prebuilt patched binary.** The latest [patch-geth release](https://github.com/CoNET-project/patch-geth/releases/latest) publishes a static Linux amd64 `geth` and a `SHA256SUMS` file. Download both into the same folder and check the binary before use:
+
+```bash
+sha256sum -c SHA256SUMS
+```
+
+Use the prebuilt binary only when its patch-geth release names the same Geth release as the latest official Geth release.
+
+Before the fork, on 2026-10-15, the checked execution clients (`38.102.126.30:8889`, `38.102.126.50` ports `8888`, `8883`, and `8884`, and `38.102.126.58:8885`) run the patched build of the Geth release current on that date. An empty `eth_call` to `0x0b` returns `invalid input length`. `rpc1.conet.network` and `publicrpc.conet.network` return the same error. Probe `0xed2E4B55152A657B43A5065a01B9655dB0033713` reports the precompile available. The earlier probe `0x864896C7dD5CA603AA11C3dC0BA329EB78Cc5F78` still returns false, because a revert with empty return data is not an empty success. Probe `0xbaff644E6C06A277AaDFde016d2eeB87AE18EB6B` is superseded: its uncapped presence check burned the transaction gas. A mixed fleet, where one client still returns empty success, is an execution fork. The CoNET checkpoint `0x52b3bc7A8c58EC64A57a62783E2e1F8CB8457b3a` stores Ethereum period 1884 and `rootReady` is true. A 0.01 Base USDC receipt in that period is covered, and the CoNET settler is installed. An empty call is still not a pairing proof.
 
 ### Start geth
 
@@ -225,6 +265,24 @@ geth \
 
 `gcmode=full` is suitable for a validator-only machine. Archive mode is
 optional and requires more storage.
+
+### Get Prysm from the official release
+
+Use the latest official release of [Prysm](https://github.com/OffchainLabs/prysm/releases/latest). Each binary has a `.sha256` file on that release page. Download the binaries into one folder and check them:
+
+```bash
+PRYSM_TAG=$(curl -fsSL https://api.github.com/repos/OffchainLabs/prysm/releases/latest \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
+BASE=https://github.com/OffchainLabs/prysm/releases/download/$PRYSM_TAG
+for b in beacon-chain validator; do
+  curl -fsSL -O "$BASE/$b-$PRYSM_TAG-linux-amd64"
+  curl -fsSL -O "$BASE/$b-$PRYSM_TAG-linux-amd64.sha256"
+  shasum -a 256 -c "$b-$PRYSM_TAG-linux-amd64.sha256"
+  install -m 0755 "$b-$PRYSM_TAG-linux-amd64" "$HOME/bin/$b"
+done
+```
+
+On Linux, `sha256sum -c` does the same check. The commands above install the binaries as `beacon-chain` and `validator` in `$HOME/bin`. Put that folder on `PATH` or change the install path.
 
 ### Start Prysm beacon
 
@@ -258,7 +316,97 @@ Allow inbound:
 Apply the same policy in the host firewall and cloud security group. Opening
 only loopback RPC does not make the node reachable as a P2P peer.
 
-## 8. Verify sync
+## 8. Network upgrades
+
+CoNET L1 has two forks after Cancun. Each fork has an execution-layer time and
+a consensus-layer epoch. The two layers switch at the same instant:
+
+| Upgrade | Status | Execution (`genesis.json`) | Consensus (`config.yml`) | Time (UTC) |
+|---|---|---|---|---|
+| Prague / Electra | Active | `pragueTime` `1792301551` | `ELECTRA_FORK_EPOCH` `56902`, `ELECTRA_FORK_VERSION` `0x20000094` | 2026-10-18 05:32:31 |
+| Osaka / Fulu | Scheduled | `osakaTime` `1792329967` | `FULU_FORK_EPOCH` `57050`, `FULU_FORK_VERSION` `0x20000095` | 2026-10-18 13:26:07 |
+
+Gloas is not scheduled. The genesis hash does not change, so the current files
+describe the same chain as the earlier files. The record of each upgrade is in
+[L1 network upgrades](../l1/upgrades.md).
+
+### Osaka and Fulu: upgrade before 13:26:07 UTC
+
+Upgrade every node you run before 13:26:07 UTC. After that time, a node that
+still runs older files cannot verify the new blocks and stops following the
+chain. Upgrade one node at a time. Finish each node (section 9) before you
+start the next.
+
+1. Back up your current files, then download and check the current files:
+
+   ```bash
+   cd "$HOME/conet-l1"
+   mkdir -p backup-pre-osaka
+   cp -p genesis.json config.yml backup-pre-osaka/
+   BASE=https://gitbook.conet.network/l1/network
+   curl -fsSL -O "$BASE/genesis.json" -O "$BASE/config.yml" -O "$BASE/SHA256SUMS"
+   grep -E ' (genesis\.json|config\.yml)$' SHA256SUMS | shasum -a 256 -c -
+   ```
+
+2. Stop geth. Re-initialize it with the new `genesis.json` on the existing
+   datadir, then start it again with the flags from section 7:
+
+   ```bash
+   geth init --datadir ./execution --state.scheme=hash ./genesis.json
+   ```
+
+   The genesis hash is unchanged, so this only rewrites the stored chain
+   configuration. The init log must show genesis hash `97cde7..d63de1`
+   (full hash in section 3). Stop if it differs.
+
+3. Stop the validator client, if you run one. Replace `config.yml` with the new
+   file and restart the beacon with your other flags. Start the validator client
+   after the beacon is synced.
+
+4. Confirm the node is at the chain tip (section 9). Upgrade the next node
+   only after this node is healthy.
+
+Upgrade in place. Do not delete the execution or beacon datadir. Keep
+`beacondata/network-keys` in place: a beacon that starts without that file
+creates a new peer ID.
+
+### Check after 13:26:07 UTC
+
+Run these on each node after the fork time:
+
+```bash
+curl -s http://127.0.0.1:4100/eth/v1/beacon/states/head/fork
+curl -s http://127.0.0.1:4100/eth/v1/config/spec
+curl -s http://127.0.0.1:8545 \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"eth_config","params":[]}'
+```
+
+Expect:
+
+- the fork endpoint reports `current_version` `0x20000095` once the head is in
+  epoch `57050` or later;
+- the config endpoint reports `FULU_FORK_EPOCH` `57050`; and
+- `eth_config` reports `osakaTime` `1792329967` for the current fork after the
+  fork time.
+
+### Prague system contracts
+
+CoNET L1 already has the three EIP system contracts. They were deployed at
+block `1758939` with their canonical keyless transactions, and they have the
+same addresses, transactions, and runtime code as the Ethereum mainnet
+deployments. Operators do not deploy them. Check them with `eth_getCode`:
+
+| Contract | Address | Deployment transaction | Runtime bytes |
+|---|---|---|---|
+| EIP-2935 history storage | `0x0000F90827F1C53a10cb7A02335B175320002935` | `0x67139a552b0d3fffc30c0fa7d0c20d42144138c8fe07fc5691f09c1cce632e15` | 83 |
+| EIP-7002 withdrawal requests | `0x00000961Ef480Eb55e80D19ad83579A64c007002` | `0x8ded54be89448d78d4bc97782c0187b099e45380ab681742f9d3754e405c2572` | 504 |
+| EIP-7251 consolidation requests | `0x0000BBdDc7CE488642fb579F8B00f3a590007251` | `0x379269d571beff3ed1d8eba3abb24076a7267b0eaf0cc66d728fb0544f5a690d` | 414 |
+
+Empty code at any of these addresses after the fork means the node is not on
+this chain's state.
+
+## 9. Verify sync
 
 Geth:
 
@@ -291,7 +439,22 @@ Compare execution height with `https://rpc1.conet.network` or
 `https://publicrpc.conet.network`. Do not use deprecated
 `https://rpc.conet.network`.
 
-## 9. Add a validator
+### BLS probe (historical, before Prague)
+
+On the local geth, an empty call to `0x0b` must fail with `invalid input length`. A stock build returns `0x`, an empty success, which is a different chain state:
+
+```bash
+curl -s http://127.0.0.1:8545 \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"to":"0x000000000000000000000000000000000000000b","data":"0x"},"latest"]}'
+```
+
+Run this before the fork time. After 2026-10-18 05:32:31 UTC, both builds implement BLS, so this probe no longer tells them apart. An empty result is never a pairing proof.
+
+## 10. Add a validator
+
+Validator keystores and the 32 CNET deposits do not change at the Prague or
+Osaka/Fulu forks.
 
 After the full node is synced:
 
@@ -308,12 +471,16 @@ After the full node is synced:
 The validator talks to the local beacon over loopback. Never publish deposit
 private keys, the mnemonic, keystore passwords, JWT, or validator RPC.
 
-## 10. Safety boundary
+## 11. Safety boundary
 
 - Joining does not authorize restarting another operator's geth, beacon, or
   validator.
-- Do not install the patch-geth binary on one execution client while the rest
-  of the fleet still runs upstream Geth.
+- Do not run a stock upstream Geth build on one execution client while the
+  rest of the fleet runs the patched build.
+- Do not run the Osaka/Fulu files on one layer only. An execution client or
+  beacon on older files stops following the chain at 13:26:07 UTC.
+- Do not delete `beacondata/network-keys`. Without it, a beacon starts with a
+  new peer ID.
 - Do not wipe execution or beacon data on an active node to troubleshoot an
   unrelated application.
 - Do not expose Engine API or validator secrets.
@@ -323,11 +490,12 @@ private keys, the mnemonic, keystore passwords, JWT, or validator RPC.
 
 ## Related
 
-- [patch-geth](https://github.com/CoNET-project/patch-geth) — Cancun EIP-2537 build; not the installed fleet binary
+- [patch-geth](https://github.com/CoNET-project/patch-geth) — source patch for the CoNET execution build; it adds EIP-2537 to the Cancun precompile table
 - [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md)
 - [Confirm the period-18 checkpoint](l1-independent-confirmation.md)
 - [Validators](../l1/validators.md)
 - [Network identity](../l1/chain-identity.md)
+- [L1 network upgrades](../l1/upgrades.md)
 - [RPC and Explorer](../l1/rpc-explorer.md)
 - [Participate in mining](l1-mining.md)
 - [L1 decentralization](../l1/decentralization.md)

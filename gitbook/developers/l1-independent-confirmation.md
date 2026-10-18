@@ -59,17 +59,23 @@ Expected checksums:
 
 | File | SHA-256 |
 |---|---|
-| `genesis.json` | `bc8e77990a5b76d75b6a2041a2ae4d69c9cda03d120b1434b8ce3e11296fde60` |
+| `genesis.json` | `e9889e1970251a145a2199caa9b889fd8868ab132372a69ff171b14476ae0b43` |
 | `genesis.ssz` | `ae0a63e7bf175bb4312d5b728ff1eced7ceb4286ff5d7074cecbfa21dfd7fb46` |
-| `config.yml` | `4bda580c4cfec801ecaed6fa04ad38bb9f1e941833fa7237ed5c6327f3cfbe24` |
+| `config.yml` | `51c2c4dac8c50b7e3fa7b4be2a68be5ac813da8aa7389193d1785b1bbdae4840` |
 
 Stop if a checksum fails. Do not edit these files. `config.yml` already sets
 `EPOCHS_PER_ETH1_VOTING_PERIOD: 4`. Prysm reads that value from the file.
+These are the Osaka and Fulu files. The forks start at 2026-10-18 13:26:07 UTC
+(Fulu epoch `57050`). Slot `155646` is far below both forks, so the checkpoint
+check below does not depend on them. See [Run an L1 node](l1-node.md), section 8,
+for the forks.
 
-## 2. Start geth 1.17.5
+## 2. Start the patched geth
 
-Use geth **1.17.5**. Older geth rejects the published genesis because the
-Cancun `blobSchedule` entry is missing. Initialize once, then start it in its
+Use the patched build of the latest official geth release, from section 7 of
+[Run an L1 node](l1-node.md). Older
+geth rejects the published genesis because the Cancun `blobSchedule` entry is
+missing. Initialize once, then start it in its
 own terminal. Replace `<YOUR_PUBLIC_IP>`.
 
 ```bash
@@ -99,7 +105,7 @@ Geth stays at block 0 until the beacon sends execution payloads. That is
 expected. Do not point this geth at another operator's Engine API, and do
 not import another operator's datadir.
 
-## 3. Start Prysm v7.1.8
+## 3. Start Prysm (latest release)
 
 ```bash
 cd "$HOME/conet-l1"
@@ -115,7 +121,9 @@ before the confirmation commands succeed.
 cd "$HOME/conet-l1"
 ENR=$(curl -fsS http://216.225.202.22:4100/eth/v1/node/identity \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['enr'])")
-USE_PRYSM_VERSION=v7.1.8 ./prysm.sh beacon-chain \
+PRYSM_TAG=$(curl -fsSL https://api.github.com/repos/OffchainLabs/prysm/releases/latest \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
+USE_PRYSM_VERSION="$PRYSM_TAG" ./prysm.sh beacon-chain \
   --accept-terms-of-use \
   --chain-id=224422 \
   --genesis-state=./genesis.ssz \

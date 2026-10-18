@@ -20,6 +20,7 @@
   * [Security limits and threat grades](l0/security-limits.md)
 * [L1 — CoNET Blockchain](l1/README.md)
   * [Network identity](l1/chain-identity.md)
+  * [Network upgrades](l1/upgrades.md)
   * [Validator network](l1/validators.md)
   * [Decentralization and verifiability](l1/decentralization.md)
   * [Guardian nodes and staking](l1/guardian-staking.md)

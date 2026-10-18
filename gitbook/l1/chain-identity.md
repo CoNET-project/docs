@@ -38,9 +38,19 @@ CoNET L1 is the canonical layer for:
 
 Individual contract addresses can change through deployment or upgrade procedures. Verify an address against current deployment records and its code on the active RPC, then inspect it at the canonical Explorer.
 
+## Fork schedule
+
+| Fork | Time (UTC) | Status |
+| --- | --- | --- |
+| Prague / Electra | 2026-10-18 05:32:31 | Active |
+| Osaka / Fulu | 2026-10-18 13:26:07 | Scheduled |
+
+See [L1 network upgrades](upgrades.md).
+
 ## Source anchors
 
 - [RPC and Explorer](rpc-explorer.md) — endpoint table and `eth_chainId` check
+- [L1 network upgrades](upgrades.md) — fork schedule and upgrade record
 - [Run an L1 node](../developers/l1-node.md) — genesis files, DHT hubs, and geth bootnodes
 - [Assets](assets.md) — active asset identifiers
 - [Resources](../resources.md) — service and repository index
