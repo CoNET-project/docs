@@ -15,7 +15,7 @@ Chapters in this whitepaper:
 | Chapter | What it covers |
 | --- | --- |
 | [Consumer PWA](beamio/consumer.md) | Wallet, Discover (Top Up + Gifting), coupons, Chat, mining tools, USDC rails, and Agent invite referrer bind (`?invite=0x…`) |
-| [Merchant OS](beamio/merchant-os.md) | Onboarding (website, marketplace seller page, business name, or attached PDF/Word/image lookup fills the cover; marketplace platform chrome is excluded from merchant fields), programs, staff, terminals, catalogs, coupons, merchant treasury, and Agent workspace (live `BeamioAgentReferrerRegistry` on CoNET) |
+| [Merchant OS](beamio/merchant-os.md) | Onboarding (website, marketplace seller page, business name, or attached PDF/Word/image lookup fills the cover; marketplace platform chrome is excluded from merchant fields), programs, staff, terminals, catalogs, coupons, and merchant treasury. Sign-in always opens the merchant workspace. Agent and temp-account creation stay on Consumer Invite a business (`BeamioAgentReferrerRegistry` on CoNET) |
 | [POS terminal](beamio/pos.md) | In-store charge, physical-card top-up through native Stripe Terminal, membership, claim, and redeem |
 | [Cash and USDC](beamio/cash-and-usdc.md) | Distinct deposit rails (Coinbase / Treasury CONET-USDC vs Stripe Onramp Base USDC to EOA) **and** Beamio-initiated USDC transfers / payments (offline sign + sponsored gas) |
 | [Merchant card custody handoff](beamio/merchant-card-custody-handoff.md) | Live identity/invite registry (`BeamioAgentReferrerRegistry`); normative card-custody handoff (`BeamioAgentRegistry` + sponsored `transferOwnership` not yet deployed) |
@@ -133,8 +133,8 @@ the account requires a left-to-right confirmation slide and removes only
 Beamio's local Connected Account association, never the Stripe account itself.
 
 An agent may create a card under a disposable temp EOA and hand that card to
-the merchant’s own EOA. Merchant OS onboarding offers an **Agent** role and a
-Temp EOA dashboard
+the merchant’s own EOA. Merchant OS does not offer an Agent role or a Temp EOA
+management page; those steps stay on Consumer Invite a business
 ([Merchant OS — Agent workspace](beamio/merchant-os.md#agent-workspace-in-merchant-os)).
 **Live today** on CoNET: `BeamioAgentReferrerRegistry` UUPS proxy
 [`0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A`](https://mainnet.conet.network/address/0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A)

@@ -7,7 +7,7 @@ claim.
 
 Parent: [Beamio whitepaper](../beamio.md).
 
-Revision: **2026-10-14**.
+Revision: **2026-10-18**.
 
 ## Product role
 
@@ -34,12 +34,20 @@ the owner move. The sequence and acceptance checks are
 [Merchant card custody handoff](merchant-card-custody-handoff.md). The temp
 private key stays in session memory only long enough to sign.
 
-Merchant OS onboarding does not offer agent registration. A signed-in Consumer
-wallet registers as an agent from Rewards Hub **Invite a business**. A wallet
-that is already an agent still opens the **Temp EOA** dashboard (`#/agent`) to
-mint disposable merchant workspaces, open full program-card management under a
-temp session, and see cards that already moved to **Transferred** (management
-blocked). See
+Merchant OS onboarding does not offer agent registration, and sign-in never
+opens an Agent workspace or a Temp EOA management page. Every successful login
+opens the merchant workspace (`#/native-pos`). A signed-in Consumer wallet
+registers as an agent from Rewards Hub **Invite a business** and creates temp
+accounts there. **Create merchant card** opens Merchant OS on **Tell us about
+your business** (business name, category, country, city, and province). The
+temp Beamio ID and access password travel in the page hash (`flow=business`).
+Merchant OS reads the hash and removes it from the address bar. After those
+business basics, it creates the merchant wallet from the passed Beamio ID and
+access password and does not show the username and password form. **Open
+Merchant OS** (and an existing program-card row) still passes the same
+credentials without `flow=business` and starts private-key unlock immediately
+into the merchant workspace. A typed sign-in still opens that workspace.
+See
 [Agent workspace in Merchant OS](#agent-workspace-in-merchant-os) below.
 
 ### Stripe card payments
@@ -151,32 +159,23 @@ Master; Master settles on CoNET (`Settle_ConetPool`) without repeating business
 prechecks. Reads: `GET /api/agentReferrerRegistry` or RPC-first views
 (`isAgent`, `tempsOfAgent`, `merchantsOfAgent`, `introducerOf`, `refereesOf`).
 
-Merchant OS sends `#/agent` when `isAgent(eoa)` is true (RPC-first; a trusted
-local cache may hydrate the first paint) **and** that EOA does not already own
-a merchant program card (`cardsOfOwner`). An EOA that owns program cards always
-lands on `#/native-pos`, including when an earlier login mistakenly submitted
-RegisterAgent. Login does not treat a browser-global workspace role as this
-wallet's agent intent, and it does not call RegisterAgent unless this EOA's own
-workspace is an agent workspace. This registry is **not** the
-unfinished card-custody `BeamioAgentRegistry` (reserve / bind card / POS
-dispose) described in the custody-handoff chapter.
+Merchant OS sign-in always opens `#/native-pos`. It does not call RegisterAgent,
+does not store an agent Access Password for routing, and does not render an
+Agent workspace or a Temp EOA management page. Bookmarks to `#/agent` and
+`#/agent/merchant-onboarding` redirect to `#/native-pos`. Temp accounts, invite
+links, credential reveal, and **RegisterTemp** stay on Consumer **Invite a
+business**. Creating a merchant program card does not require BusinessStartKet
+#0. This registry is **not** the unfinished card-custody `BeamioAgentRegistry`
+(reserve / bind card / POS dispose) described in the custody-handoff chapter.
 
 | Surface | Behavior |
 | --- | --- |
 | **Role choice** | Merchant OS onboarding shows **Merchant** only. New **RegisterAgent** is Consumer Rewards Hub **Invite a business**, not this screen |
-| **Agent Identity** | A wallet that is already an agent signs in with `@BeamioTag` + Access Password and lands on `#/agent` when `isAgent` (no Recovery QR). Merchant OS onboarding does not start a new agent registration |
-| **Temp EOA dashboard** | List temp EOAs; **Add Temp EOA** creates a random available `agt…` tag and Access Password via `createRecover`, offline-signs **RegisterTemp**, then restores the agent session (IndexedDB must not remain on the temp wallet) |
-| **Invite link** | Dashboard copies `https://beamio.app/app/?invite=0x…` (agent EOA). Consumer deep-link / app-download `target=` preserves `invite=`. After the invitee registers, Consumer offline-signs **RegisterReferrer** under that introducer |
-| **Reveal credentials** | Show / copy `@BeamioTag` and Access Password for a temp (password is stored in the agent’s local workspace record; private keys stay session-memory-only after unlock) |
-| **Create merchant card** | Shown when the temp EOA has **no manageable** program cards. Creating a merchant program card does not require BusinessStartKet #0. Create switches Merchant OS to the temp session and opens `#/native-pos` Card Setup |
-| **Open Merchant OS** | Shown only after the temp owns at least one **non-transferred** program card. Switches session to the temp and opens `#/native-pos` to configure cards (tiers, coupons, POS, Programs) |
-| **Open a card** | Same session switch, select that card as the staff program card, then full merchant-card management |
-| **Transferred** | If on-chain `owner()` is no longer the temp EOA, the card shows **Transferred** and cannot be opened for management. Agent then offline-signs **RegisterMerchant** for the merchant EOA under this agent |
-| **Return to agent** | While a temp session is active, a banner restores the agent EOA (requires the agent Access Password still in session memory) and returns to `#/agent` |
+| **Sign-in** | `@BeamioTag` + Access Password, including a revealed temp account, opens `#/native-pos`. Chain `isAgent` does not change the destination |
+| **Invite a business** | Consumer creates the temp Beamio ID and lists that temp's cards. **Create merchant card** opens Merchant OS on **Tell us about your business**, then creates the wallet from the hash Beamio ID and access password without showing those inputs. **Open Merchant OS** unlocks into `#/native-pos` immediately |
 
 Signing material for any unlocked wallet still follows Merchant OS session-memory
-rules. After `createRecover` for a temp, Merchant OS always restores the agent
-with `restoreWithUserPin` so the agent’s IndexedDB profile is not overwritten.
+rules.
 
 ## What exists today
 

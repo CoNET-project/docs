@@ -52,25 +52,18 @@ and not the paymaster.
 
 ## Merchant OS product surface
 
-Live Merchant OS (`https://biz.beamio.app`) implements the agent product path
-against **`BeamioAgentReferrerRegistry`** (agent / temp / merchant / invite
-referrer). Full card-custody registry steps below remain normative until
-`BeamioAgentRegistry` and sponsored `transferOwnershipWithSignature` ship:
-
-1. Merchant OS onboarding is **Merchant** only. New agent registration is
-   Consumer Rewards Hub **Invite a business**, which offline-signs
-   **RegisterAgent**.
-2. A wallet that is already an agent signs in with `@BeamioTag` and Access
-   Password and opens `#/agent` when chain `isAgent` is true (no Recovery QR).
-3. The Temp EOA dashboard creates disposable merchant wallets with random tags
-   and passwords, offline-signs **RegisterTemp**, reveals those credentials,
-   and opens `#/native-pos` under a temp session for full program-card
-   management (tiers, coupons, POS). Agents copy an invite URL
-   (`?invite=0x…`) for Consumer referrer binds.
-4. When `owner()` is no longer the temp EOA, the card is shown as
-   **Transferred** and management is blocked; the agent may
-   **RegisterMerchant** for the receiving merchant EOA.
-5. A session banner returns from a temp session to the agent workspace.
+Live Merchant OS (`https://biz.beamio.app`) signs every wallet into
+`#/native-pos`. It does not show an Agent workspace or a Temp EOA management
+page. Consumer Rewards Hub **Invite a business** is the live surface for
+**RegisterAgent**, temp Beamio IDs, **RegisterTemp**, and invite links, against
+**`BeamioAgentReferrerRegistry`**. **Create merchant card** opens Merchant OS
+on **Tell us about your business**. After those basics, Merchant OS creates
+the wallet from the Beamio ID and access password passed in the page hash and
+does not show the identity inputs. **Open Merchant OS** still starts
+private-key unlock immediately into the merchant workspace. Full card-custody
+registry steps below
+remain normative until `BeamioAgentRegistry` and sponsored
+`transferOwnershipWithSignature` ship.
 
 Operational detail:
 [Agent workspace in Merchant OS](merchant-os.md#agent-workspace-in-merchant-os).
