@@ -4,6 +4,8 @@
 
 CoNET L1 is an EVM-compatible proof-of-stake network. It provides the canonical settlement, asset, identity, registry, and cross-chain Treasury layer used by CoNET protocols.
 
+CoNET L1 runs the Ethereum Osaka execution rules and the Fulu consensus rules. Both forks activated together on 2026-10-18 at 13:26:07 UTC, after Prague / Electra earlier that day. See [L1 network upgrades](upgrades.md).
+
 EVM compatibility means that the chain executes Ethereum-style smart-contract bytecode and supports familiar account, signature, ABI, and JSON-RPC tooling. It does **not** mean that CoNET shares Ethereum or Base state, validators, balances, or finality.
 
 ## Network facts
@@ -12,6 +14,7 @@ EVM compatibility means that the chain executes Ethereum-style smart-contract by
 | --- | --- |
 | `chainId` | **224422** (`0x36ca6`) |
 | Native gas asset | **CNET** |
+| Current fork | **Osaka / Fulu**, active since 2026-10-18 13:26:07 UTC (block `1767139`, Fulu epoch `57050`) |
 | Primary RPC | `https://rpc1.conet.network` |
 | Backup RPC | `https://publicrpc.conet.network` |
 | Explorer | `https://mainnet.conet.network` |
@@ -31,13 +34,14 @@ Network-layer privacy and censorship resistance are transport objectives. Wallet
 ## Read this section
 
 1. [Chain identity](chain-identity.md)
-2. [Validators](validators.md)
-3. [Decentralization and verifiability](decentralization.md)
-4. [Guardian Nodes](guardian-staking.md)
-5. [RPC and Explorer](rpc-explorer.md)
-6. [Assets](assets.md)
-7. [Decentralized cross-chain Treasury](cross-chain-treasury.md)
-8. [AAC proof-driven cross-chain settlement](aac-cross-chain.md)
+2. [Network upgrades](upgrades.md)
+3. [Validators](validators.md)
+4. [Decentralization and verifiability](decentralization.md)
+5. [Guardian Nodes](guardian-staking.md)
+6. [RPC and Explorer](rpc-explorer.md)
+7. [Assets](assets.md)
+8. [Decentralized cross-chain Treasury](cross-chain-treasury.md)
+9. [AAC proof-driven cross-chain settlement](aac-cross-chain.md)
 
 Developer how-tos for this layer: [Run an L1 node](../developers/l1-node.md), [Confirm the period-18 checkpoint](../developers/l1-independent-confirmation.md), [Participate in mining](../developers/l1-mining.md), and [Bring an ERC-20 into CoNET](../developers/l1-erc20-bridge.md).
 

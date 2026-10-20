@@ -62,7 +62,7 @@ Loopback-bound JSON-RPC, WebSocket, Engine API, consensus RPC, and monitoring po
 
 To join the live network, download the published `genesis.json`, `genesis.ssz`, and `config.yml`, then follow [Run an L1 node](../developers/l1-node.md). That page lists the current DHT hubs, geth bootnodes, and ports. Do not copy another operator’s systemd units or a stale engineering `genesis.json`.
 
-The published `genesis.json` and `config.yml` set the Osaka and Fulu forks at 2026-10-18 13:26:07 UTC (Fulu epoch `57050`). Before that time, the execution client and the beacon of each validator node must both run the current files. See [Run an L1 node](../developers/l1-node.md), section 8, and [L1 network upgrades](upgrades.md).
+The Osaka and Fulu forks activated at 2026-10-18 13:26:07 UTC (Fulu epoch `57050`). The execution client and the beacon of each validator node must both run the published Osaka/Fulu `genesis.json` and `config.yml`. A node on older files cannot follow the chain. See [Run an L1 node](../developers/l1-node.md), section 8, and [L1 network upgrades](upgrades.md).
 
 ## Operational boundary
 

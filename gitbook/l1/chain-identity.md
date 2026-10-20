@@ -43,7 +43,7 @@ Individual contract addresses can change through deployment or upgrade procedure
 | Fork | Time (UTC) | Status |
 | --- | --- | --- |
 | Prague / Electra | 2026-10-18 05:32:31 | Active |
-| Osaka / Fulu | 2026-10-18 13:26:07 | Scheduled |
+| Osaka / Fulu | 2026-10-18 13:26:07 | Active (current fork) |
 
 See [L1 network upgrades](upgrades.md).
 

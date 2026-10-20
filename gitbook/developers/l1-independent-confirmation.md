@@ -65,7 +65,7 @@ Expected checksums:
 
 Stop if a checksum fails. Do not edit these files. `config.yml` already sets
 `EPOCHS_PER_ETH1_VOTING_PERIOD: 4`. Prysm reads that value from the file.
-These are the Osaka and Fulu files. The forks start at 2026-10-18 13:26:07 UTC
+These are the Osaka and Fulu files. The forks activated at 2026-10-18 13:26:07 UTC
 (Fulu epoch `57050`). Slot `155646` is far below both forks, so the checkpoint
 check below does not depend on them. See [Run an L1 node](l1-node.md), section 8,
 for the forks.

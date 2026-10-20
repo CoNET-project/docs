@@ -60,13 +60,14 @@ shasum -a 256 -c SHA256SUMS
 If a checksum fails, stop and re-download. Do not edit a genesis artifact to
 make a checksum pass.
 
-`genesis.json` and `config.yml` are the Osaka and Fulu files. Osaka activates at
+`genesis.json` and `config.yml` are the Osaka and Fulu files. Osaka activated at
 2026-10-18 13:26:07 UTC and Fulu at epoch `57050`, at the same instant
 ([section 8](#8-network-upgrades)). `genesis.ssz` is unchanged. A new node starts
 from these files.
 
-A node that runs an older file set must upgrade before 13:26:07 UTC. The older
-files have these SHA-256 values, so you can check a copy you already have:
+A node that still runs an older file set cannot follow the chain past block
+`1767139`, the first Osaka block. The older files have these SHA-256 values, so
+you can check a copy you already have:
 
 | File | Prague SHA-256 | Pre-Prague SHA-256 |
 |---|---|---|
@@ -318,24 +319,26 @@ only loopback RPC does not make the node reachable as a P2P peer.
 
 ## 8. Network upgrades
 
-CoNET L1 has two forks after Cancun. Each fork has an execution-layer time and
-a consensus-layer epoch. The two layers switch at the same instant:
+CoNET L1 has two forks after Cancun, and both are active. Osaka / Fulu is the
+current fork. Each fork has an execution-layer time and a consensus-layer
+epoch. The two layers switched at the same instant:
 
 | Upgrade | Status | Execution (`genesis.json`) | Consensus (`config.yml`) | Time (UTC) |
 |---|---|---|---|---|
 | Prague / Electra | Active | `pragueTime` `1792301551` | `ELECTRA_FORK_EPOCH` `56902`, `ELECTRA_FORK_VERSION` `0x20000094` | 2026-10-18 05:32:31 |
-| Osaka / Fulu | Scheduled | `osakaTime` `1792329967` | `FULU_FORK_EPOCH` `57050`, `FULU_FORK_VERSION` `0x20000095` | 2026-10-18 13:26:07 |
+| Osaka / Fulu | Active (current) | `osakaTime` `1792329967` | `FULU_FORK_EPOCH` `57050`, `FULU_FORK_VERSION` `0x20000095` | 2026-10-18 13:26:07 |
 
 Gloas is not scheduled. The genesis hash does not change, so the current files
 describe the same chain as the earlier files. The record of each upgrade is in
 [L1 network upgrades](../l1/upgrades.md).
 
-### Osaka and Fulu: upgrade before 13:26:07 UTC
+### Osaka and Fulu: upgrade a node that is still on older files
 
-Upgrade every node you run before 13:26:07 UTC. After that time, a node that
-still runs older files cannot verify the new blocks and stops following the
-chain. Upgrade one node at a time. Finish each node (section 9) before you
-start the next.
+Osaka and Fulu activated at 2026-10-18 13:26:07 UTC. The first Osaka block is
+`1767139`. A node that still runs older files cannot verify blocks from that
+height and stops following the chain. Upgrade it in place with the steps
+below. If you run several nodes, upgrade one node at a time. Finish each node
+(section 9) before you start the next.
 
 1. Back up your current files, then download and check the current files:
 
@@ -370,9 +373,9 @@ Upgrade in place. Do not delete the execution or beacon datadir. Keep
 `beacondata/network-keys` in place: a beacon that starts without that file
 creates a new peer ID.
 
-### Check after 13:26:07 UTC
+### Check the fork on a node
 
-Run these on each node after the fork time:
+Run these on each node:
 
 ```bash
 curl -s http://127.0.0.1:4100/eth/v1/beacon/states/head/fork
@@ -384,11 +387,13 @@ curl -s http://127.0.0.1:8545 \
 
 Expect:
 
-- the fork endpoint reports `current_version` `0x20000095` once the head is in
-  epoch `57050` or later;
-- the config endpoint reports `FULU_FORK_EPOCH` `57050`; and
-- `eth_config` reports `osakaTime` `1792329967` for the current fork after the
-  fork time.
+- the fork endpoint reports `current_version` `0x20000095`;
+- the config endpoint reports `FULU_FORK_EPOCH` `57050`;
+- `eth_config` reports `current.activationTime` `1792329967`, `forkId`
+  `0xe59eefd1`, and no `next` fork; and
+- block `1767139` has hash
+  `0x20ab2d9cb6917a0b9a7c223fce7f77265e9b993711930dba5c246fdc26d2ebc2`, the same
+  as on `rpc1.conet.network`.
 
 ### Prague system contracts
 
@@ -478,7 +483,7 @@ private keys, the mnemonic, keystore passwords, JWT, or validator RPC.
 - Do not run a stock upstream Geth build on one execution client while the
   rest of the fleet runs the patched build.
 - Do not run the Osaka/Fulu files on one layer only. An execution client or
-  beacon on older files stops following the chain at 13:26:07 UTC.
+  beacon on older files cannot follow the chain past block `1767139`.
 - Do not delete `beacondata/network-keys`. Without it, a beacon starts with a
   new peer ID.
 - Do not wipe execution or beacon data on an active node to troubleshoot an

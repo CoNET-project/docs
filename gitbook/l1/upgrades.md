@@ -10,7 +10,7 @@ operator steps are in [Run an L1 node](../developers/l1-node.md), section 8.
 |---|---|---|---|---|
 | Cancun | `shanghaiTime` = `cancunTime` = `1781376367` | Deneb (`DENEB_FORK_EPOCH` `0`) | Genesis, 2026-06-13 18:46:07 | Active |
 | Prague / Electra | `pragueTime` `1792301551` | `ELECTRA_FORK_EPOCH` `56902` | 2026-10-18 05:32:31 | Active |
-| Osaka / Fulu | `osakaTime` `1792329967` | `FULU_FORK_EPOCH` `57050` | 2026-10-18 13:26:07 | Scheduled |
+| Osaka / Fulu | `osakaTime` `1792329967` | `FULU_FORK_EPOCH` `57050` | 2026-10-18 13:26:07 | Active |
 | Gloas | — | `GLOAS_FORK_EPOCH` disabled | — | Not scheduled |
 
 The two layers switch at one instant. CoNET uses 6-second slots, and
@@ -39,6 +39,25 @@ is `1792329967` seconds after the Unix epoch, the same as `osakaTime`.
 | `genesis.json` | `e9889e1970251a145a2199caa9b889fd8868ab132372a69ff171b14476ae0b43` |
 | `config.yml` | `51c2c4dac8c50b7e3fa7b4be2a68be5ac813da8aa7389193d1785b1bbdae4840` |
 | `genesis.ssz` | `ae0a63e7bf175bb4312d5b728ff1eced7ceb4286ff5d7074cecbfa21dfd7fb46` (unchanged) |
+
+### Activation
+
+Osaka and Fulu are active on the CoNET L1 mainnet. Osaka is the current
+execution fork, and Prague is no longer the current fork.
+
+- The first Osaka block is `1767139`
+  (`0x20ab2d9cb6917a0b9a7c223fce7f77265e9b993711930dba5c246fdc26d2ebc2`), with
+  timestamp `1792329967`, equal to `osakaTime`. The previous block, `1767138`,
+  has timestamp `1792329961` and is the last Prague block.
+- On 2026-10-20, `rpc1.conet.network` and `publicrpc.conet.network` both
+  returned the same hash for block `1767139`. Both returned an `eth_config`
+  with `current.activationTime` `1792329967`, `forkId` `0xe59eefd1`, and no
+  `next` fork.
+- The chain kept producing blocks after the fork. Both endpoints reported head
+  blocks above `1792000` on 2026-10-20.
+
+To check a node yourself, see [Run an L1 node](../developers/l1-node.md),
+section 8.
 
 ## Rollout record
 
