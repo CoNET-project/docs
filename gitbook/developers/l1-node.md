@@ -215,8 +215,10 @@ The fork also enables EIP-7702, EIP-6110, EIP-7002, EIP-7251, and EIP-2935. Use 
 
 **When the patch is still needed.** Before Prague, CoNET ran Cancun with the BLS precompiles added by [patch-geth](https://github.com/CoNET-project/patch-geth), and AAC transactions called them. For example, settle `0x726426028cb6e0d71b86f3a24c33f0e62fefe5fd1fc8017d7e40f567cfc9b34d` in block `1727574` succeeded through the CoNET AAC verifier, which calls the pairing precompile `0x0f`. Under Cancun rules, the official Geth treats `0x0b`–`0x11` as empty accounts. It computes a different result for such a block and rejects it. Use the patched build only when a node re-executes blocks before `1762626`:
 
-- a full sync from genesis (`--syncmode full`), as in [Confirm the period-18 checkpoint](l1-independent-confirmation.md); or
-- an archive node that answers `eth_call` or traces at blocks before `1762626`.
+- a full sync from genesis (`--syncmode full`), as in [Confirm the period-18 checkpoint](l1-independent-confirmation.md), including a rebuild of an archive node; or
+- a node that must return exact traces of pre-Prague BLS transactions, for example to re-index Explorer history.
+
+An archive node that is already synced can switch to the official Geth build and keep following the chain. Only `eth_call` and traces at blocks before `1762626` that reach a BLS precompile then differ from the chain record; the settle above, for example, would trace as a failure. AAC safety does not depend on those historical answers.
 
 The start command below uses the default sync mode (snap), which downloads a recent state and does not re-execute old blocks. CoNET peers serve the snap protocol: on 2026-10-20, two checked CoNET-operated nodes each had 11 peers, and every peer advertised `snap/1`.
 
@@ -453,7 +455,7 @@ Compare execution height with `https://rpc1.conet.network` or
 
 ### BLS probe (full-replay nodes only)
 
-At the current head, an empty call to `0x0b` fails with `invalid input length` on both the official and the patched build, because Prague provides the precompile. To check that a full-replay or archive node runs the patched build, call `0x0b` at block `1762625` (`0x1ae541`), the last block before Prague:
+At the current head, an empty call to `0x0b` fails with `invalid input length` on both the official and the patched build, because Prague provides the precompile. To check that a node runs the patched build, call `0x0b` at block `1762625` (`0x1ae541`), the last block before Prague:
 
 ```bash
 curl -s http://127.0.0.1:8545 \
@@ -487,9 +489,9 @@ private keys, the mnemonic, keystore passwords, JWT, or validator RPC.
 
 - Joining does not authorize restarting another operator's geth, beacon, or
   validator.
-- Do not run a full sync from genesis or an archive node with the official
-  Geth build. It rejects the first block before Prague that calls a BLS
-  precompile. Use the patched build for those nodes (section 7).
+- Do not run a full sync from genesis with the official Geth build. It
+  rejects the first block before Prague that calls a BLS precompile. Use the
+  patched build for that sync (section 7).
 - Do not run the Osaka/Fulu files on one layer only. An execution client or
   beacon on older files cannot follow the chain past block `1767139`.
 - Do not delete `beacondata/network-keys`. Without it, a beacon starts with a
