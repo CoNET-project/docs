@@ -51,7 +51,7 @@ Developer how-tos for this layer: [Run an L1 node](../developers/l1-node.md), [C
 - [Decentralization and verifiability](decentralization.md) — reproducible validator, Guardian, stake, client, and governance views
 - [RPC and Explorer](rpc-explorer.md) — connection and verification examples
 - [Decentralized cross-chain Treasury](cross-chain-treasury.md) — current Treasury proxy, route modes, miner quorum, and the conditional hand-off to DLE
-- [AAC proof-driven cross-chain settlement](aac-cross-chain.md) — Obstacles 1–5 Accepted; Phases B–E recorded 2026-10-15; custody closed; Base → CoNET waits on patch-geth
+- [AAC proof-driven cross-chain settlement](aac-cross-chain.md) — Obstacles 1–5 Accepted; Phases B–E recorded 2026-10-15; custody closed; EIP-2537 native on CoNET since Prague
 - [Resources](../resources.md) — public git map and live-service index
 
 ## Next

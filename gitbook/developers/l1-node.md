@@ -104,7 +104,7 @@ curl -s http://38.102.126.50:4100/eth/v1/beacon/genesis
 | Osaka (execution) | `osakaTime` **`1792329967`** = **2026-10-18 13:26:07 UTC** |
 | Fulu (consensus) | `FULU_FORK_EPOCH` **`57050`** (slot `1825600`); `FULU_FORK_VERSION` `0x20000095`; the same instant as Osaka |
 | Blob schedule | `prague` and `osaka`: target `6`, max `9`, `baseFeeUpdateFraction` `5007716` |
-| Recommended clients | The latest official release of Geth, built with the [patch-geth](https://github.com/CoNET-project/patch-geth) patch (section 7); the latest official release of Prysm. Use the release pages, not a version pinned in this document |
+| Recommended clients | The latest official release of Geth and the latest official release of Prysm. Use the release pages, not a version pinned in this document. A [patch-geth](https://github.com/CoNET-project/patch-geth) build is needed only to re-execute blocks before Prague (section 7) |
 
 The validators-root field is stored inside the genesis state. A beacon can
 copy that field into a different state and a different sync committee. Treat
@@ -209,13 +209,20 @@ explicitly planned a rebuild.
 
 ### CoNET execution client and EIP-2537
 
-Run the **patched build of the latest official Geth release**, and use the same build on every execution client. Stock upstream Geth answers an empty call to `0x0b`–`0x11` with an empty success before the fork. That result is an empty account, not the BLS12-381 precompile, so a mixed fleet forks at the first block that calls those addresses.
+Run the **latest official Geth release**. AAC proofs of a Base receipt on CoNET need the EIP-2537 BLS12-381 precompiles `0x0b`–`0x11`. Prague includes EIP-2537, and Osaka keeps it. Prague has been active since `pragueTime` (block `1762626`), and Osaka is the current fork, so the official Geth runs those precompiles natively. It executes every current block the same way as the patched build. You do not need a patch to follow the chain or to verify AAC proofs.
 
-AAC proofs of a Base receipt on CoNET need those seven precompiles. Before the fork, Cancun has no BLS precompiles, so the patch adds them. From `pragueTime`, Prague includes EIP-2537 itself. Keep the patched build after the fork, because blocks before the fork still replay under Cancun rules. The fork also enables EIP-7702, EIP-6110, EIP-7002, EIP-7251, and EIP-2935. Use the published `genesis.json`; do not edit `pragueTime` or `blobSchedule` in a local copy.
+The fork also enables EIP-7702, EIP-6110, EIP-7002, EIP-7251, and EIP-2935. Use the published `genesis.json`; do not edit `pragueTime`, `osakaTime`, or `blobSchedule` in a local copy.
 
-**Official sources.** The Geth source is the latest official release of [go-ethereum](https://github.com/ethereum/go-ethereum/releases/latest). Binary archives are listed at [geth.ethereum.org/downloads](https://geth.ethereum.org/downloads). Each archive is named `geth-linux-amd64-<version>-<commit>.tar.gz` and has an `.asc` PGP signature beside it. Import the build-server keys linked from that page and verify the signature before you use an archive. Stock archives do not include the CoNET patch, so a CoNET execution client must run the patched build described below.
+**When the patch is still needed.** Before Prague, CoNET ran Cancun with the BLS precompiles added by [patch-geth](https://github.com/CoNET-project/patch-geth), and AAC transactions called them. For example, settle `0x726426028cb6e0d71b86f3a24c33f0e62fefe5fd1fc8017d7e40f567cfc9b34d` in block `1727574` succeeded through the CoNET AAC verifier, which calls the pairing precompile `0x0f`. Under Cancun rules, the official Geth treats `0x0b`–`0x11` as empty accounts. It computes a different result for such a block and rejects it. Use the patched build only when a node re-executes blocks before `1762626`:
 
-**Build the patched binary from source.** Run these on a build machine, not on a live node. The patch adds the BLS implementations that already exist in the Geth release into `PrecompiledContractsCancun` only:
+- a full sync from genesis (`--syncmode full`), as in [Confirm the period-18 checkpoint](l1-independent-confirmation.md); or
+- an archive node that answers `eth_call` or traces at blocks before `1762626`.
+
+The start command below uses the default sync mode (snap), which downloads a recent state and does not re-execute old blocks. CoNET peers serve the snap protocol: on 2026-10-20, two checked CoNET-operated nodes each had 11 peers, and every peer advertised `snap/1`.
+
+**Official sources.** The Geth source is the latest official release of [go-ethereum](https://github.com/ethereum/go-ethereum/releases/latest). Binary archives are listed at [geth.ethereum.org/downloads](https://geth.ethereum.org/downloads). Each archive is named `geth-linux-amd64-<version>-<commit>.tar.gz` and has an `.asc` PGP signature beside it. Import the build-server keys linked from that page and verify the signature before you use an archive.
+
+**Build the patched binary from source (full replay only).** Run these on a build machine, not on a live node. The patch adds the BLS implementations that already exist in the Geth release into `PrecompiledContractsCancun` only:
 
 ```bash
 GETH_TAG=$(curl -fsSL https://api.github.com/repos/ethereum/go-ethereum/releases/latest \
@@ -238,7 +245,7 @@ Compare the commit printed by `git rev-parse HEAD` with the commit that the GitH
 
 `apply` and `check` must both exit with status 0. `apply` is safe to repeat on a newer Geth tag. If it cannot find the Cancun table, or a `bls12381*` type, it exits without writing a partial patch. If either command fails, do not build and do not edit the source by hand. Keep the last accepted binary.
 
-**Prebuilt patched binary.** The latest [patch-geth release](https://github.com/CoNET-project/patch-geth/releases/latest) publishes a static Linux amd64 `geth` and a `SHA256SUMS` file. Download both into the same folder and check the binary before use:
+**Prebuilt patched binary (full replay only).** The latest [patch-geth release](https://github.com/CoNET-project/patch-geth/releases/latest) publishes a static Linux amd64 `geth` and a `SHA256SUMS` file. Download both into the same folder and check the binary before use:
 
 ```bash
 sha256sum -c SHA256SUMS
@@ -246,7 +253,7 @@ sha256sum -c SHA256SUMS
 
 Use the prebuilt binary only when its patch-geth release names the same Geth release as the latest official Geth release.
 
-Before the fork, on 2026-10-15, the checked execution clients (`38.102.126.30:8889`, `38.102.126.50` ports `8888`, `8883`, and `8884`, and `38.102.126.58:8885`) run the patched build of the Geth release current on that date. An empty `eth_call` to `0x0b` returns `invalid input length`. `rpc1.conet.network` and `publicrpc.conet.network` return the same error. Probe `0xed2E4B55152A657B43A5065a01B9655dB0033713` reports the precompile available. The earlier probe `0x864896C7dD5CA603AA11C3dC0BA329EB78Cc5F78` still returns false, because a revert with empty return data is not an empty success. Probe `0xbaff644E6C06A277AaDFde016d2eeB87AE18EB6B` is superseded: its uncapped presence check burned the transaction gas. A mixed fleet, where one client still returns empty success, is an execution fork. The CoNET checkpoint `0x52b3bc7A8c58EC64A57a62783E2e1F8CB8457b3a` stores Ethereum period 1884 and `rootReady` is true. A 0.01 Base USDC receipt in that period is covered, and the CoNET settler is installed. An empty call is still not a pairing proof.
+Historical record: before the fork, on 2026-10-15, the checked execution clients (`38.102.126.30:8889`, `38.102.126.50` ports `8888`, `8883`, and `8884`, and `38.102.126.58:8885`) run the patched build of the Geth release current on that date. An empty `eth_call` to `0x0b` returns `invalid input length`. `rpc1.conet.network` and `publicrpc.conet.network` return the same error. Probe `0xed2E4B55152A657B43A5065a01B9655dB0033713` reports the precompile available. The earlier probe `0x864896C7dD5CA603AA11C3dC0BA329EB78Cc5F78` still returns false, because a revert with empty return data is not an empty success. Probe `0xbaff644E6C06A277AaDFde016d2eeB87AE18EB6B` is superseded: its uncapped presence check burned the transaction gas. A mixed fleet, where one client still returns empty success, is an execution fork. The CoNET checkpoint `0x52b3bc7A8c58EC64A57a62783E2e1F8CB8457b3a` stores Ethereum period 1884 and `rootReady` is true. A 0.01 Base USDC receipt in that period is covered, and the CoNET settler is installed. An empty call is still not a pairing proof.
 
 ### Start geth
 
@@ -444,17 +451,17 @@ Compare execution height with `https://rpc1.conet.network` or
 `https://publicrpc.conet.network`. Do not use deprecated
 `https://rpc.conet.network`.
 
-### BLS probe (historical, before Prague)
+### BLS probe (full-replay nodes only)
 
-On the local geth, an empty call to `0x0b` must fail with `invalid input length`. A stock build returns `0x`, an empty success, which is a different chain state:
+At the current head, an empty call to `0x0b` fails with `invalid input length` on both the official and the patched build, because Prague provides the precompile. To check that a full-replay or archive node runs the patched build, call `0x0b` at block `1762625` (`0x1ae541`), the last block before Prague:
 
 ```bash
 curl -s http://127.0.0.1:8545 \
   -H 'content-type: application/json' \
-  --data '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"to":"0x000000000000000000000000000000000000000b","data":"0x"},"latest"]}'
+  --data '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"to":"0x000000000000000000000000000000000000000b","data":"0x"},"0x1ae541"]}'
 ```
 
-Run this before the fork time. After 2026-10-18 05:32:31 UTC, both builds implement BLS, so this probe no longer tells them apart. An empty result is never a pairing proof.
+The patched build returns `invalid input length`, the same as `rpc1.conet.network`. The official build returns `0x`, an empty success. A node that does not keep the state of that block returns a missing-state error instead; that node does not need the patch. An empty result is never a pairing proof.
 
 ## 10. Add a validator
 
@@ -480,8 +487,9 @@ private keys, the mnemonic, keystore passwords, JWT, or validator RPC.
 
 - Joining does not authorize restarting another operator's geth, beacon, or
   validator.
-- Do not run a stock upstream Geth build on one execution client while the
-  rest of the fleet runs the patched build.
+- Do not run a full sync from genesis or an archive node with the official
+  Geth build. It rejects the first block before Prague that calls a BLS
+  precompile. Use the patched build for those nodes (section 7).
 - Do not run the Osaka/Fulu files on one layer only. An execution client or
   beacon on older files cannot follow the chain past block `1767139`.
 - Do not delete `beacondata/network-keys`. Without it, a beacon starts with a
@@ -495,7 +503,7 @@ private keys, the mnemonic, keystore passwords, JWT, or validator RPC.
 
 ## Related
 
-- [patch-geth](https://github.com/CoNET-project/patch-geth) — source patch for the CoNET execution build; it adds EIP-2537 to the Cancun precompile table
+- [patch-geth](https://github.com/CoNET-project/patch-geth) — adds EIP-2537 to the Cancun precompile table; needed only to re-execute blocks before Prague
 - [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md)
 - [Confirm the period-18 checkpoint](l1-independent-confirmation.md)
 - [Validators](../l1/validators.md)

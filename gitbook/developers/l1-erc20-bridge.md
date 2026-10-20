@@ -72,7 +72,7 @@ The destination contract rejects a disabled route, conflicting payloads, duplica
 
 These controls decentralize **authorization** across the configured miner set. They do not prove operator independence, source-chain finality, or that upgrade keys cannot be compromised.
 
-The proposed AAC route replaces this per-deposit vote only after destination verification and an explicit cutover. Obstacles 1–5 Accepted prove the on-chain gate contracts and settler path; they do not open custody. Miner `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed`. Source `initiate*` also requires `aacDestinationOpen[destinationChainId]`. This window opens only Base chain id `8453`. The owner can later open any other chain id with `setAacDestinationOpen` without another treasury upgrade. CoNET `224422` stays closed. The CoNET Base-receipt settler is deployed and is not wired, because stock Geth has no EIP-2537 precompile. The build is [patch-geth](https://github.com/CoNET-project/patch-geth); see [Run an L1 node](l1-node.md). Until that cutover, applications must continue using the enabled Treasury V3 route above.
+The proposed AAC route replaces this per-deposit vote only after destination verification and an explicit cutover. Obstacles 1–5 Accepted prove the on-chain gate contracts and settler path; they do not open custody. Miner `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed`. Source `initiate*` also requires `aacDestinationOpen[destinationChainId]`. This window opens only Base chain id `8453`. The owner can later open any other chain id with `setAacDestinationOpen` without another treasury upgrade. CoNET `224422` stays closed. The CoNET Base-receipt settler is deployed and is not wired. The EIP-2537 precompiles it needs have been native on CoNET since Prague (2026-10-18), so the official Geth build runs them; see [Run an L1 node](l1-node.md). Until that cutover, applications must continue using the enabled Treasury V3 route above.
 
 ## Use a current product path (Base USDC)
 
@@ -179,7 +179,7 @@ That second transition is specified, not deployed. See [L2 development](l2.md) a
 ## Related
 
 - [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md)
-- [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md) — Obstacles 1–5 Accepted; Phases B–E recorded 2026-10-15; custody closed; Base → CoNET waits on patch-geth
+- [AAC proof-driven cross-chain settlement](../l1/aac-cross-chain.md) — Obstacles 1–5 Accepted; Phases B–E recorded 2026-10-15; custody closed; EIP-2537 native on CoNET since Prague
 - [Core L1 assets](../l1/assets.md)
 - [RPC and Explorer](../l1/rpc-explorer.md)
 - [Miner-matched order-book exchange](../applications/miner-orderbook-dex.md) — design study on top of canonical assets

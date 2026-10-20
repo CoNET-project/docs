@@ -73,7 +73,8 @@ for the forks.
 ## 2. Start the patched geth
 
 Use the patched build of the latest official geth release, from section 7 of
-[Run an L1 node](l1-node.md). Older
+[Run an L1 node](l1-node.md). This guide runs `--syncmode full`, which
+re-executes blocks before Prague, so the official build is not enough here. Older
 geth rejects the published genesis because the Cancun `blobSchedule` entry is
 missing. Initialize once, then start it in its
 own terminal. Replace `<YOUR_PUBLIC_IP>`.

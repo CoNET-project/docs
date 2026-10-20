@@ -25,7 +25,7 @@ All assets below are associated with CoNET L1, **`chainId 224422`**.
 
 The Treasury controls explicit cross-chain route and canonical-asset policy. A foreign ERC-20 does not become canonical merely because it has been wrapped or assigned matching metadata. See [Decentralized cross-chain Treasury](cross-chain-treasury.md).
 
-The [AAC settlement track](aac-cross-chain.md) specifies proof-driven movement for canonical USDC, **paid GB**, wCNET, and unbound developer ERC-20s. Its production read-only Shadow is deployed, but AAC custody is not. It does not permit free GB or a developer token bound to a GB exchange rate to cross. Miner completion reverts `VoteBridgeClosed`. Base → CoNET proofs wait on [patch-geth](https://github.com/CoNET-project/patch-geth), which is not the installed execution client.
+The [AAC settlement track](aac-cross-chain.md) specifies proof-driven movement for canonical USDC, **paid GB**, wCNET, and unbound developer ERC-20s. Its production read-only Shadow is deployed, but AAC custody is not. It does not permit free GB or a developer token bound to a GB exchange rate to cross. Miner completion reverts `VoteBridgeClosed`. Base → CoNET proofs need the EIP-2537 precompiles, which CoNET has run natively since Prague (2026-10-18).
 
 CoNET-USDC uses 6 decimals. Issued-NFT social exchange payouts must use this
 canonical token; the legacy USDC factory address

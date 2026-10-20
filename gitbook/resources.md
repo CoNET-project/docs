@@ -77,7 +77,7 @@ documentation repositories is maintained in the
 | Browser `web3://` client | [CoNET-project/web3Url](https://github.com/CoNET-project/web3Url) |
 | CoNET DLE | [CoNET-project/CoNET-DLE](https://github.com/CoNET-project/CoNET-DLE) |
 | AAC Rust reference gateway | [CoNET-project/bridgeAAC](https://github.com/CoNET-project/bridgeAAC) |
-| CoNET execution-client BLS patch | [CoNET-project/patch-geth](https://github.com/CoNET-project/patch-geth) |
+| CoNET execution-client BLS patch (pre-Prague replay only) | [CoNET-project/patch-geth](https://github.com/CoNET-project/patch-geth) |
 | Documentation | [CoNETProject/docs](https://github.com/CoNETProject/docs) |
 
 ## Maturity
