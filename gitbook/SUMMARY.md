@@ -26,6 +26,8 @@
   * [Guardian nodes and staking](l1/guardian-staking.md)
   * [RPC and Explorer](l1/rpc-explorer.md)
   * [Core L1 assets](l1/assets.md)
+  * [GB token whitepaper (draft)](l1/gb-whitepaper.md)
+  * [GB AMM whitepaper (draft)](l1/gb-amm-whitepaper.md)
   * [Decentralized cross-chain Treasury](l1/cross-chain-treasury.md)
   * [AAC proof-driven cross-chain settlement](l1/aac-cross-chain.md)
 * [L2 — CoNET-DLE](l2/README.md)

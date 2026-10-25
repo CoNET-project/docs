@@ -35,6 +35,8 @@ canonical USDC reward to the user's EOA.
 
 **ConetGB1155 is deprecated.** It is a legacy accounting track and must not be used as the canonical GB wallet balance, transfer asset, or default integration target. New integrations should use the GBToken ERC-20 contract and 9-decimal precision.
 
+**GB and conet-USDC design status.** The GBToken and conet-USDC contracts above are live production contracts, and this page describes them as they are. A proposed replacement design is described in the [GB token whitepaper (draft)](gb-whitepaper.md): paid GB issued only by burning conet-USDC, free GB that is consume-only and non-transferable, and conet-USDC deployed as a new contract with no admin or upgrade authority. That design is not deployed and is not approved by the DAO. Its deployment waits for design discussion and an independent audit. Market structure and treasury operations for that design are described in the [GB AMM whitepaper (draft)](gb-amm-whitepaper.md).
+
 ## Endpoint note
 
 Read balances and token metadata from `https://rpc1.conet.network`, with `https://publicrpc.conet.network` as backup. `https://rpc.conet.network` is deprecated. The canonical Explorer is `https://mainnet.conet.network`.
