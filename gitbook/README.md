@@ -39,6 +39,36 @@ focuses on privacy-oriented Internet access, [CoNET Chat](applications/depin-cha
 on relationship-private wallet communication, and [Beamio](applications/beamio.md)
 on consumer, merchant, and POS workflows.
 
+## Where things stand (October 2026)
+
+| Area | Status | Read |
+|---|---|---|
+| **CoNET L1** | Production, `chainId` 224422. Osaka / Fulu active since 2026-10-18; the official Geth release runs current blocks | [L1 overview](l1/README.md) · [Run an L1 node](developers/l1-node.md) |
+| **Cross-chain settlement** | AAC read-only Shadow in production since 2026-10-16; Obstacles 1–5 Accepted; miner-vote path closed and paid-GB bridge paused since 2026-10-15; AAC custody closed | [AAC](l1/aac-cross-chain.md) · [Treasury](l1/cross-chain-treasury.md) |
+| **GB** | The live GBToken is unchanged. A replacement GB and conet-USDC design is a discussion draft, not deployed | [GB whitepaper](l1/gb-whitepaper.md) · [GB AMM whitepaper](l1/gb-amm-whitepaper.md) |
+| **CoNET-DLE** | Normative design with a public lab. The 30-day lab assessment was partial success, not qualified; production archive signing and asset ingress are not enabled | [L2 overview](l2/README.md) · [Lab honesty track](l2/lab-honesty-track.md) |
+| **Order-book exchange** | Whitepaper draft for an exchange that runs inside DLE; not implemented | [Exchange whitepaper](applications/miner-orderbook-dex-whitepaper.md) |
+
+## Design drafts and whitepapers
+
+These documents propose designs. Rules they mark as decided are operator
+decisions, not DAO approval, and none of the designs below is deployed.
+
+- [GB token whitepaper (draft v0.3)](l1/gb-whitepaper.md) — paid GB issued
+  only by burning conet-USDC, consume-only free GB, Base USDC as the only
+  reserve, DAO-voted parameters executed by contracts, and a cross-chain
+  forged-message gate before any mint or release path opens.
+- [GB AMM whitepaper (draft v0.2)](l1/gb-amm-whitepaper.md) — GB markets,
+  treasury open-market operations and risk management for that design.
+- [Order-book exchange whitepaper (draft v0.2)](applications/miner-orderbook-dex-whitepaper.md)
+  — a non-custodial order book on CoNET-DLE: users freeze their own DLE
+  balances, miners split and match orders in batch auctions, and anyone can
+  open a liquidity pool for a fast lane. It also compares today's
+  centralized and decentralized exchanges.
+- [Privacy-first Decentralized AI whitepaper](applications/privacy-first-ai-whitepaper.md)
+  — independent model, data and agent roles over wallet-addressed
+  infrastructure.
+
 ## Wallet-addressed applications
 
 [`web3://`](applications/web3-url.md) is an **application protocol using Layer
@@ -79,6 +109,14 @@ traffic.
 - L1 operations: [Run an L1 node](developers/l1-node.md),
   [RPC and Explorer](l1/rpc-explorer.md), and
   [decentralization evidence](l1/decentralization.md).
+- Cross-chain assets: [Cross-chain Treasury](l1/cross-chain-treasury.md) →
+  [AAC proof-driven settlement](l1/aac-cross-chain.md) →
+  [cross-chain assets in DLE](l2/cross-chain-assets.md).
+- Economics: [Core L1 assets](l1/assets.md) →
+  [GB whitepaper](l1/gb-whitepaper.md) →
+  [GB AMM whitepaper](l1/gb-amm-whitepaper.md).
+- Trading on DLE: [Exchange design study](applications/miner-orderbook-dex.md) →
+  [exchange whitepaper](applications/miner-orderbook-dex-whitepaper.md).
 - Public source: [Open source repository index](open-source.md).
 - Current endpoints and evidence: [Resources](resources.md).
 
