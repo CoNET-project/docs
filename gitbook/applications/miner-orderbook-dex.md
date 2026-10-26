@@ -8,6 +8,8 @@ GitBook.
 
 Public site: [https://gitbook.conet.network/applications/miner-orderbook-dex.html](https://gitbook.conet.network/applications/miner-orderbook-dex.html)
 
+**Whitepaper.** The [order-book exchange whitepaper](miner-orderbook-dex-whitepaper.md) (v0.2 discussion draft, 25 October 2026) expands this study. It keeps funds inside CoNET-DLE instead of L1 wallets: users freeze their own DLE asset chains, one DLE order chain is opened per order, miners split and match in batches, and DLE settles fills as parallel two-phase transfers. It also adds permissionless liquidity pools for a fast lane, and the operator's fee decisions. Where the two pages differ, the whitepaper reflects the later decisions. Neither is deployed.
+
 ## Product thesis
 
 A decentralized exchange does not have to use an automated market-maker curve.
@@ -244,6 +246,7 @@ Before describing the exchange as available, the project must publish:
 
 ## Related
 
+- [Order-book exchange whitepaper](miner-orderbook-dex-whitepaper.md)
 - [Applications](README.md)
 - [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md)
 - [Cross-chain assets in CoNET-DLE](../l2/cross-chain-assets.md)

@@ -36,7 +36,7 @@ Maturity is not an audit, uptime, or anonymity guarantee.
 | **CoNET Chat** | Relationship-private messaging and real-time voice: sender wallet inside recipient-only ciphertext, Layer Minus IP/route separation, encrypted history, and opaque voice relay sessions | Implemented capability | [CoNET Chat](depin-chat.md) |
 | **Privacy-first Decentralized AI** | Three independent roles and one open intelligence economy: private paths plus candidate micropayments (not a live AI fee rail) | Design study | [Landing](privacy-first-ai.md) · [Whitepaper](privacy-first-ai-whitepaper.md) |
 | **Institutional multisig AA** | Team-controlled Smart Wallet with on-chain tasks and threshold votes | Implemented capability | [Institutional multisig AA](institutional-multisig-aa.md) |
-| **Miner-matched order-book exchange** | Proposed non-custodial ERC-20 order book | Design study | [Miner-matched exchange](miner-orderbook-dex.md) |
+| **Miner-matched order-book exchange** | Proposed non-custodial order book on CoNET-DLE, matched by miners | Design study | [Miner-matched exchange](miner-orderbook-dex.md) · [Whitepaper](miner-orderbook-dex-whitepaper.md) |
 | **DePIN DCDN / BT** | Planned encrypted bulk-content distribution | Under development | [DePIN DCDN / BT](bt-dcdn.md) |
 
 The [`web3://` application page](web3-url.md) is the canonical cross-platform

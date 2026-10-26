@@ -55,6 +55,7 @@
     * [Whitepaper](applications/privacy-first-ai-whitepaper.md)
   * [Institutional multisig AA](applications/institutional-multisig-aa.md)
   * [Miner-matched order-book exchange](applications/miner-orderbook-dex.md)
+    * [Whitepaper](applications/miner-orderbook-dex-whitepaper.md)
   * [BT over DePIN DCDN](applications/bt-dcdn.md)
 * [Developers](developers/README.md)
   * [L0 development](developers/l0.md)
