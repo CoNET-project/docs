@@ -1,300 +1,121 @@
 # AAC proof-driven cross-chain settlement
 
-**Evidence level: mixed.** The `bridgeAAC` repository contains the AAC reference state machine and a production **read-only Shadow observer**. Shadow `0.33.13` is deployed as the production unit (since 2026-10-16), but it is **not** a Base or CoNET light client, controls no custody, emits no settlement transaction, and has not replaced the live miner-vote bridge.
+**Status as of 2026-10-26.** This page follows the [GB token whitepaper](gb-whitepaper.md) (v0.3, 25 October 2026) and the [CoNET privacy and asset fragmentation whitepaper](privacy-fragmentation-whitepaper.md) (v0.3, 26 October 2026). Both are DAO discussion drafts, not approved by the DAO and not on-chain. Labels marked **[Decided]** are operator decisions with the stated date; they are not DAO approvals. No mint or release path is open. Under the deployment gate in GB §17, no new contract is deployed before independent audit.
 
-Source: [CoNET-project/bridgeAAC](https://github.com/CoNET-project/bridgeAAC)
+**Evidence level: mixed.** The [bridgeAAC](https://github.com/CoNET-project/bridgeAAC) repository holds the AAC reference state machine and a production **read-only Shadow observer** (release `0.33.13`). Shadow is not a Base or CoNET light client. It controls no custody, emits no settlement transaction, and does not replace the legacy miner-vote bridge.
 
-## Purpose
+## What this page corrects
 
-Atomic Asset Container (AAC) is the proposed deterministic replacement for per-deposit miner voting. A source chain locks or burns an asset. A destination contract accepts that fact only after it verifies:
+This page replaces the 2026-10-15 version. These statements from the earlier version are withdrawn or corrected:
 
-1. the deposit or burn is included under a source-state commitment;
+- **Minting on external chains.** The earlier version said a destination GB or Peer v5 contract mints the asset. The whitepapers say the AAC secure construction holds the minting right on external chains, and the external treasury holds none (GB §3.1, §4.3).
+- **Legacy addresses as targets.** The earlier version listed the legacy GB token `0xC3EF…` and the legacy CoNET USDC `0x5209…` as intended adapters. The whitepapers void the old GB balances and issue from zero on new contracts (GB §19.1). conet-USDC is deployed as a new contract (GB §3.2).
+- **Rate governance venue.** The earlier version placed GB/USDC rate voting on CoNET Peer v5. The GB whitepaper makes the rate a DAO-voted parameter that the yes-voters execute, with no execution multisig (GB §15.1, §15.4).
+- **wCNET completion.** The earlier version described CoNET-side completion as a release from custody. The GB whitepaper says release from custody is not an inbound method. Inbound completion is a CoNET mint after an external burn (GB §4.2).
+- **Audit waiver.** The earlier version recorded that independent audit and third-party acceptance were waived by the owner on 2026-10-14. The GB deployment gate of 25 October 2026 requires independent audit before any new contract is deployed (GB §17). The waiver is kept as a historical bridgeAAC record and is not treated as satisfying that gate.
+- **Host details.** Operator host addresses and partial IP addresses from the earlier version are removed from this public page.
+
+## 1. Purpose
+
+Atomic Asset Container (AAC) is the proposed one-time destination-chain record for cross-chain settlement. A source chain locks or burns an asset. A destination chain accepts that fact only after it verifies:
+
+1. the lock or burn is included under a source-state commitment;
 2. the commitment belongs to the intended source chain and gateway;
 3. the source header is final under that chain's consensus rules;
-4. the asset, amount, recipient, route, nonce, and domain match; and
-5. the source deposit has not already been consumed.
+4. the asset, amount, recipient, route, nonce and domain match; and
+5. the source event has not already been consumed.
 
-A relayer may submit a proof, but it cannot choose the amount or receive an unrestricted mint role.
+A relayer may submit a proof. It cannot choose the amount, choose the unit, or receive an unrestricted minting role.
 
-## Deterministic state machine
+## 2. Role in the whitepapers
 
-```text
-source lock or burn
-        │
-        ▼
-submit inclusion + finality proof
-        │
-        ▼
-VERIFIED → RESERVED → MINTED
-                    └→ RELEASED
-```
+- **AAC and cross-chain module** (GB §3.1). It verifies external lock or burn facts, confirms finality, and constrains one-time settlement. Tokens issued on CoNET are minted on external chains by the AAC secure construction (decided 24 October 2026).
+- **External treasury** (GB §3.1, §3.2). It holds Base USDC and accounts for it by use. It holds no minting right. Cross-chain tokens are deployed at one address on external chains (decided 24 October 2026).
+- **Deposit units** (privacy whitepaper §3). The proposal is that each accepted deposit corresponds to one unit, one token and one registration record, so a restriction on one unit does not by itself reach the others. The privacy whitepaper grades this as a proposed specification (§11.2).
+- **Source-state proofs** (privacy whitepaper §3.7). A proof names the chain, the token address, the implementation version, the block height or hash, the state root, the storage layout and the finality rule. A single observer's signature over an RPC read is not a trustless verification.
 
-`isReserved(aacId)` is true only in `RESERVED`. It prevents two destination executions from consuming the same source deposit. It does not replace source custody, prove that a submitted header is real, or prove source-chain finality.
+## 3. Routes
 
-The AAC key commits to the source chain, source gateway, source deposit ID, and target domain. Its stored payload also binds the source and destination assets, amount, recipient, and asset class. Terminal states are irreversible.
+| Route | Source action | Destination action | Basis |
+| --- | --- | --- | --- |
+| Base USDC to CoNET (inbound) | USDC is locked in the external treasury | CoNET mints conet-USDC after the AAC proof is verified | GB §3.2, §4.5 |
+| conet-USDC to Base (outbound) | conet-USDC is burned on CoNET | The external treasury releases locked Base USDC, capped by the locked balance. Nothing is minted on Base. Blocked until the forged-burn gate passes | GB §3.2 (25 October 2026) |
+| Paid GB to an external chain (outbound) | Paid GB is burned on CoNET | The AAC secure construction mints the same amount on the external chain. No other route exists | GB §4.1 |
+| Paid GB from an external chain (inbound) | The external chain burns the CoNET-issued asset | CoNET mints paid GB. Release from custody is not an inbound method | GB §4.2 |
+| External native assets | Base USDC, and ERC-20 tokens the DAO later votes to bridge, are locked in the external treasury | CoNET mints on inbound. On outbound the external treasury releases the asset. Nothing is minted on external chains | GB §4.5 |
+| wCNET | Minted on an external chain only after the wCNET burn on CoNET | Inbound completion is a CoNET mint after an external burn | GB §4.1, §4.2 (24 October 2026) |
 
-## CoNET and Base responsibilities
+Rules that apply across the routes:
 
-The same contract address on two chains does not imply shared storage. Each source-side contract locks or burns locally; the destination-side contract verifies and consumes its own AAC.
+- Developer-issued ERC-20 tokens have no separate route. A CoNET-issued token that is bridged out follows the same rule: CoNET burn, then external mint by the AAC secure construction (GB §4.1).
+- Free GB cannot be bridged. It has no right of exit and cannot be transferred, traded or bridged across chains (GB §8.2, decided 24 October 2026).
+- A GB holder on an external chain who wants to exit must first bridge back to CoNET. The exit obligation is calculated on global supply: L = R × (paid GB circulating on CoNET + GB circulating on each external chain) (GB §4).
+- Outbound burns and external minting only change where the supply sits. They are not a supply contraction and not new capital (GB §4).
 
-| Asset route | Source action | Destination AAC action |
-| --- | --- | --- |
-| Base Circle USDC → CoNET | Base `TreasuryBridgeV3` locks Circle USDC | CoNET `TreasuryBridgeV3` mints canonical `conet-USDC` |
-| CoNET USDC → Base | CoNET `TreasuryBridgeV3` burns canonical `conet-USDC` | Base `TreasuryBridgeV3` releases Circle USDC from its balance |
-| Paid GB, either direction | Source GB contract burns paid GB | Destination GB contract mints the same amount into the paid pool |
-| Unbound developer ERC-20, either direction | Source Peer v5 burns the token | Destination Peer v5 mints the same token address |
+## 4. Minting authority
 
-Free GB cannot cross. A developer token bound to a GB exchange rate cannot transfer or cross, so it has no AAC. GB/USDC rate voting and the CNET voter threshold are parameter governance on CoNET Peer v5, not remote-state proofs.
+- Minting of CoNET-issued tokens on external chains is done by the AAC secure construction. The external treasury holds no minting right (GB §3.1, decided 24 October 2026).
+- The form of that construction is **pending** (GB §19.11). It must be decided whether the verification contract holds the minting right directly, or a dedicated representation token grants it only to the AAC secure construction. It must also be decided how the minter is replaced when the token has no admin.
+- conet-USDC has no admin or owner minting and no upgrade authority (GB §3.2, decided 25 October 2026). It has two minting paths only: a Base USDC deposit, and the burn of paid GB (GB §3.2).
+- Paid GB has four sources and no others: user issuance by burning conet-USDC, AMO sales, cross-chain inbound, and the miner mint as a risk-reserve exception. No address holds a minting right beyond these (GB §5.1).
+- The new GB contract removes direct admin minting of paid GB and minting after burning developer FX tokens (GB §5.1, decided 24 October 2026).
 
-## Contract boundaries
+**Legacy contracts.** The legacy GB contract still carries admin-side entry points, including an AAC admin role that was granted on 2026-10-15. The new GB contract removes these entry points (GB §5.1, §18). The legacy contract is a historical record, not the target design.
 
-The intended adapters are:
+## 5. One-time settlement
 
-| Component | Address or status |
+- A cross-chain event may be confirmed, retained and completed only once. Source-chain reorganisations, expired proofs, replays, retries and concurrent requests must not cause duplicate minting or duplicate release (GB §3.3).
+- The two chains do not execute atomically. The process must provide traceable pending states, timeouts and recovery rules. A claim for GB already burned but not yet paid must not be lost to interface errors, retries or pauses (GB §3.3).
+- On the external side, a multi-unit payment is atomic. Either all selected unit transfers succeed or the whole payment reverts. A transfer that returns a failure value does not by itself complete the settlement accounting (privacy whitepaper §5.1).
+- Cancellation may not rely on local timeouts. A source-chain request cannot be paid after a proven final cancellation, and rights are not restored merely because a timeout passed (privacy whitepaper §5.4, §9.1).
+- Assets in transit and accepted exits not yet completed are shown as pending-settlement occupancy, separately from available backing (GB §3.2).
+
+## 6. Proof boundary
+
+- A Merkle inclusion path proves only that a leaf belongs to a supplied root. It does not prove that the root belongs to a real, final source block.
+- **Base to CoNET** needs a verifier of Base finality, such as an OP Stack output-root and fault-proof adapter. A header supplied by a relayer is not sufficient.
+- **CoNET to Base** needs a verifier of CoNET consensus and finality. Ethereum does not publish CoNET headers for Base to consume.
+- Base has separate stages: sequencer pre-confirmation, L2 block confirmation, L1 batches, and finality. Cross-domain withdrawal proofs have their own waiting rules. They must not be collapsed into one fixed delay (privacy whitepaper §3.7).
+- A consensus light client for one chain does not, by itself, verify another chain (privacy whitepaper §3.7).
+- A token upgrade can change the storage layout. An adapter must bind the implementation version, and must not silently read old storage slots and continue to report a valid proof (privacy whitepaper §3.7).
+- Agreement between RPC readers, a message bus, a miner signature or an HTTP success response is not a substitute for either verifier.
+- The bridgeAAC reference code exposes a `FinalityVerifier` interface. Its execution-client adapters and its `MockFinality` test double are not light clients.
+
+## 7. Security and deployment gates
+
+- **Security gate** (decided 24 October 2026). Before any path that mints paid GB or conet-USDC opens, it must be proven that cross-chain verification rejects forged source-chain messages, including forged block headers and receipts. Positive tests with real data alone are not sufficient (GB §17).
+- **Outbound release gate** (decided 25 October 2026). Before the conet-USDC outbound release path opens, it must be proven that the Base side rejects forged CoNET burn messages. The path mints no token, but a forged burn message would withdraw Base USDC from the external treasury (GB §3.2, §17).
+- **Deployment gate** (decided 25 October 2026). New contracts are deployed only after discussion and independent audit are complete. Nothing is deployed before the audit is complete (GB §17).
+- **The miner mint is not an AAC route.** The miner mint in GB §5.2 is a risk-reserve-backed issuance rule on CoNET. The legacy miner-vote bridge is a different mechanism and is closed (see Section 8).
+
+## 8. Status recorded in bridgeAAC (2026-10-26)
+
+| Item | Status |
 | --- | --- |
-| TreasuryBridgeV3 on CoNET and Base | `0xa208982212978550594A7FEEB70a61665d129003` |
-| Canonical CoNET USDC | `0x5209865D404aA5646eDe5B91CD4218909eA72eDA` |
-| Base Circle USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| GB token | `0xC3EF02DaE632b4C10abB66e07d92a387c10838D8` |
-| Peer v5 predicted CREATE2 address | `0x1DF0F1826e9085caDB2bDc927A117140FAb39066` — design / local implementation, not a verified production deployment |
+| Reference state machine | bridgeAAC `0.33.13`, released 2026-10-16. Local tests and fail-closed smoke as recorded in the repository |
+| Production Shadow | Read-only observer since 2026-10-16. Its reports keep `broadcast no`, `settled no`, `custody closed`, `light-client no`, `registry paused` and `consume denied`. Each chain is read by two execution readers, as recorded in the repository |
+| Forged-message gate | **Not passed.** Audit gap G-14: the live CoNET cover for Base-origin messages does not bind the Base header to a Base block hash. Cover V4 closes the gap in source and in 15 tests (2026-10-19). V4 has no deployment record and is not wired to any settler |
+| Legacy miner-vote bridge | `voteBridgeOperation`, `executeMint` and `executeRelease` revert `VoteBridgeClosed` |
+| Legacy GB operations, 2026-10-15 | An AAC admin role was granted on the legacy GB contract, a 0.01 GB canary was executed, and the paid-GB bridge was paused. The monitor baseline was recorded healthy. These were executed against the legacy contract and do not pass the deployment or security gates above |
+| Base checkpoint | A Base-side Ethereum sync-committee checkpoint root is installed and was rotated to period 1884 on 2026-10-15. It is observer evidence and does not open custody |
+| Deposit-unit prototype | On 2026-10-26 a deposit-unit treasury prototype ran on Base Sepolia with test proofs and a test token. It tests the privacy whitepaper design. It is not AAC verification and not a production record |
 
-The deprecated Treasury at `0xa311c8fBE7CafC611603Ee925465A62493B73B30` is not an AAC gateway.
+## 9. Open items
 
-## Proof boundary
-
-A Merkle inclusion path proves only that a leaf belongs to a supplied root. It does not prove that the root belongs to a real, final source block.
-
-- **Base → CoNET** needs an audited OP Stack finality adapter that validates the relevant Base output rather than trusting a relayer-supplied L2 header.
-- **CoNET → Base** needs an audited CoNET consensus/finality adapter. Ethereum does not automatically publish CoNET headers for Base to consume.
-- A message bus, event log, miner signature, or HTTP success response is not a substitute for either verifier.
-
-The Rust project deliberately exposes a `FinalityVerifier` interface. Its execution-client adapters and `MockFinality` are explicitly not light clients. Execution tags, an Ethereum receipt proof, and agreement between two RPC readers do not by themselves verify an OP Stack output/fault-proof result or CONET consensus signatures.
-
-## Ethereum sync committee root for Base
-
-**Evidence level: installed checkpoint.** Base proxy `0xcEE3D699df3df07a573f1aFf642888B97B7aA961` was installed with the period-`1883` committee for finalized beacon slot `15427520`. On 2026-10-15 `applyUpdate` rotated that store to period **1884** (`0x47a9574c75a3dd3c8b92270f69fbaaa8dd8bee98fa97a202732033c6d968d9cb`). One two-thirds aggregate verified under the keys of the period being left. The proxy `headerFinal()` view stays false. This installation does not open custody.
-
-New AAC proofs of Base finality use one Ethereum sync committee stored on Base. The first keys are the `current_sync_committee` of a finalized beacon block chosen at installation. They are not the committee initialized at the Altair fork. The historical 0.01 USDC lock is not a sample for this root. Altair handoff contracts already deployed from `bridgeAAC` stay historical records.
-
-A sync-committee period is `8192` beacon slots, about `27.3` hours. On 2026-10-12 the signing period was `1882`, covering slots `15417344` through `15425535`. An installation after that date uses the period that is current at installation.
-
-Installing the root requires all of the following:
-
-1. A finalized beacon block. The stored keys are the sync committee that signs slots in that block's period, proven by a Merkle branch into its beacon `state_root`. The stored digest is `keccak256` of the compressed keys.
-2. The same beacon block root present in the Ethereum EIP-4788 beacon-roots contract `0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02`, with an account proof for that execution header. This shows the execution layer recorded the root. It does not by itself prove beacon finality.
-3. More than one CoNET observer recomputes that digest from the state proof. The installation record names the observers. One beacon endpoint is not an observer set. Observers agree only on this first root.
-4. After the digest is stored, one sync aggregate from a block in the same period verifies under those keys with at least two-thirds participation. If it fails, the root is rejected.
-
-A Base output root is a commitment to Base execution state, the message-passer storage root, and a Base block hash. It does not contain the 512 committee keys. Base follows Ethereum, so a matching L1 origin does not choose the Ethereum committee.
-
-After installation, Base accepts a committee update only when the stored committee signs the next period, at least two thirds participate, and the update advances exactly one period. An aggregate below two thirds does not rotate the keys. Pairing runs on Base through EIP-2537 precompiles `0x0b` through `0x11`. CoNET has run Osaka / Fulu since 2026-10-18 13:26:07 UTC, and Prague, which includes EIP-2537, has been active since 05:32:31 UTC that day. The official Geth build therefore runs these precompiles on current blocks, and an empty call to `0x0b` is a precompile error (`invalid input length`) rather than an empty success. The [patch-geth](https://github.com/CoNET-project/patch-geth) build is needed only to re-execute blocks before Prague. An empty success is still the signal that the address is not a precompile.
-
-A new lock is eligible only when its beacon slot is in a period the stored committee signs, and only after a finalized beacon header is at least that late. Finality lags by about two epochs. Receipts under one finalized header share that one BLS verification. Each receipt still needs its own inclusion proof and can be consumed once. `headerFinal` in that combined proof means final relative to the installed checkpoint, not final by a chain of signatures back to Altair.
-
-At the gas price measured on Base on 2026-10-12, one rotation cost about `0.000069` ETH (`11,481,348` gas at `0.006` gwei). About `321` rotations fit in a year, about `0.022` ETH at that price. One Base transaction cannot hold two such pairings: the transaction gas cap is `16,777,216`, and one rotation already uses about `11.5` million gas. Skipping the Altair replay removes the historical rotations. It does not remove rotations after the checkpoint.
-
-The checkpoint aggregate has succeeded. Custody and production settle remain closed. Shadow remains read-only. Independent audit and third-party acceptance were **waived by owner 2026-10-14**.
-
-## Milestones (2026-10-15)
-
-| Milestone | State |
-| --- | --- |
-| Obstacles 1–5 | **Accepted** (2026-10-14). [PRODUCTION-CUSTODY-GATES](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-CUSTODY-GATES.md) |
-| Assurance | Tests and fail-closed smoke **PASS**. Audit **WAIVED**. [PRODUCTION-ASSURANCE](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md) |
-| Phase A–E | A **recorded**. B GB `addAdmin(AAC)` **executed**. C 0.01 GB canary **executed**. D paid-GB bridge **paused** on both chains. E monitor **recorded healthy**. [CUTOVER-CUSTODY](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md) |
-| F4 | CheckpointRoot rotated to period **1884** |
-| Miner path | `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed` |
-| Destination allowlist | Base chain id `8453` is open on both treasuries. Base chain id `224422` is open. CoNET chain id `224422` stays closed. `sourceInitiateOpen` is true on both treasuries. Another chain is `setAacDestinationOpen` only |
-| SettlerF7c | Pending `0xefb038ec81aaBfEe9E5a2625B7e50ee3e1FABE44`. `upgradeTo` only after **2026-10-17T13:25:41Z**. Live implementation remains F7 `0x29e10621fF159422237d2a0B9F020303F9BDdD12` |
-| wCNET | CoNET `0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5`, wrap on. Base `0x0E01ca7a99B38a4E021C25B7BE01356E71158B66`, wrap off. CoNET wCNET completion is release, not an unbacked mint |
-| Base → CoNET contracts | Receipt verifier `0x6B44d8469c902F0BbF74333AAfE7E164D020943f`, checkpoint proxy `0x52b3bc7A8c58EC64A57a62783E2e1F8CB8457b3a` (period **1884**, `rootReady` true), probe `0xed2E4B55152A657B43A5065a01B9655dB0033713`, cover `0xA5bB063652A9f21ddF600e78AC1c7db1A0812E06`, settler `0x7285fD9a9e62751e952697f95DD753C82Bb84BbE` installed on `AacChainEffect` |
-| patch-geth | Checked execution clients run the Cancun EIP-2537 build. The checkpoint aggregate proved 510 of 512 signers. The 0.01 Base USDC lock `0xa1ed9817ac5361dcf1613d9ef863d8f868e5b54e987fad2710481693dc290b2a` returned covered and `headerFinal`. Settle `0x726426028cb6e0d71b86f3a24c33f0e62fefe5fd1fc8017d7e40f567cfc9b34d` minted 0.01 canonical CoNET-USDC. `sourceInitiateOpen` is true on Base and CoNET |
-
-A second `scheduleUpgrade` on the live AAC resets the 48-hour delay. `sourceInitiateOpen` is true on Base and CoNET. A presence check must cap the gas sent to precompile `0x0b`: a reverting precompile burns the entire stipend. The L1 join guide is [Run an L1 node](../developers/l1-node.md).
-
-## Production read-only Shadow
-
-Release `bridge-aac-v0.33.13` runs the production read-only Shadow as
-`bridge-aac-shadow-prod.service` on the operator's Shadow host (switched 2026-10-16). Its
-production readers since 2026-10-16:
-
-- Base: two public execution nodes from different operators, `mainnet.base.org`
-  and `base.publicnode.com`. Both return chain id `8453` and agree on the
-  finalized block hash. The earlier `.30:8547` and `.58:8547` pair shares one
-  network block, so it is no longer used as the two independent readers;
-- CONET: the execution client on the production host and the
-  `publicrpc.conet.network` archive cluster.
-
-For each scanned block, both readers must agree on the block hash, state root,
-and receipts root. The scanner advances only to the lower finalized reader
-height, starts at an immutable deployment floor, persists its cursor, and pages
-on reader or cursor lag. It verifies real receipt inclusion and records legacy
-bridge observations, but never reserves, mints, releases, or broadcasts.
-
-Both chains completed the production gate: lower-head cursor lag stayed within
-64 blocks for a 256-block hold and ended at `cursor-lag 0` / `stable yes`.
-Reader divergence is not hidden: a final Base sample had `reader-lag 177` and
-correctly kept `page open` / `alert reader-lag`.
-
-Every production report keeps the following boundary:
-
-```text
-shadow yes
-broadcast no
-settled no
-custody closed
-light-client no
-registry paused
-consume denied
-```
-
-## Production deployment acceptance
-
-**Status (2026-10-14; Phase E updated 2026-10-15): Obstacles 1–5 are Accepted.** Custody stays closed:
-`custodyOpen()` / `headerFinal()` remain false; no-arg `settle()` still
-reverts `CustodyClosed`. Independent audit and third-party acceptance were
-**waived by owner 2026-10-14**. Phase B GB `addAdmin(AAC)` is **executed**
-(2026-10-15). Phase C canary (0.01 paid GB) is **EXECUTED** (2026-10-15).
-Phase D paid-GB `setBridgePaused(true)` is **EXECUTED** (2026-10-15; CoNET + Base).
-Treasury `voteBridgeOperation` was closed later the same day (`voteBridgeClosed=true`). Phase E monitor baseline is
-**RECORDED HEALTHY** (2026-10-15). The historical Altair committee store and
-the 0.01 USDC lock in Base block `52497860` do not pass any of these obstacles.
-Full gate evidence: [`bridgeAAC` PRODUCTION-CUSTODY-GATES](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-CUSTODY-GATES.md).
-Assurance package: [`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md).
-Cutover Phase A **recorded**; Phase B–D **EXECUTED**; Phase E **RECORDED HEALTHY**
-2026-10-15:
-[`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md).
-
-| Order | Deployment | Accepted address / evidence |
-| --- | --- | --- |
-| 1 | New Base checkpoint-root store | Proxy `0xcEE3D699df3df07a573f1aFf642888B97B7aA961` — installed at period `1883`; rotated to period **1884** on 2026-10-15 |
-| 2 | One new AAC message | Cover `0x01506527a4Dab14141038Db15f5341dcF4729233` — new 0.01 USDC lock in Base block `52583500`; finalized beacon slot `15427680` + receipt in one call |
-| 3 | CoNET-source finality, on the destination | Proxy `0xE4f6c834eb63f726cbE65b4F864620e4a6F7a6c9` — `proveAggregate` on Base |
-| 4 | New consume-once consumer | Proxy `0xC6CBcC0c629ac1A80DB95e8b80927e713E82Cf4F` — second consume reverts; not the paused canary / `0xA13843C75f68F726e1DC4dbA75d07597EE18d999` |
-| 5 | Upgrade Base proxy `0x9051e08aBA3EC1A1323f36f0F5c3745C81912aAd` | Impl `0x3085216E8329eF7d10c914cB1C43Cd8168f53442` — cover overloads accept Obstacle 2 sample; no-arg `settle()` still `CustodyClosed` |
-
-A Base-origin message uses obstacles 1, 2, 4, and 5. A CoNET-origin message uses obstacles 3, 4, and 5. An execution `finalized` tag, a parent-hash walk, an output root, a same-block bootstrap, a beacon API `finalized` flag, and `isGameClaimValid` by `eth_call` do not pass obstacle 1 or 2.
-
-## Custody remains closed
-
-Obstacles 1–5 Accepted does **not** open decentralized burn/mint custody.
-Production Shadow approval is not a cutover. The Shadow commands below are
-observers. Mint, release, and production settle stay closed. Paid-GB
-`voteBridgeMint` is **paused** (Phase D); USDC miner
-`voteBridgeOperation` is **closed** (`voteBridgeClosed=true`, 2026-10-15; independent audit and third-party acceptance **waived by
-owner 2026-10-14**; GB `admins(AAC)` granted in Phase B 2026-10-15; Phase C
-canary **EXECUTED** 2026-10-15 — settler `settle` still reverts; Phase D
-**EXECUTED** 2026-10-15; Phase E monitor **RECORDED HEALTHY** 2026-10-15; see
-[`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md);
-engineering assurance in
-[`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md)).
-
-1. `base-l1-output` only reads the OptimismPortal anchor and
-   `isGameClaimValid`. While the Base execution `finalized` tag is ahead of
-   that anchor, the report stays `covered no`. This command does not replay
-   the fault proof, does not install the checkpoint root, and does not feed
-   the production shadow decision;
-   Since 2026-10-16, `check-header --l1-rpc` and `verify-receipt --l1-rpc` also
-   recompute the OP output root for the anchored Base block (header rebuild and
-   a message-passer account proof). A block below the anchor is accepted when
-   parent-hash links from the anchored block reach it, up to 4096 blocks. Each
-   link is checked by rebuilding the header. This is an off-chain observer check.
-   It does not replace the on-chain obstacle 1 proof and does not open custody.
-2. verify CONET finality from consensus signatures against an independently
-   trusted committee. `conet-consensus` compares the beacon finalized
-   execution payload with the execution client's `finalized` tag and checks
-   the sync-committee aggregate with FastAggregateVerify against the committee
-   at the parent slot. A match prints `aggregate-verify yes`,
-   `committee-state parent-slot`, and `signature-check yes`. `sync-quorum yes`
-   requires two-thirds participation.    The report still prints
-   `trusted-committee no` and `custody-gate no`,
-   because the committee came from that same beacon and the beacon does not
-   serve a light-client update. The checkpoint is read from the head state.
-   The checkpoint stored in the already-finalized state lags fork choice by
-   about two epochs. `beacon-agreed` compares geth `finalized` with the head
-   checkpoint payload only. `alias-matches-geth yes` does not make
-   `beacon-agreed yes`. `state-root-binding yes` means the parent slot's
-   beacon state hashes to the signed header's `state_root` and its sync
-   committee verifies the aggregate. That state still comes from the same
-   beacon, so `trusted-committee` stays `no`. `committee-handoff yes` and
-   `handoff-periods` count how many earlier periods authenticate the next
-   committee. A read that linked four periods, back to epoch 47358, still
-   used this same beacon. `genesis-pin yes` means the genesis beacon state
-   hashes to the published genesis state root, its slot-0 header hashes to the
-   published header root, and its validators root is the published CoNET pin.
-   Since 2026-10-16 the sync-committee signing domain uses the published
-   validators root, not the beacon's copy.
-   The handoff chain has not reached that genesis committee, so
-   `trusted-committee` stays `no`. `forward-committee` starts at that same
-   genesis pin and accepts the next period only from a supermajority signature
-   by the committee already trusted for the current period.    A period without a two-thirds aggregate still advances by its best valid
-   signature after the period timeout. Eight such steps were required. The
-   chain then reached beacon head period 189, and the stored committee's
-   finalized execution hash matched geth. `trusted-committee` stays `no`
-   because those eight steps were not a supermajority. `0.33.0`
-   `weak-subjectivity` does not invent those missing supermajorities. It froze
-   a period-18 candidate at slot 155646 and checked the next-sync-committee
-   branch and the finalized-root branch against that state root. A second
-   beacon returned the same state root. Three other full nodes, operated by the same operator, recomputed that
-   same header from their own beacons. Those three confirmations are unsigned. Since 2026-10-16 they no longer change the
-   safety label, so the checkpoint stays `observed`. The nodes share
-   one operator and one consensus client, so `trusted-committee` stays `no`.
-   Stock Lighthouse v5.3.0 and v8.2.2 hash a CoNET checkpoint with the mainnet
-   eth1 vote limit and stop on a different block root. On the operator's Shadow host, a
-   Lighthouse v5.3.0 build with a 4-epoch eth1 voting period recomputed slot
-   155646 from hub SSZ: block root `0x442a5f8c…91336` and state root
-   `0x70001a2f…1410`. That host runs its own geth and does not use a production
-   Engine API. The operator is still the same, and periods 18 through 189 are
-   not replayed into the weak-subjectivity store, so `trusted-committee` stays
-   `no`. This check does not feed the production shadow decision. Production Shadow is `bridge-aac-v0.33.13` and stays read-only. An operator who does not administer
-   these hosts follows
-   [Confirm the period-18 checkpoint](../developers/l1-independent-confirmation.md).
-3. deploy and audit the destination consume-once AAC contracts.
-   `destination-consumer` only records PUSH4 selector presence for
-   `aacConsumeMint`, `aacConsumeRelease`, `aacConsumeMintPaid`, and
-   `aacConsumeMintDeveloper`. `selector-observation present` still prints
-   `semantic-proof no`, `consume-once no`, `consumer observation-only`,
-   `audit no`, and `custody-gate no`. A 4-byte collision is not treated as
-   an entrypoint. This command does not deploy or call a consumer and does
-   not feed the production shadow decision. A separate specification
-   consumer, proxy `0xA13843C75f68F726e1DC4dbA75d07597EE18d999` on CoNET,
-   records consume ids only. It is compiled with `bytecodeHash: ipfs`, and
-   Blockscout reports `is_fully_verified` for the proxy, both implementations,
-   the rejected reorder implementation, the gateway, and the revert effect.
-   An earlier `bytecodeHash: none` deployment stayed partial and is superseded.
-   Mainnet transactions rejected a second consume, a reentrant consume, a
-   failed effect, and a reordered upgrade, and an append-only upgrade kept
-   the consumed id. It does not mint or release.
-   Obstacles 1–5 Accepted and consume-once evidence are recorded; Phase C
-   canary, Phase D paid-GB pause, and Phase E monitor baseline recorded;
-   production settle still closed;
-   4. close the unrestricted paid-GB admin-mint path and the upgrade authority
-   that could restore it. `gb-mint-authority` only reads GBToken
-   `0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`. `mint`, `mintPaid`, and
-   `voteBridgeMint` are on that token. Paid-GB `voteBridgeMint` is **paused**
-   (`bridgePaused` true, Phase D). While `mint` / `mintPaid` selectors remain,
-   the report may still show `admin-mint open` for those paths. If they
-   disappear, the report is `selectors-absent yes`, `upgrade-authority unread`,
-   and `mint-closed no`. This command does not send a mint or a vote and does
-   not feed the production shadow decision;
-5. complete end-to-end adversarial tests
-   ([`PRODUCTION-ASSURANCE`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/PRODUCTION-ASSURANCE.md):
-   local tests and Base fail-closed smoke **PASS**; independent audit
-   **WAIVED BY OWNER 2026-10-14**); and
-6. perform a separately approved cutover
-   ([`CUTOVER-CUSTODY`](https://github.com/CoNET-project/bridgeAAC/blob/main/docs/CUTOVER-CUSTODY.md):
-   Phase A **recorded**; Phase B–D **EXECUTED**; Phase E **RECORDED HEALTHY**
-   2026-10-15).
-
-Production USDC miner `voteBridgeOperation` is **closed** (`voteBridgeClosed=true`, 2026-10-15). Paid-GB
-miner `voteBridgeMint` is paused. No documentation or UI should label miner
-votes as AAC or Merkle proof verification.
+1. The form of the AAC secure construction, including how the minter is replaced when the token has no admin (GB §19.11).
+2. Same-address deployment of cross-chain tokens: deployer, initialisation code and salt (GB §19.10).
+3. Migration of the existing conet-USDC supply, which is pending (GB §3.2). Old GB balances are void and the new contracts issue from zero (GB §19.1).
+4. The holding structure of the external treasury. The GB whitepaper accounts for it by use. The privacy whitepaper proposes per-deposit units. Which structure is used is not decided.
+5. Proof adapters for Base and CoNET, including proof freshness and failure behaviour (privacy whitepaper §3.7). None is implemented.
+6. The outbound conet-USDC release: its burn-side design is decided, and it waits for the forged-burn gate (GB §19.12).
+7. The threshold for DAO voting registration (GB §19.13) and the legal assessment of the exit mechanism and the fee types (GB §19.16).
 
 ## Related
 
-- [Run an L1 node](../developers/l1-node.md) — public join, and the patch-geth execution build
-- [patch-geth](https://github.com/CoNET-project/patch-geth) — Cancun EIP-2537 source patch
+- [GB token whitepaper (draft), v0.3](gb-whitepaper.md)
+- [CoNET privacy and asset fragmentation whitepaper (draft), v0.3](privacy-fragmentation-whitepaper.md)
 - [Decentralized cross-chain Treasury](cross-chain-treasury.md)
 - [Core L1 assets](assets.md)
 - [Bring an ERC-20 into CoNET](../developers/l1-erc20-bridge.md)
 - [Cross-chain assets in CoNET-DLE](../l2/cross-chain-assets.md)
+- [Run an L1 node](../developers/l1-node.md)
