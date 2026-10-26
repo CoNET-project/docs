@@ -33,6 +33,8 @@ There is **one** production Treasury: `TreasuryBridgeV3`. Older CREATE2 / `BaseT
 
 The current production counterpart chain is **Base (`chainId` 8453)**. That is a governed CoNET ↔ Base route on the **same** V3 Treasury, not a permissionless bridge and not a second Treasury contract. `ConetTreasuryPeer` bytecode is present on CoNET L1 at the address above; do not assume the same Peer address is deployed on Base without checking `eth_getCode`.
 
+**GB and conet-USDC design status.** The contracts in the table above are live. The [GB token whitepaper (draft)](gb-whitepaper.md) proposes a replacement design for paid GB and for conet-USDC. That design is not deployed, and it does not change the live routes described on this page.
+
 ## Three explicit route modes
 
 Every route binds the source chain, source Treasury, source asset, destination asset, mode, decimals, enabled state, and policy version.
@@ -81,7 +83,7 @@ These controls decentralize authorization across the configured miner set. They 
 
 [AAC proof-driven settlement](aac-cross-chain.md) is the proposed deterministic successor to per-operation miner votes. It separates source inclusion, source-header authenticity, finality, route constraints, and destination replay protection.
 
-`bridge-aac-v0.33.13` runs the production read-only Shadow as `bridge-aac-shadow-prod.service` on `70.35.205.77` (switched 2026-10-16). Its two Base readers are the public nodes `mainnet.base.org` and `base.publicnode.com`, run by different operators. It scans
+`bridge-aac-v0.33.13` runs the production read-only Shadow as `bridge-aac-shadow-prod.service` on the operator's Shadow host (switched 2026-10-16). Its two Base readers are the public nodes `mainnet.base.org` and `base.publicnode.com`, run by different operators. It scans
 two independent Base readers and two CONET reader paths, agrees block hash,
 state root, and receipts root at the lower finalized height, verifies receipt
 inclusion, persists its cursor, and pages on divergence. Both chains completed

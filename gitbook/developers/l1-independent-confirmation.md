@@ -27,7 +27,6 @@ independent confirmation. Those consensus identities are:
 | `216.225.202.22` | `16Uiu2HAmCtPRBmiYPNcfwscvKzhDqsFwVtm2DmsMZCvtR2rHgDtA` |
 | `216.225.197.3` | `16Uiu2HAmQgiLAC8bfpYKVt8WakbkC3wvdG8VwGUc4KQKXfM53t7g` |
 | `216.225.202.82` | `16Uiu2HAmDJCHuVkXtkPrrL8YykQ9gFZnQkR9Q6WjZZUrmueohPfd` |
-| `70.35.205.77` | `16Uiu2HAmAoxo8HWa724Vm6zPMJNn1uXv2Vtpbjm9vLSJMA3KnjgZ` |
 
 DHT identities on port `4110` are a different set. Do not mix them with the
 beacon `peer_id` from port `4100`.

@@ -41,6 +41,8 @@ Canonical CoNET-USDC for CoNET L1 application settlement:
 above; legacy USDC factory addresses and older Treasury addresses are
 deprecated.
 
+The GBToken above is the live token. A proposed replacement design for GB and conet-USDC is described in the [GB token whitepaper (draft)](l1/gb-whitepaper.md). It is not deployed; deployment waits for design discussion and an independent audit.
+
 Verify current code and state on the active RPC before relying on a historical
 deployment note.
 

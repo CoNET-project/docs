@@ -33,7 +33,7 @@ R ── waits until the 12s connect timer
 B ── no chat listen, no socketForward inbound
 ```
 
-A peel-success log such as `peeled … inner key AE85A2AEEC768225 … forward 174.7.21.175` means:
+A peel-success log such as `peeled … inner key AE85A2AEEC768225 … forward <peer-ip>` means:
 
 - the **inner OpenPGP key ID** is the next hop (here mailbox B’s route key);
 - the **`forward <ip>`** field is the **client source IP** that opened `/post` on C, not B’s locator.

@@ -83,7 +83,7 @@ Explorer Home + Certificates show a **non-green** `pilotClockPill` (`30-day cloc
 
 Tests: `npm run explorer:test` **10/10**. Runtime tests: `npm run runtime:test` **159/159**. Pilot tests: **19/19**.
 
-**Public SPA publish (not P26):** parent-repo `scripts/deployDleExplorer.sh` rsynced the clock-overlay bundle to `70.35.205.77:/var/www/dle.conet.network/` and reloaded the explorer nginx vhost only. [dle.conet.network](https://dle.conet.network/) now serves `index-C8IdTq4H.js` (2026-08-18T10:15:00Z). It did **not** restart EL/CL/validator and did **not** change archive seating.
+**Public SPA publish (not P26):** parent-repo `scripts/deployDleExplorer.sh` rsynced the clock-overlay bundle to the explorer host (`/var/www/dle.conet.network/`) and reloaded the explorer nginx vhost only. [dle.conet.network](https://dle.conet.network/) now serves `index-C8IdTq4H.js` (2026-08-18T10:15:00Z). It did **not** restart EL/CL/validator and did **not** change archive seating.
 
 Starting the clock and painting the clock are **not** 30-day qualification. Do **not** invent P26.
 

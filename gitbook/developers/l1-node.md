@@ -127,8 +127,7 @@ Current public execution, consensus, and DHT hosts:
 | `216.225.197.3` | Full node, validators, DHT hub |
 | `216.225.202.82` | Full node, validators, DHT hub |
 
-Do not bootstrap from retired hosts such as `216.225.192.76`,
-`207.90.192.71`, or `38.102.85.33`.
+Do not bootstrap from retired hosts.
 
 | Plane | Port | Protocol | Public inbound |
 |---|---:|---|---|
@@ -255,7 +254,7 @@ sha256sum -c SHA256SUMS
 
 Use the prebuilt binary only when its patch-geth release names the same Geth release as the latest official Geth release.
 
-Historical record: before the fork, on 2026-10-15, the checked execution clients (`38.102.126.30:8889`, `38.102.126.50` ports `8888`, `8883`, and `8884`, and `38.102.126.58:8885`) run the patched build of the Geth release current on that date. An empty `eth_call` to `0x0b` returns `invalid input length`. `rpc1.conet.network` and `publicrpc.conet.network` return the same error. Probe `0xed2E4B55152A657B43A5065a01B9655dB0033713` reports the precompile available. The earlier probe `0x864896C7dD5CA603AA11C3dC0BA329EB78Cc5F78` still returns false, because a revert with empty return data is not an empty success. Probe `0xbaff644E6C06A277AaDFde016d2eeB87AE18EB6B` is superseded: its uncapped presence check burned the transaction gas. A mixed fleet, where one client still returns empty success, is an execution fork. The CoNET checkpoint `0x52b3bc7A8c58EC64A57a62783E2e1F8CB8457b3a` stores Ethereum period 1884 and `rootReady` is true. A 0.01 Base USDC receipt in that period is covered, and the CoNET settler is installed. An empty call is still not a pairing proof.
+Historical record: before the fork, on 2026-10-15, the checked execution clients (lab ports omitted) run the patched build of the Geth release current on that date. An empty `eth_call` to `0x0b` returns `invalid input length`. `rpc1.conet.network` and `publicrpc.conet.network` return the same error. Probe `0xed2E4B55152A657B43A5065a01B9655dB0033713` reports the precompile available. The earlier probe `0x864896C7dD5CA603AA11C3dC0BA329EB78Cc5F78` still returns false, because a revert with empty return data is not an empty success. Probe `0xbaff644E6C06A277AaDFde016d2eeB87AE18EB6B` is superseded: its uncapped presence check burned the transaction gas. A mixed fleet, where one client still returns empty success, is an execution fork. The CoNET checkpoint `0x52b3bc7A8c58EC64A57a62783E2e1F8CB8457b3a` stores Ethereum period 1884 and `rootReady` is true. A 0.01 Base USDC receipt in that period is covered, and the CoNET settler is installed. An empty call is still not a pairing proof.
 
 ### Start geth
 

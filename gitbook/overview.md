@@ -22,7 +22,7 @@ Operational facts in this book come from current source code, deployed contracts
 [L0](l0/README.md) is the **permissionless decentralized cloud resource
 plane**. Participants may contribute traffic forwarding, ciphertext storage,
 service hosting, CPU/GPU capacity, and other measurable resources. GB is the
-active resource unit. L0 uses ordinary TCP/IP as its underlay and does not
+active resource unit. Its proposed payment design is described in the [GB whitepaper draft](l1/gb-whitepaper.md). L0 uses ordinary TCP/IP as its underlay and does not
 claim that every resource provider is trusted, independently operated, or
 able to reconstruct an application.
 

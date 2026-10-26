@@ -115,7 +115,7 @@ A second `scheduleUpgrade` on the live AAC resets the 48-hour delay. `sourceInit
 ## Production read-only Shadow
 
 Release `bridge-aac-v0.33.13` runs the production read-only Shadow as
-`bridge-aac-shadow-prod.service` on `70.35.205.77` (switched 2026-10-16). Its
+`bridge-aac-shadow-prod.service` on the operator's Shadow host (switched 2026-10-16). Its
 production readers since 2026-10-16:
 
 - Base: two public execution nodes from different operators, `mainnet.base.org`
@@ -235,13 +235,12 @@ engineering assurance in
    `weak-subjectivity` does not invent those missing supermajorities. It froze
    a period-18 candidate at slot 155646 and checked the next-sync-committee
    branch and the finalized-root branch against that state root. A second
-   beacon returned the same state root. Three other full nodes, at
-   `216.225.202.22`, `216.225.197.3`, and `216.225.202.82`, recomputed that
+   beacon returned the same state root. Three other full nodes, operated by the same operator, recomputed that
    same header from their own beacons. Those three confirmations are unsigned. Since 2026-10-16 they no longer change the
    safety label, so the checkpoint stays `observed`. The nodes share
    one operator and one consensus client, so `trusted-committee` stays `no`.
    Stock Lighthouse v5.3.0 and v8.2.2 hash a CoNET checkpoint with the mainnet
-   eth1 vote limit and stop on a different block root. On `70.35.205.77`, a
+   eth1 vote limit and stop on a different block root. On the operator's Shadow host, a
    Lighthouse v5.3.0 build with a 4-epoch eth1 voting period recomputed slot
    155646 from hub SSZ: block root `0x442a5f8c…91336` and state root
    `0x70001a2f…1410`. That host runs its own geth and does not use a production
