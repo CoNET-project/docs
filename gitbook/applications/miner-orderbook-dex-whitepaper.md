@@ -24,7 +24,7 @@ This paper proposes a decentralized order-book exchange that runs entirely on Co
 
 **One order chain per order, with a 0.003% prepayment.** The order placer opens one DLE order chain for each order. At placement the placer prepays 0.003% of the full order amount. This prepayment is the chain-opening fee and goes to all validators of that order chain. Cancelling costs nothing more, and the prepayment is not refunded. The minimum order is 1 USDC equivalent [Decided] (2026-10-25). The order chain records the signed terms, the frozen funds and the fill progress, and closes when the order ends.
 
-**Miners split and match orders and earn a matching fee.** Each trading pair has one market chain. In every matching batch, a miner committee drawn by DLE includes orders, splits them and matches them. The hosting archive group replays the batch independently and finalizes it. At fill, each order placer pays the matching miners 0.007% of the filled amount. When two book orders fill each other, each side pays 0.007% [Decided] (2026-10-25). The 0.003% prepayment and the 0.007% at fill add up to 0.01%.
+**Idle miners race to match; consensus miners keep it safe.** Each trading pair has one market chain. Order matching is done by every idle light miner (one that has staked the CNET threshold), competing for profit to be the first with a winning match: each one includes orders, splits them, computes the result and submits a proposal. The consensus committee DLE draws for the batch recomputes the proposals independently and makes the valid proposal with the largest fill volume the block, and the archive group replays and finalizes it. An invalid proposal costs its submitter [Decided] (2026-10-26). At fill, each order placer pays 0.007% of the filled amount as the matching fee, all of it to the winning matching miner; when two book orders fill each other, each side pays 0.007%. The 0.01% transfer fee is shared by the consensus miners [Decided] (2026-10-26). The 0.003% prepayment and the 0.007% at fill add up to 0.01%.
 
 **DLE completes the transfers in parallel.** After a fill is final, miners split it into transfers on many asset chains and submit them in parallel. DLE executes them. Every outgoing transfer pays a 0.01% DLE transfer fee on its amount. However many chains a transfer is split across, the total fee equals 0.01% of the amount transferred [Decided] (2026-10-25). Transfers use two phases: first debit to in-flight, then credit. If either side's debit fails, the other side is refunded automatically.
 
@@ -85,7 +85,7 @@ In short, DEXs removed custody risk but brought curve pricing and MEV, congestio
 | --- | --- | --- |
 | Throughput tied to one chain's block speed | DLE is an event-driven ledger system of many chains running concurrently. Each market, order and asset chain produces a block only when an event arrives and is served by its own committee drawn from the miner pool, so total capacity grows as miners and archive groups join, instead of being set by one chain's block interval (Section 1.4.1) | DLE §3.1–§3.4 |
 | The exchange holds user assets | Funds stay on DLE asset chains in the user's own name; placing an order only freezes them; no vault, no admin | Section 4.2, Chapter 13 |
-| A fixed sequencer or validator set | Each batch draws 7 miners at random from the on-demand waiting queue, and 5 signatures produce the block; the archive group replays it independently and finalizes at 4/5; committees rotate every batch | DLE §6.5, §5.2.1 |
+| A fixed sequencer or validator set | Matching is open to every idle miner that stakes CNET, competing to be first; confirmation is done by a consensus committee of 7 drawn at random each batch (5 signatures produce the block) and an archive group replaying it independently at 4/5; committees rotate every batch | DLE §6.5, §5.2.1; Section 6.6 |
 | Matching cannot be verified | Matching rules live in the state machine and give deterministic results; full batches have data availability, so anyone can recompute them | Section 6.4; DLE §5.2.1 |
 | Front-running and MEV | Ordinary orders use frequent batch auctions, where order within a batch does not affect price; marginal allocation uses an unpredictable random seed; orders travel encrypted over L0 to several miners, not through a public mempool | Sections 6.2, 6.4 |
 | Congestion on a shared chain | One market chain per pair, one order chain per order, asset chains in parallel; no event, no block; a busy market does not slow others | DLE §3.1, §3.2 |
@@ -93,7 +93,7 @@ In short, DEXs removed custody risk but brought curve pricing and MEV, congestio
 | Matchers forging fills | The paying asset chain checks the order signature and freeze record itself, so a forged fill cannot take funds | Section 7.1 |
 | An upgrade key held by one party | No admin; the L1 market registry is proposed to be non-upgradeable | Chapter 13 |
 | High fees | A fully filled order pays about 0.02% in total (excluding any LP fee), computed on amounts and not increased by splitting | Section 9.2 |
-| No lasting incentive for matchers | Matching miners earn by fill volume, order-chain validators by order amount, LPs by pool share | Chapters 9, 10 |
+| No lasting incentive for matchers | Matching miners race for the matching fee, consensus miners share the transfer fee, order-chain validators earn by order amount, LPs by pool share | Section 6.6, Chapters 9, 10 |
 | Waiting when no counterparty is present | Permissionless liquidity pools and a fast lane, compared with book orders | Chapter 10 |
 | Cross-chain asset risk | Only Treasury canonical assets are listed; an asset that depends on a cross-chain proof is listed only after that proof is shown to reject forged source-chain messages | Section 4.6 |
 | Traders' network identity exposed | Wallet-address routing and encrypted forwarding reduce IP exposure (this is not anonymity) | DLE §4.5, §7 |
@@ -130,7 +130,7 @@ This is the main architectural difference between this exchange and existing dec
 
 1. **Capacity that grows with miners**: an event-driven, multi-chain concurrent ledger, where markets, orders and settlements run on separate chains with separate committees; total capacity grows with miners and archive groups instead of being set by one chain's block speed (Section 1.4.1).
 2. **Non-custodial**: assets always stay on the user's own DLE asset chains; only what the user freezes by signature can leave, and only per the order.
-3. **No fixed matcher**: each batch draws a random miner committee and an archive group replays it, with no reliance on one company or a few fixed validators.
+3. **Open matching, randomly drawn confirmation**: any idle miner that stakes CNET can race to match; a randomly drawn consensus committee and an archive group confirm the result, with no reliance on one company or a few fixed validators.
 4. **Verifiable results**: matching and the reference price are deterministic computations on public data that anyone can recompute.
 5. **Less front-running**: batch auctions clear at one uniform price, so order within a batch does not matter.
 6. **Parallelism and failure isolation**: pairs, orders and assets are separate chains; congestion or a fault in one market does not affect others.
@@ -144,14 +144,14 @@ This is the main architectural difference between this exchange and existing dec
 
 | Disadvantage | Notes |
 | --- | --- |
-| Not usable today | It depends on AssetBurnMintGateway, which is not live; production archive signing is forbidden; the 30-day pilot did not qualify; DLE revisions R1–R8 are still needed (Chapter 2) |
+| Not usable today | It depends on AssetBurnMintGateway, which is not live; production archive signing is forbidden; the 30-day pilot did not qualify; DLE revisions R1–R9 are still needed (Chapter 2) |
 | Slower than a CEX | Each batch needs a committee vote (window up to 30 seconds) and archive finality, and settlement needs several two-phase events; it cannot reach CEX millisecond speed; the fast lane fixes the price at once but does not speed up settlement; latency is not measured |
 | Complex settlement, unknown execution cost | Each fill needs at least 4 asset-chain events, and each order needs an order chain and an L1 NFT; execution cost is not measured, and the 0.003% prepayment may not cover costs for small orders (B-18) |
 | Fragmentation from the 100 USDC cap | Users with more funds hold many asset chains; receipts above the cap open new chains with a birth cost; wallets must merge and manage them |
 | Liquidity cold start | An order book needs market makers; this design pays no maker rebates; LPs can lose money in one-way markets |
 | Weak composability | DLE has no general-purpose VM, so other contracts cannot call the exchange the way they call an AMM; cross-chain settlement is eventually consistent in two phases, not atomic within one transaction |
 | Security rests on DLE assumptions | It depends on committee sampling and an honest majority in 5-member archive groups; an attacker who controls several archive groups can cause losses on several asset chains; handling a forced exit of a frozen asset chain is still open (B-10) |
-| Ordering and short-term censorship | The assembler decides which orders to include and the order of fast-lane orders; it can delay but not block for long, yet short-term censorship and ordering advantage remain |
+| Ordering and short-term censorship | A matching miner decides which orders its proposal includes and the order of fast-lane orders; leaving orders out loses to a more complete competitor, but the consensus committee's receive order (used only for ties) and short-term ordering advantage remain |
 | The reference price can be pushed | In thin markets the reference price can be moved; protective parameters are not set |
 | No fiat ramps or compliance services | No KYC, fiat on- or off-ramp, or customer support; the regulatory position is uncertain |
 | Fees in many tokens | Miners, archive groups and LPs receive many tokens and must account for and convert them |
@@ -208,7 +208,7 @@ Fill latency or throughput (neither is measured); depth or spread on any pair; m
 | **DLE market chain** (one per pair) | Order book, batch inputs, reference-price curve, clearing results, fill records [Needs DLE revision] |
 | **DLE storage chain** | Liquidity-pool registration: pool parameters, frozen asset chains of each LP, shares [Decided] |
 | **DLE trading pools** | Where LPs can trade received tokens into any token [Decided]. The markets and pools of this exchange are such pools |
-| **DLE validator committee** (per event, N_V=7, Q_V=5) | On the market chain, the matching committee; on order and asset chains, it runs those chains' events [DLE current] (DLE §6.5) |
+| **DLE validator committee** (per event, N_V=7, Q_V=5) | On the market chain, the consensus committee: recomputes matching proposals, picks the winner and produces the block, without matching itself; on order and asset chains, it runs those chains' events [DLE current] (DLE §6.5) |
 | **DLE archive group** (5 active + 2 standby, Q_A=4) | Replays every event, checks data availability, forms the Archive Certificate (AC) [DLE current] (DLE §5.2.1) |
 | **Data availability `dle.rs.v1`** | Anyone can fetch the full batch and recompute it |
 | **L1 Global Archive Routing Registry** (deployed) | Finds which archive group hosts each chain and whom to ask for its history and ACs |
@@ -239,7 +239,8 @@ The path for assets into DLE is itself not open. Until the DLE production gates 
 | R5 | An event on one chain may cite **another chain's AC as a precondition** | The market chain cites order chains and pool registrations; asset chains cite market batches. Current rules only cite L1 views |
 | R6 | Storage chains gain a **liquidity-pool registration** record type | The operator decided to register pools on storage infrastructure |
 | R7 | **Transfer-fee asset**: from "oracle-valued, paid in conet-USDC" to "0.01% of the amount, paid in the transferred token" | The operator decided all fees are computed in the placer's outgoing token (Chapter 9). This differs from the current text of DLE §13.2 and must be revised there |
-| R8 | **Matching-fee allocation**: the matching fee goes to the matching committee, not split 50/50 with the archive group | Section 9.4; DLE §13.4 |
+| R8 | **Matching and transfer fee allocation**: the 0.007% matching fee goes to the winning matching miner, not split 50/50; the transfer fee is shared by consensus miners | Section 9.4; DLE §13.4 |
+| R9 | **Open matching proposals**: the market chain accepts matching proposals from staked light miners outside the committee, selects by fill volume, and defines penalties for invalid proposals | The operator decided that idle miners race to match (Section 6.6) |
 
 ---
 
@@ -253,8 +254,8 @@ The path for assets into DLE is itself not open. Until the DLE production gates 
 | Order-chain validators | Validators drawn by DLE for each event of an order chain | Produce the order chain's genesis, fill updates and closing blocks | Receive the 0.003% prepayment [Decided] |
 | Pool creator | Anyone, no permission [Decided] | Opens a pool on a storage chain and sets pair, fee rate and price range | Shares as an LP when providing liquidity; no extra cut [Decided] |
 | Liquidity provider (LP) | Anyone | Searches pools and freezes own asset chains into one | Receives the LP fee by share [Decided]; pays DLE transfer fee on own outgoing transfers |
-| Order-intake miner | Registered miner staking CNET | Receives orders and cancels over L0, verifies signatures, forwards, acknowledges "received" | No share in this version (Appendix B) |
-| Matching committee | 7 miners plus 2 standbys drawn by DLE per market batch | The assembler includes, splits, matches and computes the reference price; other members recompute and sign | 0.007% matching fee [Decided] |
+| Matching miner (light miner) | A miner that has staked the CNET threshold and is currently idle [Decided] | Receives orders and cancels over L0; includes, splits, matches and computes the reference price; races to submit matching proposals | The winner earns the 0.007% matching fee [Decided] |
+| Consensus committee | 7 miners plus 2 standbys drawn by DLE per market batch | Recomputes matching proposals, picks the valid one with the largest fill volume, signs the block; does not match | Shares the DLE transfer fee (Section 9.4) |
 | Transfer committees | Drawn by DLE for each asset-chain and order-chain event | Run debit, credit, refund and order-status events | DLE transfer fee, allocated by DLE rules [DLE current] |
 | Archive groups | The 5+2 group hosting each chain | Replay, data availability, AC | Archive share of the DLE transfer fee; availability budget |
 
@@ -267,8 +268,11 @@ The path for assets into DLE is itself not open. Until the DLE production gates 
    LPs sign pool entry + freeze authorization, registered on the pool's storage chain
         │ L0 encrypted transport
         ▼
-3. One batch on the market chain (matching committee 5/7 + archive group 4/5 AC)
-     Admit newly opened order chains
+3. One batch on the market chain
+     Idle matching miners each include orders, compute the result and race to submit a proposal
+     The consensus committee (5/7) recomputes every proposal and makes the valid one with the largest
+     fill volume the block; the archive group finalizes it with a 4/5 AC
+     A proposal contains: newly admitted order chains
      Fast-lane orders first: compare pools and book orders together, fill at once
      Ordinary orders next: frequent batch auction at one clearing price
      Output: fillsRoot, updated book, reference-price curve
@@ -288,7 +292,7 @@ The path for assets into DLE is itself not open. Until the DLE production gates 
 
 | Status | Meaning |
 | --- | --- |
-| **Received** | An intake miner verified the signature and acknowledged; no promise of inclusion or fill |
+| **Received** | A matching miner verified the signature and acknowledged; no promise of inclusion or fill |
 | **Matched** | The market batch has an AC; price and quantity are fixed and both sides' funds are frozen |
 | **Settled** | Every debit and credit event has an AC; assets are on the recipient's asset chains |
 
@@ -495,13 +499,13 @@ DLE's rule is "no event, no block" [DLE current] (DLE §3.2). One block on the m
 
 ### 6.2 Inclusion and censorship resistance
 
-Matching is deterministic. The only thing the assembler controls is which orders to include.
+Matching is deterministic. The only thing a matching miner controls is which orders to include, and selecting proposals by fill volume makes a proposal that leaves orders out lose (Section 6.6).
 
 - **L1 inbox fallback**: a placer may submit an order chain's genesis reference or a cancel to an L1 inbox. The market chain must consume the inbox in order. An entry not consumed within `T_inbox` can go to DLE's archive censorship challenge (DLE §6.4 `ArchiveCensorshipChallenge`) [Proposed].
-- **Several intake miners, rotating committees**: orders go to several intake miners over L0, and each batch draws a new committee. One assembler leaving out an order can only delay it.
+- **Many competing miners, rotating committees**: orders go over L0 to every idle matching miner, and each batch draws a new consensus committee. A matching miner that leaves out an order only lets a more complete competitor win.
 - **Aligned incentives**: miners earn by fill amount, so leaving out a fillable order means losing its matching fee.
 
-The assembler decides the order of fast-lane orders, which leaves room to reorder. Mitigations: a per-batch cap on fast-lane orders by count and amount, and ordering by order hash plus a batch random seed (Appendix B, B-4).
+The matching miner decides the order of fast-lane orders in its proposal, which leaves room to reorder. Mitigations: a per-batch cap on fast-lane orders by count and amount, and ordering by order hash plus a batch random seed (Appendix B, B-4).
 
 ### 6.3 Order splitting
 
@@ -512,7 +516,7 @@ The assembler decides the order of fast-lane orders, which leaves room to reorde
 3. **Across LPs in a pool**: a pool fill is spread over many frozen asset chains by LP share (Section 10.6).
 4. **Across asset chains**: each fill's payments and receipts split into parallel transfers on many asset chains (Section 4.3, Chapter 7).
 
-Splitting does not change the order signature or add fees. Cumulative fills of each order are recorded on the market chain and the order chain and never exceed `quantityLots`. All splitting rules are deterministic, so the assembler cannot choose who gets the volume. `B_max` is also the market-chain counterpart of DLE's committee cumulative-exposure rule E_C ≤ E_max (DLE §12.3.2); how it counts is pending (Appendix B, B-8).
+Splitting does not change the order signature or add fees. Cumulative fills of each order are recorded on the market chain and the order chain and never exceed `quantityLots`. All splitting rules are deterministic, so a matching miner cannot choose who gets the volume. `B_max` is also the market-chain counterpart of DLE's committee cumulative-exposure rule E_C ≤ E_max (DLE §12.3.2); how it counts is pending (Appendix B, B-8).
 
 ### 6.4 Ordinary orders: frequent batch auction [Proposed]
 
@@ -523,13 +527,62 @@ Splitting does not change the order signature or add fees. Cumulative fills of e
 5. Orders better than the clearing price fill completely. At the marginal price, allocation goes to orders admitted in earlier batches first, then pro rata by remaining quantity within a batch, with leftover lots allocated by ascending `keccak(orderHash ‖ batchSeed)`, where `batchSeed` comes from L1 beacon randomness.
 6. Every fill executes at the clearing price.
 
-The order of arrival within a batch does not change the clearing price, so the assembler cannot front-run by reordering. Switching to continuous matching within a batch is pending (Appendix B, B-3).
+The order of arrival within a batch does not change the clearing price, so a matching miner cannot front-run by reordering. Switching to continuous matching within a batch is pending (Appendix B, B-3).
 
 ### 6.5 Self-trade prevention
 
 When buy and sell orders of the same `owner` would both fill in one batch, the later-admitted one sits out that batch. The same applies between an owner's pool liquidity and their own fast-lane order (Section 10.6).
 
 ---
+
+### 6.6 Racing to match: idle light miners compete, consensus miners keep it safe [Decided] (2026-10-26)
+
+Operator decision: order matching is done by all idle miners, who race to match first for profit and so bring trades about, while consensus miners maintain security. The operator also decided that the matching miner receives the 0.007% and the consensus miners share the 0.01% transfer fee; that the proposal with the largest fill volume wins, with ties going to the first to arrive; and that becoming a light miner requires staking CNET, with a cost for invalid proposals.
+
+| Role | Who | Does what | Earns |
+| --- | --- | --- | --- |
+| Matching miner (light miner) | A miner that has staked the CNET threshold and is not serving on this market's consensus committee for the batch | Collects orders, splits them, computes the result with the deterministic rules of Sections 6.4, 10.5 and 10.6, signs and submits a matching proposal | The whole 0.007% matching fee of the winning proposal [Decided] |
+| Consensus miners | The market-chain consensus committee DLE draws for the batch (5 of 7) and the hosting archive group (4 of 5) | Recompute every proposal independently, pick the winner, produce and finalize the block; do not match | Share the 0.01% DLE transfer fee [Decided]; order-chain validators also receive the 0.003% prepayment |
+
+**Matching proposal [Proposed]**
+
+```text
+MatchProposal {
+    marketId, batchNonce, parentStateRoot, l1BlockNumber,
+    includedOrderRefs[], cancels[], amendments[], poolRefs[],
+    referencePriceTicks, clearingPriceTicks,
+    fillsRoot, bookRoot,
+    totalFillQuote,        // this proposal's fill volume, in the quote asset
+    matcher, matcherStakeRef, signature
+}
+```
+
+**Flow**
+
+1. Orders, cancels and amendments are broadcast over L0 to every idle matching miner.
+2. Each matching miner starts from the same parent state, chooses which orders to include, computes the result with the deterministic rules, and signs and submits its proposal.
+3. The batch's consensus committee collects proposals until the cut-off and recomputes each one independently. A proposal whose result differs from its claims, cites an invalid order, or fails a precondition is invalid.
+4. Among valid proposals, the one with the largest fill volume (`totalFillQuote`) wins [Decided]. Ties go to the one the consensus committee received first [Decided], then to the lower proposal hash.
+5. The winning proposal becomes the batch's `Batch` event: 5 of 7 sign it under the normal DLE flow, and the archive group replays it and forms the AC.
+6. When settlement completes, the 0.007% matching fee is credited to the winning matching miner; a voided fill pays nothing.
+
+**Cost of an invalid proposal [Decided principle, proposed method].** Each proposal carries a stake reference. A proposal ruled invalid for a reason any third party can recheck (a recomputation mismatch, a missing or expired order, a bad signature) loses a DAO-set share of its submitter's stake, and the submitter may not propose for a number of batches. A valid proposal that loses only because its volume was smaller or it arrived later is not penalized.
+
+**Why this design**
+
+- Matching is deterministic: for a given set of included orders, there is exactly one result. Matching miners can only compete on how many fillable orders they include. "Largest fill volume wins" rewards the miner who includes more orders and brings about more trades.
+- A proposal that leaves orders out loses to a more complete competitor, which makes censorship harder.
+- Confirmation is separate from matching: consensus miners do not race for matches, and a matching miner cannot confirm its own result.
+- The number of matching miners is not capped; the more idle miners, the stronger the competition.
+- Fund safety does not depend on matching miners: a wrong or forged result fails consensus recomputation and the paying asset chain's check of signatures and freezes (Section 7.1).
+
+**Boundaries and risks**
+
+- "First to arrive" uses the consensus committee's own receive order, which outsiders cannot verify; it matters only for ties.
+- A consensus committee could unfairly drop some proposals. Proposed mitigation: matching miners send each proposal to every committee member, and each member attaches to its signature the hash of the largest valid proposal it received, for later review (mechanism pending, Appendix B, B-23).
+- One operator could control both a matching miner and consensus miners; role registration and conflict-of-interest rules are needed (DLE OperatorDomainRegistryV1).
+- Many proposals consume the committee's recomputation capacity; the stake threshold, penalties and a per-miner per-batch proposal cap limit this.
+- The matching miner decides the order of fast-lane orders in its proposal (Section 6.2).
 
 ## 7. Settlement: parallel DLE transfers [Decided] (2026-10-25)
 
@@ -658,16 +711,18 @@ Fee transfers themselves are not charged further fees [Proposed].
 - Fees do not depend on conet-USDC and need no oracle conversion. Pools can open on any pair, and LPs need no conet-USDC fee reserve.
 - This differs from the current DLE §13.2 rule ("asset transfer fees are oracle-valued and paid in conet-USDC"), and DLE must be revised to match (R7).
 
-### 9.4 Matching-fee allocation [Proposed]
+### 9.4 Fee allocation
 
-| Share | Recipient |
-| --- | --- |
-| α | The batch assembler |
-| 1-α | The other matching-committee members who voted to accept, split equally |
+| Fee | Recipient | Rule |
+| --- | --- | --- |
+| Matching fee 0.007% | The winning proposal's matching miner | All of it [Decided] (2026-10-26) |
+| DLE transfer fee 0.01% | Consensus miners | Shared by consensus miners [Decided] (2026-10-26). Proposed: by DLE rules, 50% to the archive group and 50% to the accepting validators of the asset chain carrying the transfer (DLE §13.4); whether the market-chain consensus committee gets a share is pending (Appendix B, B-22) |
+| Prepayment 0.003% | Order-chain validators | Section 5.1 |
+| LP fee | LPs in the pool, by share | Chapter 10 |
 
-Computed separately for each token. The DAO sets α (Appendix B, B-6); the examples use 30%. Rounding follows DLE (DLE §13.4): the assembler's share is rounded down, and dust among validators goes by ascending address. The matching fee is credited to miners when settlement completes; a voided fill pays nothing.
+Computed separately for each token. Dust among validators goes by ascending address (DLE §13.4). The matching fee is credited to the matching miner when settlement completes; a voided fill pays nothing.
 
-DLE currently splits its 1 bp protocol fee 50/50 between the archive group and validators (DLE §13.4). Here the whole matching fee goes to the matching miners. The DLE transfer fee is still allocated by DLE rules to the archive group and validators of the asset chain carrying the transfer, which gives archive groups income tied to volume, alongside the availability budget (DLE §13.4a). The 0.003% prepayment goes to order-chain validators, not to archive groups. This needs confirmation in a DLE revision (R8).
+DLE currently splits its 1 bp protocol fee 50/50 between the archive group and validators (DLE §13.4). Here the whole matching fee goes to the matching miner, the DLE transfer fee is shared by consensus miners, and the prepayment goes to order-chain validators. This needs confirmation in a DLE revision (R8).
 
 ### 9.5 Income illustration
 
@@ -680,7 +735,7 @@ DLE currently splits its 1 bp protocol fee 50/50 between the archive group and v
 | 10,000,000 | about 1,400 | 700 |
 | 100,000,000 | about 14,000 | 7,000 |
 
-Units are quote-asset equivalent. Sellers pay the matching fee in the base asset, converted here at the fill price. The assembler receives α of it.
+Units are quote-asset equivalent. Sellers pay the matching fee in the base asset, converted here at the fill price. All of it goes to each batch's winning matching miner.
 
 **Order-chain validators (0.003% prepayment)**: computed on the total amount of orders placed, not on volume. With 1,000,000 in daily order totals, about 30. Orders later cancelled or expired count too.
 
@@ -688,7 +743,8 @@ None of this is an income forecast.
 
 ### 9.6 Are incentives aligned?
 
-- Including more fillable orders earns more matching fees, so censorship has a cost.
+- Matching miners compete on fill volume: only a proposal that includes more fillable orders wins, and leaving orders out loses to a competitor, so censorship has a cost.
+- Invalid proposals lose stake, so spamming proposals has a cost.
 - Matching and the reference price are deterministic, so miners cannot earn more by changing results.
 - The matching fee is credited only after settlement, so miners have a reason to submit settlement events promptly.
 - The prepayment is not refunded, so spam orders and repeated place-and-cancel have a cost. Order-chain validators earn from order flow and matching miners earn from volume, separately.
@@ -811,7 +867,7 @@ LP net result = fill and inventory gain or loss + LP fee − DLE transfer fee �
 | --- | --- | --- |
 | Reference-price manipulation | Push the reference price, then extract from pools | Order evidence backed by order chains and frozen funds, spread threshold, clamp to volume-weighted average; per-pool per-batch cap `poolBatchCap` |
 | Adverse selection | Traders with faster information pick pools when quotes lag | LP fee, price range; reference price updated every batch |
-| Assembler ordering | The assembler orders fast-lane orders | Per-batch cap; ordering by order hash and random seed (B-4) |
+| Matching-miner ordering | The matching miner orders fast-lane orders in its proposal | Per-batch cap; ordering by order hash and random seed (B-4) |
 | Pool concentration | A few large pools dominate quotes | Pools are permissionless; LPs choose freely |
 | Too many settlement events | One pool fill spread over many LP asset chains | Minimum allocation, merging per chain |
 | LPs receive many tokens | LP fees and proceeds come in the placer's token | Trade them on DLE trading pools |
@@ -835,11 +891,12 @@ With all funds in DLE, safety rests mainly on DLE itself: committee sampling, an
 
 | Risk | Handling | Residual |
 | --- | --- | --- |
-| Matching committee and market archive group both captured | A forged fill fails the paying asset chain's signature and freeze check | Censorship, delay, unfavorable fills and ordering within limit prices |
+| Consensus committee and market archive group both captured | A forged fill fails the paying asset chain's signature and freeze check | Censorship, delay, dropping competitors' proposals, unfavorable fills and ordering within limit prices |
+| Matching miners submitting invalid or spam proposals | Stake threshold; rechecked invalid proposals lose stake and proposal rights for a time; a per-miner per-batch proposal cap | Penalty share and cap not set |
 | An asset chain's committee and archive group captured | Direct loss at most that chain's balance (≤ 100 USDC); committee cumulative exposure E_C ≤ E_max | One attacker capturing several archive groups |
 | An order chain captured | Order terms are bound to the signature at genesis and cannot change; asset chains check the signature | Delayed closing and release |
-| Front-running | Batch auction for ordinary orders; caps on fast-lane ordering | The assembler's ordering of fast-lane orders |
-| Censorship | L1 inbox fallback, several intake miners, rotating committees | Short delays |
+| Front-running | Batch auction for ordinary orders; caps on fast-lane ordering | The matching miner's ordering of fast-lane orders; the consensus committee's receive order (ties only) |
+| Censorship | L1 inbox fallback, competing matching miners selected by fill volume, rotating committees | Short delays |
 | Partial settlement | Two-phase transfer: if any debit fails, the rest is refunded and no fee is charged | Forced exit against in-flight amounts (B-10) |
 | Reference-price manipulation | Section 10.4 | Parameters pending |
 | Malicious tokens | Only DLE-admitted canonical assets are listed | A token changing behavior after an upgrade needs a circuit breaker |
@@ -854,7 +911,7 @@ Until the archive production blockers close (a second independent implementation
 
 ## 13. Governance
 
-- **Listing and parameters**: listing, delisting, halting and resuming pairs, and `lotSize`, `tickSize`, `B_max`, `priceBandBps`, reference-price parameters, fast-order validity caps, `K_unsettled`, α and similar, are decided by DAO proposal and vote. Parameter changes name a future effective batch and do not apply to order chains already opened.
+- **Listing and parameters**: listing, delisting, halting and resuming pairs, and `lotSize`, `tickSize`, `B_max`, `priceBandBps`, reference-price parameters, fast-order validity caps, `K_unsettled`, the light-miner stake threshold, the invalid-proposal penalty and similar, are decided by DAO proposal and vote. Parameter changes name a future effective batch and do not apply to order chains already opened.
 - **Liquidity pools**: opening a pool needs no permission and no DAO approval [Decided]. The DAO sets only global limits (for example the per-pool per-batch cap, the minimum allocation and the `feeBps` floor).
 - **No admin**: the market registry contract, market-chain parameters, order chains and pool records have no admin role and no privileged address that can move user or LP funds [Proposed, following the GB system's decision that admin roles do not exist and are folded into DAO management].
 - **Upgrading the L1 market registry**: the proposal is no upgradeability; if upgradeability is kept, it requires a DAO vote with a code hash and a public timelock (Appendix B, B-16).
@@ -875,7 +932,7 @@ Until the archive production blockers close (a second independent implementation
 
 | Phase | Content | Precondition |
 | --- | --- | --- |
-| 0 Specification | Turn this paper into an executable specification and test vectors; submit revisions R1–R8 to DLE | Operator confirms the key items in Appendix B |
+| 0 Specification | Turn this paper into an executable specification and test vectors; submit revisions R1–R9 to DLE | Operator confirms the key items in Appendix B |
 | 1 Lab network | Run one market and a few pools on the DLE lab network (0x44c45) with test assets; differential replay with a second independent implementation | Phase 0 complete |
 | 2 Limited pilot | Real assets, low caps, few markets; all data public | AssetBurnMintGateway live; DLE production gates closed; specification and contracts audited; listed assets meet Section 4.6 |
 | 3 Open | The DAO approves pairs one by one | Pilot data public with no open high-severity issue |
@@ -907,7 +964,8 @@ Mapping to the design study's release gates:
 | Amendment prepayment | New order total, paid in full again, not refunded | [Decided] 0.003% | — |
 | DLE transfer fee | Each outgoing transfer, on the amount, in the transferred token | [Decided] 0.01% | — |
 | LP fee `feeBps` | Per pool, paid by the placer in own outgoing token | [Decided] set by the creator; floor 1 bp [Proposed] | 0.05% |
-| α | Assembler share | [Pending] | 30% |
+| Light-miner stake threshold | CNET stake needed to be a matching miner | [Decided] stake required; amount [Pending] | — |
+| Invalid-proposal penalty | Share of stake lost and batches suspended for a rechecked invalid proposal | [Decided] a cost is required; values [Pending] | — |
 | Asset-chain cap | Balance per asset chain | [DLE current] 100 USDC equivalent | — |
 | N_V / Q_V / standbys | Committee | [DLE current] 7 / 5 / 2 | — |
 | N_A / Q_A | Archive group | [DLE current] 5 / 4 | — |
@@ -930,7 +988,7 @@ Mapping to the design study's release gates:
 | B-3 | Matching algorithm for ordinary orders | A: frequent batch auction. B: continuous matching within a batch | A |
 | B-4 | Ordering of fast-lane orders within a batch | Inclusion order; order hash with random seed; per-batch cap | Hash with random seed, plus a cap |
 | B-5 | ~~Who pays the matching fee~~ | Decided: each placer pays; 0.003% prepaid at placement + 0.007% at fill (2026-10-25) | — |
-| B-6 | α; whether intake miners get a share | — | DAO sets α; no intake-miner share in the first version |
+| B-6 | ~~Assembler share α; whether intake miners get a share~~ | Decided: idle light miners race to match, and the 0.007% matching fee goes entirely to the winning matching miner; there is no assembler (2026-10-26) | — |
 | B-7 | Implementation order | Wait for the DLE revisions; or prototype on the lab network first | Lab prototype first |
 | B-8 | How market batches and settlement events count toward E_C | — | By fill value and settled value, separately |
 | B-9 | Birth cost of new receiving asset chains | Paid by the recipient; subsidized from fees | Recipient pays; wallet warns |
@@ -946,10 +1004,13 @@ Mapping to the design study's release gates:
 | B-19 | ~~Can an order chain be amended or reused?~~ | Decided: amendment on the same chain is allowed (re-sign to change price or quantity, rejoin the queue), with 0.003% paid in full again on the new order total (2026-10-25). Still open: which fields may change (Section 5.1a is a proposal) | — |
 | B-20 | Fee base | Filled amount; total outgoing including the LP fee | Filled amount; no fee on fees (the prepayment uses the order total, decided) |
 | B-21 | How the prepayment is shared among order-chain validators | Per block (Section 5.1); all to the genesis committee; all at close | Per block |
+| B-22 | How consensus miners share the transfer fee | All to the asset chain's archive group and validators by DLE rules; or a DAO-set share to the market-chain consensus committee | A DAO-set share for the market-chain committee, the rest by DLE rules |
+| B-23 | How to stop a consensus committee from dropping proposals | Attach the hash of the largest proposal received to each signature; send proposals to every member; later challenge | The first two together; challenge rules defined separately |
+| B-24 | Light-miner stake threshold, invalid-proposal penalty, per-miner per-batch proposal cap | — | Set by the DAO, calibrated after the pilot |
 
 ## Appendix C — Examples
 
-Pair GB / conet-USDC with the parameters of Section 5.5, α=30%. All figures are for illustration only.
+Pair GB / conet-USDC with the parameters of Section 5.5. All figures are for illustration only.
 
 ### C.1 Two book orders filling each other (batch auction)
 
@@ -993,7 +1054,7 @@ Erin does not fill in this batch and Dave fills half; their prepayments do not c
 
 Alice's matching fee is computed per fill: 0.000357 + 0.000714 + 0.000714 = 0.001785.
 
-**Matching fees in this batch**: 0.001785 conet-USDC and 0.175 GB. With α=30%, the assembler gets 535 smallest units of conet-USDC and 0.0525 GB; each of the other 5 accepting members gets 250 units of conet-USDC and 0.0245 GB. Converted at the fill price, miners earn about 0.014% of the 25.5 filled.
+**Matching fees in this batch**: 0.001785 conet-USDC and 0.175 GB, all to the matching miner whose proposal won the batch. Converted at the fill price, that is about 0.014% of the 25.5 filled. The DLE transfer fees of this batch are shared by the consensus miners.
 
 **Settlement**: Alice froze one asset chain holding 30 conet-USDC. Phase 1: Alice's asset chain debits 25.504335 to in-flight; Bob's, Carol's and Dave's GB asset chains debit 500.085, 1,000.17 and 1,000.17 GB. Phase 2: Bob, Carol and Dave's receiving asset chains are credited 5.1, 10.2 and 10.2 conet-USDC; Alice's receiving asset chain is credited 2,500 GB (about 25.5 USDC equivalent, within the 100 cap); fees are credited by the rules. If Carol's debit times out because of a forced exit, Carol's fill is void, Alice's 10.2 + 0.000714 + 0.00102 = 10.201734 conet-USDC for it is refunded, and the other two fills complete. Nobody's prepayment is refunded.
 
@@ -1040,7 +1101,8 @@ Ann's 0.15 GB transfer fee is about 0.00153 USDC at the reference price; after t
 | Market chain | A DLE chain for one trading pair, recording the book and matching results |
 | Freeze authorization | The user's signature freezing balance on their own asset chain for an order chain or a pool |
 | Matching batch | One block of the market chain |
-| Matching committee / assembler | The 7 miners DLE draws per batch / the first of them in draw order |
+| Matching miner (light miner) | A miner that stakes CNET, is idle, and races to submit matching proposals |
+| Consensus committee / consensus miners | The 7 miners DLE draws per batch to recompute and confirm, plus the hosting archive group |
 | Two-phase transfer | Debit to in-flight, credit against every debit receipt, refund on timeout |
 | Liquidity pool | A storage-chain record listing LPs' frozen asset chains; the pool itself holds no funds |
 | Placer's token | The token an order placer sends in a fill; every fee is computed and paid in it |
@@ -1053,4 +1115,4 @@ Ann's 0.15 GB transfer fee is about 0.00153 USDC at the reference price; after t
 | Version | Changes |
 | --- | --- |
 | v0.1 (not published) | Funds in L1 wallets with ERC-20 approvals; L1 `settleBatch` with per-fill `transferFrom`; LP firm quotes for the fast lane |
-| v0.2 (this version) | All funds in DLE with freeze authorization; parallel two-phase DLE settlement; permissionless liquidity pools on storage chains compared with book orders; reference price from the trade-price curve and funded orders; one order chain per order with a 0.003% prepayment and 0.007% matching fee; amendment on the same chain; DLE transfer fee 0.01% by amount, in the outgoing token; LP transfer fee covered by the pool fee; minimum order 1 USDC equivalent; Sections 1.2–1.5 on the state of centralized and decentralized exchanges, what DLE addresses, advantages and disadvantages |
+| v0.2 (this version) | All funds in DLE with freeze authorization; parallel two-phase DLE settlement; permissionless liquidity pools on storage chains compared with book orders; reference price from the trade-price curve and funded orders; one order chain per order with a 0.003% prepayment and 0.007% matching fee; amendment on the same chain; DLE transfer fee 0.01% by amount, in the outgoing token; LP transfer fee covered by the pool fee; minimum order 1 USDC equivalent; Sections 1.2–1.5 on the state of centralized and decentralized exchanges, what DLE addresses, advantages and disadvantages; Section 1.4.1 on throughput; Section 6.6 on idle light miners racing to match, with consensus miners confirming |
