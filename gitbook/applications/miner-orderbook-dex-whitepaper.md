@@ -83,6 +83,7 @@ In short, DEXs removed custody risk but brought curve pricing and MEV, congestio
 
 | Problem today | How this exchange handles it on DLE | Basis |
 | --- | --- | --- |
+| Throughput tied to one chain's block speed | DLE is an event-driven ledger system of many chains running concurrently. Each market, order and asset chain produces a block only when an event arrives and is served by its own committee drawn from the miner pool, so total capacity grows as miners and archive groups join, instead of being set by one chain's block interval (Section 1.4.1) | DLE §3.1–§3.4 |
 | The exchange holds user assets | Funds stay on DLE asset chains in the user's own name; placing an order only freezes them; no vault, no admin | Section 4.2, Chapter 13 |
 | A fixed sequencer or validator set | Each batch draws 7 miners at random from the on-demand waiting queue, and 5 signatures produce the block; the archive group replays it independently and finalizes at 4/5; committees rotate every batch | DLE §6.5, §5.2.1 |
 | Matching cannot be verified | Matching rules live in the state machine and give deterministic results; full batches have data availability, so anyone can recompute them | Section 6.4; DLE §5.2.1 |
@@ -97,20 +98,47 @@ In short, DEXs removed custody risk but brought curve pricing and MEV, congestio
 | Cross-chain asset risk | Only Treasury canonical assets are listed; an asset that depends on a cross-chain proof is listed only after that proof is shown to reject forged source-chain messages | Section 4.6 |
 | Traders' network identity exposed | Wallet-address routing and encrypted forwarding reduce IP exposure (this is not anonymity) | DLE §4.5, §7 |
 
+#### 1.4.1 Throughput: where DLE differs from today's order-book DEXs
+
+This is the main architectural difference between this exchange and existing decentralized order books.
+
+**Existing order-book DEXs are bounded by one chain.** An order book on a shared chain (such as Serum / OpenBook on Solana) shares that chain's block space and block time with every other application. An appchain order book (such as dYdX v4 or Hyperliquid) runs every market through one validator set that produces one sequence of blocks. In both cases total capacity is set by how fast one chain produces blocks and how much one block can carry. Adding validators does not add capacity; it usually adds coordination cost.
+
+**DLE has no global block interval.** DLE is an event-driven, multi-chain concurrent ledger system [DLE current] (DLE §3.1–§3.2):
+
+- Each ledger is its own chain. In this exchange, each trading pair has its own market chain, each order has its own order chain, and balances sit on many independent asset chains.
+- A chain produces a block only when an event arrives ("no event, no block"). Nothing waits for a network-wide slot.
+- Each block is produced by a committee of 7 drawn from the on-demand miner waiting queue and finalized by the archive group that hosts that chain. Different chains use different committees at the same time.
+- Throughput is the sum of all active event streams across chains, not the speed of one chain.
+
+**What this means for an order book.**
+
+- **More markets in parallel**: every trading pair advances independently. A busy pair does not slow other pairs, and adding markets does not compete for one shared block space.
+- **Many orders per block**: a matching batch is one event that can carry many orders, cancels and fills, so one market-chain block clears a whole batch auction at once.
+- **Settlement in parallel**: each fill settles as transfers on different asset chains with different committees, so settlement capacity grows with the number of committees available.
+- **Capacity grows with participation**: as more miners join the waiting queue and archive groups split (fission), more committees and more hosting capacity exist at the same time, so more markets, orders and settlements can run concurrently.
+
+**Boundaries.** These are architectural properties, not measured results, and they do not mean each transaction gets faster as miners join [DLE current] (DLE §3.4):
+
+- The batches of one trading pair still advance one after another on its market chain. The speed of a single market is bounded by the committee vote (window up to 30 seconds) and archive finality, and by the batch cap `B_max`.
+- Capacity also depends on the number of archive groups and on the committee exposure bound E_C ≤ E_max.
+- Fill latency and throughput have not been measured. The 30-day lab assessment was partial success, not qualified, and production signing is not enabled.
+
 ### 1.5 Advantages and disadvantages
 
 **Advantages**
 
-1. **Non-custodial**: assets always stay on the user's own DLE asset chains; only what the user freezes by signature can leave, and only per the order.
-2. **No fixed matcher**: each batch draws a random miner committee and an archive group replays it, with no reliance on one company or a few fixed validators.
-3. **Verifiable results**: matching and the reference price are deterministic computations on public data that anyone can recompute.
-4. **Less front-running**: batch auctions clear at one uniform price, so order within a batch does not matter.
-5. **Parallelism and failure isolation**: pairs, orders and assets are separate chains; congestion or a fault in one market does not affect others.
-6. **Bounded loss**: if one asset chain is compromised, the direct loss is at most 100 USDC equivalent.
-7. **Low, transparent fees**: about 0.02% for a full fill (excluding any LP fee), computed on amounts, regardless of how many chains carry it.
-8. **Incentives tied to work**: miners, validators and LPs earn by fill volume, order amount and pool share respectively.
-9. **Open liquidity**: anyone can open or join a pool without permission.
-10. **No privileged address in governance**: listings and parameters are DAO votes; pools need no permission.
+1. **Capacity that grows with miners**: an event-driven, multi-chain concurrent ledger, where markets, orders and settlements run on separate chains with separate committees; total capacity grows with miners and archive groups instead of being set by one chain's block speed (Section 1.4.1).
+2. **Non-custodial**: assets always stay on the user's own DLE asset chains; only what the user freezes by signature can leave, and only per the order.
+3. **No fixed matcher**: each batch draws a random miner committee and an archive group replays it, with no reliance on one company or a few fixed validators.
+4. **Verifiable results**: matching and the reference price are deterministic computations on public data that anyone can recompute.
+5. **Less front-running**: batch auctions clear at one uniform price, so order within a batch does not matter.
+6. **Parallelism and failure isolation**: pairs, orders and assets are separate chains; congestion or a fault in one market does not affect others.
+7. **Bounded loss**: if one asset chain is compromised, the direct loss is at most 100 USDC equivalent.
+8. **Low, transparent fees**: about 0.02% for a full fill (excluding any LP fee), computed on amounts, regardless of how many chains carry it.
+9. **Incentives tied to work**: miners, validators and LPs earn by fill volume, order amount and pool share respectively.
+10. **Open liquidity**: anyone can open or join a pool without permission.
+11. **No privileged address in governance**: listings and parameters are DAO votes; pools need no permission.
 
 **Disadvantages**
 
@@ -140,6 +168,7 @@ In short, DEXs removed custody risk but brought curve pricing and MEV, congestio
 | Front-running | Invisible internally | Sandwich attacks common | Depends on the sequencer | Uniform-price batch auction; fast-lane orders still have ordering room |
 | Latency | Milliseconds | One block | Close to a CEX, depending on the implementation | A batch plus settlement; not measured |
 | Trading fee | Around 0.1% | 0.01%–1% tiers, plus gas | Varies by platform | About 0.02% (excluding any LP fee) |
+| Capacity scaling | The exchange's matching hardware | One shared chain's block space and block time | One validator set's block production | Grows with miners and archive groups across independent chains; one market is still serial |
 | Failure isolation | One platform | One chain | One appchain | Separate per market, order and asset chain |
 | Status | Live | Live | Live | Not implemented |
 
