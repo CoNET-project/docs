@@ -1,5 +1,7 @@
 # L1 overlay lab — wallet-addressed geth / Prysm
 
+> **Removed from CoNET-SI (2026-10-31).** The exclusive L0 attachment primitives this page relies on (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) are no longer implemented by SI; `l0_listen` / `l0_connect` close the connection. The rest of this page is kept as a historical reference and does not describe current network behavior.
+
 **Evidence level: laboratory review (2026-08-24).** This page records a
 read-only evaluation of two **non-production** spokes that run unmodified
 geth and Prysm behind [`conet-l0d`](conet-l0d.md). It is **not** the public

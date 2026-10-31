@@ -1,5 +1,7 @@
 # Persistent application streams
 
+> **Removed from CoNET-SI (2026-10-31).** The exclusive L0 attachment primitives this page relies on (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) are no longer implemented by SI; `l0_listen` / `l0_connect` close the connection. The rest of this page is kept as a historical reference and does not describe current network behavior.
+
 **Evidence level: Implemented capability.** Layer Minus provides the encrypted
 forwarding and exclusive attachment primitives used by persistent application
 streams. [`web3://`](web3-application-protocol.md) defines the portable
@@ -237,14 +239,20 @@ Each participant maintains an independent reorder buffer keyed by
 `sessionId + direction`; a timestamp is metadata only and never replaces the
 sequence number.
 
+Send path: each media `voice_uplink` / video chunk posts to **one** entry
+(`fanout: 1`). Parallel multi-entry fanout of the same `seq` is forbidden;
+text gossip may still fan out.
+
 The receiver must:
 
 - deliver contiguous `seq` values in order;
 - discard an exact duplicate `(seq, payload, frame metadata)`;
 - reject a pending frame that reuses `seq` with different payload or metadata
   and emit `voice_conflict_v1`;
-- wait only for a bounded gap interval, then emit `voice_gap_v1` and continue
-  real-time delivery without pretending the missing frame was received;
+- when a later `seq` is buffered while `nextSeq` is still missing, **immediately**
+  emit `voice_gap_v1` with reason `skip_ahead` and continue with the later
+  frame (do not wait out a full reorder timeout before skipping); a short
+  timer may apply only to incomplete video-chunk groups at `nextSeq`;
 - keep late frames behind the delivery cursor from being delivered again;
 - reassemble video chunks only when `frameId`, `chunkIndex`, and `chunkCount`
   form a complete, valid set.

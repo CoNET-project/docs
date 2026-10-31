@@ -12,14 +12,16 @@ Use this page to build a client against SI. Developer-track index: [L0 developme
 
 SI may carry signed `voice_uplink` and `voice_downlink` commands after the
 application has established its temporary session. SI routes the ciphertext
-but does not decrypt, reorder, persist, or interpret media frames. The client
-Worker authenticates frames, isolates streams by `sessionId + direction`,
-orders by `seq`, suppresses exact duplicates, emits
-`voice_conflict_v1` for conflicting sequence reuse, and emits
-`voice_gap_v1` after a bounded gap timeout. Video chunk reassembly is
-client-side and bounded by payload, buffer, and chunk limits. `/post` remains
-`{ "data": "<armor>" }` only; no media metadata is added as a cleartext
-field.
+but does not decrypt, reorder, persist, or interpret media frames. Clients
+post each media frame to **one** entry (`fanout: 1`); text gossip may still
+fan out. The client Worker authenticates frames, isolates streams by
+`sessionId + direction`, orders by `seq`, suppresses exact duplicates, emits
+`voice_conflict_v1` for conflicting sequence reuse, and—when a later `seq`
+arrives while earlier ones are missing—**immediately** emits `voice_gap_v1`
+(`skip_ahead`) and continues (no full reorder-timeout wait). Video chunk
+reassembly is client-side and bounded by payload, buffer, and chunk limits.
+`/post` remains `{ "data": "<armor>" }` only; no media metadata is added as a
+cleartext field.
 
 ## What you are calling
 
@@ -166,7 +168,7 @@ Wrap inner **user-PGP** armor in JSON encrypted to **B’s route PGP**. HTTP to 
 | Field | Meaning |
 | --- | --- |
 | `data` | Inner OpenPGP armor encrypted to the recipient **user PGP** |
-| `NoPush` | **Do not send** for L0 / `conet-l0d` duplex. Historical Chat field meaning “skip APNs.” If set, SI must still try the idle `l0_listen` pool **before** AddressPGP `getRoute` |
+| `NoPush` | Historical Chat field meaning “skip APNs.” It does not change routing |
 
 ```text
 inner user-PGP armor
@@ -179,14 +181,13 @@ inner user-PGP armor
 **B after decrypting mailbox work (normative):**
 
 1. Inner PKESK key ID is a **user** key, not a Guardian route key.
-2. Match idle `l0ListenPool` via `l0ListenByPgp` (indexed from `l0_listen.userPgpKeyId`). Hit → copy armor onto that SSE; HTTP 200; **stop**. No `getRoute`.
-3. Miss → then Chat liveness / `getRoute` to another SI.
+2. `getRoute` it: store and deliver to the Chat listen when local, otherwise forward to the recipient's SI.
 
-Temporary duplex wallets are **not** on AddressPGP. `getRoute` first is a protocol bug (`can not find router`).
+L0 exclusive occupancy (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) was removed from CoNET-SI on 2026-10-31.
 
 Entry A peels (if wrapped) and forwards `{ data }` to B. Do **not** put `NoPush` on the HTTP JSON. If the client lacks B’s route public key, fail — do not fall back to a sibling HTTP field.
 
-`gossip_delivery_ack` is a signed SI command (family 2), not mailbox work. `duplex_accept` **is** mailbox work (this family).
+`gossip_delivery_ack` is a signed SI command (family 2), not mailbox work.
 
 ## Live command catalog
 
@@ -196,7 +197,7 @@ Source: CoNET-SI `localNodeCommandSocket`. Encrypt the command family to **route
 | --- | --- | --- | --- |
 | **`mailbox_listen`** | Own mailbox **B** route PGP | Long SSE via entry **C ≠ B** | Preferred Chat mailbox command. Required `walletAddress`; optional opaque `instanceId`. Multiple instances per wallet are retained and receive fan-out copies. |
 | `voice_listen` | Own mailbox **B** route PGP | Separate temporary SSE via entry **C ≠ B** | Random `sessionId`; separate voice pool. Never occupies `mailbox_listen`. An outgoing call includes opaque push metadata and `offerArmor` (callee user-PGP ciphertext). B forwards `offerArmor` to the callee mailbox without decrypting it, indexes it under `callId`+`sessionId`, then after `voice_ready` calls `/api/voiceCallPush`. |
-| `voice_offer_store` | Callee mailbox **B** route PGP | Short POST via entry ≠ B | Index user-PGP `offerArmor` by opaque `callId`+`sessionId`. Capability auth via `sessionId` (≥16). Never decrypt. |
+| `voice_offer_store` | Callee mailbox **B** route PGP | Short POST via entry ≠ B | Index user-PGP `offerArmor` by opaque `callId`+`sessionId`. Capability auth via `sessionId` (≥16). Never decrypt. Sent by the caller's mailbox SI **and** by the calling client itself (the SI leg is best effort); storing twice is harmless. |
 | `voice_offer_fetch` | Own mailbox **B** route PGP | Short POST via entry **C ≠ B** | Return indexed `offerArmor` for killed-app shell local decrypt. Same capability auth. |
 | `voice_uplink` / `voice_downlink` | Peer mailbox **B** route PGP | Short POST via entry **A ≠ B** | Opaque AES-GCM frame addressed by `targetSessionId`; no session key or plaintext audio. |
 | `voice_unlisten` | Own mailbox **B** route PGP | Short POST via entry **C ≠ B** | Closes one temporary voice session. |
@@ -207,8 +208,7 @@ Source: CoNET-SI `localNodeCommandSocket`. Encrypt the command family to **route
 | `wallet_native_wake_query` | Contact’s mailbox **B** route PGP | **Entry C ≠ B only.** Never dial B | CoNET Chat native-shell status, sent after presence. Same signer, target, and ±600s timestamp. The entry hop hides the querier's IP from mailbox B. Success: `{ ok: true, wallet, nativeWakeable }`. `true` means a registered iOS, Android, Windows, Linux, or macOS shell can be woken. No device token. Failure `{ ok: false, error, nativeWakeable: false }` is untrusted and must not clear the last trusted flag |
 | `udp_subscribe` | UDP server **user** PGP | Entry **A ≠ B** | Contains `Securitykey`. SI rejects encryption to B (`encrypt_to_udp_server_user_pgp`) |
 | `udp_listen` / `udp_server_listen` / `udp_relay` / `udp_uplink` / `udp_unlisten` | **B** route PGP | Entry ≠ B | No `Securitykey`. See [UDP frame forwarding](udp-forward.md) |
-| `l0_listen` or `mining` + `listenKind: "l0"` | Own mailbox **B** route PGP | Long SSE via **C ≠ B** | Exclusive occupancy pipe. **No** overlay `Securitykey`. Signed wire fields are only `userPgpKeyId` and `timestamp`; the temporary EOA is recovered for SI-internal authorization and is not sent as a field. `userPgpKeyId` is stored only in the local `l0ListenByPgp` matcher. Handshake is `{ ok, kind:"l0", listenId }`; it must not expose wallet, nodeWallet, connector, or PGP ID. Idle L0 may receive user-PGP gossip without occupying. Temporary wallets are not AddressPGP. Separate from Chat / mining / UDP. Replacement while **live** occupied → **409** |
-| `l0_connect` | **Target** mailbox **B** route PGP | Entry ≠ B; keep TCP | Signed wire fields use opaque `targetListenId` and `timestamp`; the temporary connector EOA is recovered internally and is not sent as a field. First occupy of idle `targetListenId` L0 SSE: write `{ type:"l0_occupied" }` on SSE, **clear idle comment keepalive**, write **HTTP 200 keep-alive** on the occupy TCP (do not `end()`), pipe remaining TCP as SSE `data:` lines, SI stops parsing that socket. Second `l0_connect` → **409**. User-PGP Chat/mining gossip on the same node must **not** 409. Idle L0 needs SSE comment keepalive (no mining epoch); occupied L0 must not write comments. On teardown, close the bound sockets and let the peer observe EOF; SI does not emit application-level `l0_pipe_end` or `l0_listen_released` frames ([duplex-forward](duplex-forward.md)) |
+| `l0_listen`, `l0_connect`, or `mining` + `listenKind: "l0"` | — | — | **Removed 2026-10-31.** SI closes the connection |
 | `SilentPass` / `SaaS_Sock5` / `SaaS_Sock5_v2` | Egress node route PGP | Product-specific | Paid proxy; not a Chat path |
 
 Old clients that omit `listenKind` on `mining` are treated as mining. During
@@ -227,7 +227,7 @@ When SI forwards to another SI it may append `X-CoNET-Hop-Sigs` (base64 JSON, ma
 After a **local** decrypt:
 
 - if the plaintext is still OpenPGP **for the same node**, SI treats it as an attack, emits socket `end`, and **does not peel again**;
-- if the plaintext is mailbox work JSON `{ data }` (not a signed `{ message, signMessage }`), SI unwraps the inner armor and **first** matches idle `l0_listen` by inner user-PGP key ID; only then Chat/`getRoute`. Do not treat `NoPush` as “skip L0 pool”;
+- if the plaintext is mailbox work JSON `{ data }` (not a signed `{ message, signMessage }`), SI unwraps the inner armor and routes it by its user-PGP key ID (Chat / `getRoute`);
 - if the inner key ID is another node, SI forwards the **inner UTF-8 armor string** when hop-sig count can still grow (cap 3); SI→SI HTTP is still only `{ data }`. Prefer the peel plaintext when it already has `BEGIN PGP MESSAGE`. Coerce with `pgpArmorToUtf8String` before hop-sig `n` / `h`. Do **not** pass an OpenPGP.js 6 `Message.armor()` stream / thenable (minified class `h`) into `Buffer.byteLength`;
 - hop-sign failure, non-UTF-8 armor, or C→B TCP timeout (~8s) is a **404** (or socket `end`). A log-only `uncaughtException` must still close the client socket. Do not leave the SSE open until the client’s ~12s `connect_timeout` — B was never dialed. Field lesson: [Peel, hop-sig, and listen timeouts](peel-hop-listen.md);
 - more than 3 hop signatures, or a count that cannot take another hop, is an all-node flood: `end`, no forward;
@@ -703,35 +703,11 @@ Node samples above use `Buffer`. In browsers use `btoa` / `atob` or a UTF-8 help
 - [Wallet-addressed peer identity](wallet-address-p2p.md)
 - [HTTP transport](http-mimicry.md)
 - [UDP frame forwarding](udp-forward.md)
-- [Persistent application streams](duplex-forward.md) — portable application semantics over L0 attachment primitives
+- [Persistent application streams](duplex-forward.md) — historical reference; its L0 attachments were removed from SI
 - [Security limits](security-limits.md)
 - [CoNET Chat product page](../applications/depin-chat.md)
 - [Resources](../resources.md)
 
 ## Long-connection transport lifecycle
 
-For a persistent application byte stream, keep the mailbox listen SSE and the attached
-`l0_connect` TCP as separate objects. A client may use a temporary listen
-wallet/PGP identity for one attachment. Any `pipeHandle` is a random,
-hop-local opaque value; it must not be derived from an EOA, port, IP, or route
-key, and SI must not correlate it with another hop.
-
-SI does not emit a same-name teardown event on the SSE. The only application
-of `l0_pipe_end` is a control line on the occupied TCP that already owns the
-handle:
-
-```json
-{
-  "type": "l0_pipe_end",
-  "pipeHandle": "<64 lowercase hex>",
-  "reason": "transport_closed"
-}
-```
-
-The fields `wallet`, `connector`, `sessionId`, and `session_id` are forbidden.
-If an entry detects that a downstream SSE is gone before keep-alive is
-committed, it returns a transport error such as `410 Gone`. Once keep-alive is
-committed, it closes the corresponding TCP with FIN/RST. The sender stops
-writing bytes and starts a bounded, backoff-controlled new attachment.
-Neither the transport error nor the opaque handle is a user-visible gossip
-message.
+L0 exclusive occupancy (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) was removed from CoNET-SI on 2026-10-31. The `l0_connect` attachment lifecycle and the `l0_pipe_end` control line described here earlier no longer apply.

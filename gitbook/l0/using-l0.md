@@ -167,11 +167,24 @@ participants send AES-GCM ciphertext through `voice_uplink` and
 duplex application relay made from two one-way paths; it is not WebRTC, raw
 UDP, or a persistent Chat-history stream.
 
-For live media, the receiving Worker authenticates each AES-GCM frame and
-maintains a bounded reorder buffer per `sessionId + direction`. It delivers
-frames by `seq`, ignores exact duplicates, rejects conflicting reuse of a
-sequence with `voice_conflict_v1`, and emits `voice_gap_v1` after a bounded
-gap timeout before continuing. Video chunks are reassembled by
+Call control rides the same relay as AES-GCM frames whose plaintext is JSON
+instead of PCM: `voice_call_accept_v1`, `voice_call_reject_v1`,
+`voice_call_timeout_v1`, and `voice_end_v1` (Hang Up of a connected call, sent
+by whichever side ends it). A receiver treats any JSON control frame as
+control, never as audio, and ignores types it does not know. Control frames
+share the media stream's `seq`: a Hang Up must carry the next sequence number
+after the last media frame, because the reorder buffer drops any frame below
+what it has already delivered.
+
+For live media, each uplink frame is posted to **one** entry only (`fanout: 1`);
+text gossip may still fan out. The receiving Worker authenticates each AES-GCM
+frame and maintains a bounded reorder buffer per `sessionId + direction`. It
+delivers frames by `seq`, ignores exact duplicates, rejects conflicting reuse
+of a sequence with `voice_conflict_v1`, and—when a later `seq` arrives while
+earlier ones are still missing—**immediately** emits `voice_gap_v1`
+(`skip_ahead`) and continues with the later frame (no full reorder-timeout
+wait). A short timer applies only to incomplete video-chunk groups at
+`nextSeq`. Video chunks are reassembled by
 `frameId`/`chunkIndex`/`chunkCount`; invalid or oversized input is discarded.
 The UI consumes only ordered, reassembled Worker events. AAD binds the
 session, direction, sequence, timestamp, and chunk metadata. SI remains an
@@ -181,7 +194,10 @@ The voice route keeps the initiating application wallet inside the
 recipient-user-PGP offer. An outgoing `voice_listen` also carries that
 ciphertext as `offerArmor`. The caller's mailbox forwards `offerArmor` to the
 callee mailbox, indexes it under opaque `callId` + `sessionId` for
-`voice_offer_fetch`, and does not decrypt it. Wake-up metadata still exposes
+`voice_offer_fetch`, and does not decrypt it. The calling application also
+posts the same index entry itself (`voice_offer_store`, encrypted to the callee
+mailbox route PGP, through an entry that is not that mailbox) because the
+mailbox-to-mailbox leg is best effort. Wake-up metadata still exposes
 only opaque session/call identifiers plus the callee routing target. A
 killed-app native shell decrypts locally with the recipient user PGP private
 key injected by the PWA. That shell posts `voice_offer_fetch` to

@@ -1,5 +1,7 @@
 # `conet-l0d` — Linux runtime for `web3://`
 
+> **Removed from CoNET-SI (2026-10-31).** The exclusive L0 attachment primitives this page relies on (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) are no longer implemented by SI; `l0_listen` / `l0_connect` close the connection. The rest of this page is kept as a historical reference and does not describe current network behavior.
+
 **Maturity: Under development.**
 
 `conet-l0d` is the Linux server/client runtime for the

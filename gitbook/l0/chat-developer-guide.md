@@ -142,8 +142,66 @@ is not running:
 }
 ```
 
+The returned `offerArmor` is a normal Chat envelope. After the PGP decrypt, the
+literal is `base64(UTF-8 JSON)` (`{ timestamp, text, from, signMessage }`, with
+the signed offer JSON in `text`), exactly like every other Chat message. Decode
+it before looking for `voice_call_offer_v1`; a shell that parses the decrypted
+literal as JSON directly never finds the offer and the call stays anonymous.
+
 Do **not** inject the EOA mnemonic into the shell for display. Do **not** put
 caller wallet or tag into the push payload.
+
+#### Caller-side offer index
+
+The caller's mailbox also indexes `offerArmor`, but that leg is best effort and
+is missing on mailboxes that predate it. The calling client therefore sends the
+same index entry itself, beside the `voice_listen` encrypt, and waits for it
+(capped at about 3 seconds) before it posts `voice_listen`, because that POST is
+what rings the callee. The command is opaque (the `sessionId` is the capability,
+no `walletAddress`), encrypted to the **callee mailbox route PGP** and posted
+through an entry that is not that mailbox:
+
+```json
+{
+  "command": "voice_offer_store",
+  "callId": "opaque-call-id",
+  "sessionId": "voice-session-opaque-id",
+  "expiresAt": 1710000123456,
+  "offerArmor": "-----BEGIN PGP MESSAGE-----\n...\n-----END PGP MESSAGE-----",
+  "timestamp": 1710000000
+}
+```
+
+Use the same `callId`, `sessionId`, and `offerArmor` as the `voice_listen`.
+Storing the same entry twice is harmless.
+
+#### Hang Up control frame
+
+Ending a connected call is signalled on the temporary voice relay, not only in
+Chat. The side that ends it sends one AES-GCM frame through `voice_uplink` to
+the peer's temporary session, using the call's session key:
+
+```json
+{
+  "type": "voice_end_v1",
+  "callId": "opaque-call-id",
+  "sessionId": "caller-ring-session-id",
+  "from": "0xEnder",
+  "to": "0xPeer",
+  "reason": "hangup",
+  "createdAt": 1710000000000,
+  "timestamp": 1710000000000
+}
+```
+
+The outer `voice_uplink` command names the sender's own session in `sessionId`
+and the peer's in `targetSessionId`, like a media frame. Its `seq` must be the
+next number after the last media frame. A control frame sent as `seq: 0` after
+media has started is dropped by the receiver's reorder buffer. The receiver
+matches the call by `callId`; the frame is authenticated by the session key.
+A client that also uses the Chat copy of `voice_end_v1` must end its call on
+either one and ignore the second. The native shell sends this frame when
+CallKit ends an answered call, and a web client ends its call on receipt.
 
 ### Implemented initiator-hidden voice protocol
 
@@ -189,14 +247,21 @@ After AES-GCM authentication, the receiving Worker—not the UI—processes each
 voice or video frame in a buffer isolated by `sessionId + direction`. `seq` is
 the only ordering key:
 
-1. `[2, 1, 3]` is delivered as `[1, 2, 3]` when the gap closes.
-2. An exact duplicate is ignored.
-3. A second frame with the same `seq` but different payload or frame metadata
+1. **Send once:** `sendVoiceFrame` / `voice_uplink` posts each
+   `sessionId + direction + seq` (and video `frameId`/`chunkIndex`) to **one**
+   entry (`fanout: 1`). Any single HTTP 2xx succeeds; a second wave is retry
+   only, never a parallel duplicate. Text chat gossip may still fan out.
+2. Contiguous `seq` values are delivered in order when they arrive in order.
+3. An exact duplicate is ignored.
+4. A second frame with the same `seq` but different payload or frame metadata
    is rejected and emits `voice_conflict_v1`.
-4. A missing sequence is held only for a bounded timeout. The receiver then
-   emits `voice_gap_v1` and continues with the next available frame; it does
-   not invent or silently replay the missing frame.
-5. Late frames behind the delivery cursor are discarded.
+5. **Later-first skip-ahead:** if `nextSeq = N` but the first buffered frame
+   has `seq > N`, the Worker **immediately** emits `voice_gap_v1` with reason
+   `skip_ahead`, advances past the missing sequences, and continues with the
+   later frame. It does **not** wait for a full reorder timeout before
+   skipping. A short timer may still apply only when the incomplete item at
+   `nextSeq` is a partial video-chunk group.
+6. Late frames behind the delivery cursor are discarded.
 
 Video frames may be split into chunks. A complete set with the same
 `frameId`, valid `chunkIndex`, and `chunkCount` is reassembled before the UI

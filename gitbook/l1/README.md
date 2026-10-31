@@ -43,6 +43,7 @@ Network-layer privacy and censorship resistance are transport objectives. Wallet
 8. [Decentralized cross-chain Treasury](cross-chain-treasury.md)
 9. [AAC proof-driven cross-chain settlement](aac-cross-chain.md)
 10. [GB token whitepaper (draft)](gb-whitepaper.md)
+11. [CoNET privacy and asset fragmentation whitepaper (draft)](privacy-fragmentation-whitepaper.md)
 11. [GB AMM whitepaper (draft)](gb-amm-whitepaper.md)
 
 Developer how-tos for this layer: [Run an L1 node](../developers/l1-node.md), [Confirm the period-18 checkpoint](../developers/l1-independent-confirmation.md), [Participate in mining](../developers/l1-mining.md), and [Bring an ERC-20 into CoNET](../developers/l1-erc20-bridge.md).

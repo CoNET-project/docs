@@ -2,7 +2,8 @@
 
 **Maturity: Implemented capability.** Wallet/OpenPGP routing, entry
 forwarding, mailbox delivery, encrypted listen controls, receipts, presence,
-UDP-shaped frame relay, and early persistent streams have implementations.
+UDP-shaped frame relay have implementations (the early persistent-stream L0
+attachments were removed from SI on 2026-10-31).
 Availability, route diversity, and product coverage remain
 deployment-specific.
 
@@ -163,6 +164,6 @@ See [Security limits and threat grades](security-limits.md).
 3. [Wallet-addressed peer identity](wallet-address-p2p.md)
 4. [Zero-trust mailbox routing](mailbox-routing.md)
 5. [HTTP transport and Fetch-and-Close](http-mimicry.md)
-6. [Persistent application streams](duplex-forward.md)
+6. [Persistent application streams](duplex-forward.md) (historical; L0 attachments removed)
 7. [`web3://` wallet-addressed applications](../applications/web3-url.md)
 8. [L0 development](../developers/l0.md)

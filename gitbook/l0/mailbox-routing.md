@@ -14,7 +14,13 @@ push API, B forwards that ciphertext to the callee mailbox by recipient key
 id (store it when the route is local, otherwise one SI hop) and **indexes** the
 same armor under opaque `callId` + `sessionId` (`voice_offer_store`) so a
 killed-app native shell can later `voice_offer_fetch` it. The caller does
-not POST the offer as a second message. After B attaches the voice SSE and
+not POST the offer as a second message. That forward-and-index leg is best
+effort and a caller mailbox that predates it indexes nothing, so the calling
+application also sends the same `voice_offer_store` itself, encrypted to the
+callee mailbox route PGP and posted through an entry that is not that
+mailbox. The index is keyed by `callId` + `sessionId`, so storing twice is
+harmless, and the caller waits for it (a few seconds at most) before the
+`voice_listen` that triggers the ring. After B attaches the voice SSE and
 writes `voice_ready`, B calls the Beamio push API. The caller PWA never calls
 that API directly, and the callee mailbox is not used as a push proxy.
 `callId` is a random wake-up reference; `sessionId` uniquely identifies one
@@ -83,38 +89,13 @@ inner user-PGP armor
 | HTTP (entry / SI→SI) | **Only** `{ data: armor }` | — |
 | Optional entry wrap | Inner armor | That **entry** route PGP |
 | Mailbox work | `{ data: innerArmor }` only | **Mailbox B** route PGP |
-| Business | Chat / `duplex_accept` / stream offer | Recipient **user PGP** |
+| Business | Chat / application offer | Recipient **user PGP** |
 
-Do **not** put `NoPush` on mailbox work used for L0 streams. `NoPush` is Chat/APNs “skip native badge.” If present, older SI treated it as Chat `skipPush` and could skip the idle `l0_listen` pool, then `getRoute` the inner user PGP as if it were a Guardian route key. Temporary duplex user PGP is **not** in AddressPGP, so that path logs `can not find router` and drops the packet.
+`NoPush` in mailbox work only means Chat/APNs “skip native badge.”
 
-**Required B behavior after unwrapping mailbox work:**
+**Required B behavior after unwrapping mailbox work:** read the inner armor’s encryption key ID (user PGP, 16-hex, case-insensitive) and `getRoute` it: store and deliver to the Chat listen when the route is local, otherwise forward one SI hop. L0 exclusive occupancy (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) was removed from CoNET-SI on 2026-10-31. SI no longer keeps an idle L0 pool or matches mailbox work against it.
 
-1. Read the inner armor’s encryption key ID (user PGP, 16-hex, case-insensitive).
-2. Look up **this process** `l0ListenByPgp` / idle `l0ListenPool`. If an idle `l0_listen` advertised that `userPgpKeyId`, write the inner armor onto that SSE. Do **not** occupy. Return HTTP 200.
-3. Only if no idle L0 match: `getRoute` for Chat liveness / other SI forward.
-
-The temporary `l0_listen` command is intentionally minimal:
-
-```json
-{
-  "command": "l0_listen",
-  "userPgpKeyId": "<temporary encryption-subkey-id>",
-  "timestamp": 1710000000
-}
-```
-
-It is signed by the temporary EOA, but the EOA is not a wire field. SI
-recovers it from the signature and keeps it only for local authorization and
-lifecycle accounting. The temporary PGP key ID is used only by the destination
-mailbox's in-memory `l0ListenByPgp` matcher; it is not an AddressPGP route,
-entry header, public SSE field, or log field. The SSE handshake returns only a
-random, short-lived `listenId` capability. `l0_connect` addresses that
-capability with `targetListenId`; it does not disclose or use a temporary
-wallet address.
-
-`duplex_accept` is mailbox work + user PGP, **not** an SI command. `l0_listen` / `l0_connect` are signed commands.
-
-Missing B’s route public key is a **failure**. Do not fall back to an HTTP sibling field. `gossip_delivery_ack` is a signed route command, not mailbox work. Chat sender receipts that still use historical `NoPush` are Chat-only; `conet-l0d` duplex does not send `NoPush`.
+Missing B’s route public key is a **failure**. Do not fall back to an HTTP sibling field. `gossip_delivery_ack` is a signed route command, not mailbox work. Chat sender receipts that still use historical `NoPush` are Chat-only.
 
 Wire samples: [SI developer guide — mailbox work](si-developer-guide.md#3-mailbox-work-envelope-mailbox-b-decrypts).
 
@@ -157,14 +138,12 @@ The SI runtime labels long-lived sessions so that unrelated lifecycle policies d
 | UDP client | `udp_listen`, or `mining` | `udp` | Separate UDP client pool |
 | UDP server | `udp_server_listen`, or `mining` | `udp_server` | Separate UDP server pool |
 | Real-time voice participant | `voice_listen` | — | Separate random temporary voice-session pool |
-| Exclusive L0 occupancy | `l0_listen` or `mining` | **`l0`** | Separate `l0ListenPool`. First `l0_connect` occupies (HTTP 200 keep-alive; stop idle comment keepalives). Second `l0_connect` is **409**. Replacement `l0_listen` while live occupied is **409**; dead/stale occupy sockets are dropped so a restarted client can re-listen. Chat / mining gossip on the same node continues. Idle gossip does not occupy |
 
-Chat, mailbox, mining, UDP, voice, and exclusive application attachments are distinct SI
-listen namespaces. Application offers, accepts, and stream frames are **not**
-ordinary Chat messages. Voice uses `voice_listen` plus signed
-`voice_uplink`/`voice_downlink` commands only for opaque frame relay; it never
-uses the normal `mailbox_listen` SSE. See
-[Persistent application streams](duplex-forward.md).
+Chat, mailbox, mining, UDP, and voice are distinct SI listen namespaces.
+Voice uses `voice_listen` plus signed `voice_uplink`/`voice_downlink` commands
+only for opaque frame relay; it never uses the normal `mailbox_listen` SSE.
+L0 exclusive occupancy (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) was removed from CoNET-SI on 2026-10-31. `l0_listen` / `l0_connect` now close the
+connection, and `listenKind: "l0"` is refused.
 
 A completed HTTP request body does not make a receive-only SSE socket stale. SI checks whether the socket remains writable; chat-only timeout or zombie policy must not evict a mining session.
 
@@ -251,16 +230,20 @@ limits, and optional padding/delayed upload. These choices do not change the
 A/B/C route or create a new SI command.
 
 For real-time voice/video, the same mailbox boundary applies to opaque
-`voice_uplink` and `voice_downlink` frame ciphertext. The receiving Worker
-must isolate each stream by `sessionId + direction`, authenticate before
-buffering, and deliver by `seq`. Exact duplicates are discarded; a different
-payload or chunk metadata for an already-pending sequence is rejected with
-`voice_conflict_v1`. A missing sequence is held for a bounded interval, then
-reported as `voice_gap_v1` so live playback can continue. Video chunks are
-reassembled only for a complete valid `frameId`/`chunkIndex`/`chunkCount` set.
-Payload, buffer, and reassembly limits are mandatory. AAD binds all of those
-fields. UI code consumes only ordered Worker output; B never decrypts or
-reorders the media.
+`voice_uplink` and `voice_downlink` frame ciphertext. Each media frame posts
+to **one** entry (`fanout: 1`); text gossip may still fan out. The receiving
+Worker must isolate each stream by `sessionId + direction`, authenticate
+before buffering, and deliver by `seq`. Exact duplicates are discarded; a
+different payload or chunk metadata for an already-pending sequence is
+rejected with `voice_conflict_v1`. When a later `seq` is buffered while
+earlier sequences are still missing, the Worker **immediately** reports
+`voice_gap_v1` (`skip_ahead`) and continues with the later frame—it does not
+wait out a full reorder timeout before skipping. A short timer may apply only
+to incomplete video-chunk groups at `nextSeq`. Video chunks are reassembled
+only for a complete valid `frameId`/`chunkIndex`/`chunkCount` set. Payload,
+buffer, and reassembly limits are mandatory. AAD binds all of those fields.
+UI code consumes only ordered Worker output; B never decrypts or reorders the
+media.
 
 ## Guarantees and non-guarantees
 
@@ -326,7 +309,6 @@ Group roster, tombstone, and admin proposal objects live **inside** the recipien
 - [Wallet-addressed peer identity](wallet-address-p2p.md) explains the keys used above.
 - [HTTP transport and Fetch-and-Close](http-mimicry.md) explains the wire carrier and short-session option.
 - [UDP frame forwarding](udp-forward.md) applies the same A/B/C model to encrypted application frames.
-- [Persistent application streams](duplex-forward.md) are an **application**
-  composition over exclusive L0 attachments; SI does not interpret the stream
-  protocol.
+- [Persistent application streams](duplex-forward.md) — historical reference;
+  the exclusive L0 attachments it relies on were removed from SI on 2026-10-31.
 - [CoNET Chat](../applications/depin-chat.md) describes the relationship-private Chat product on this path.

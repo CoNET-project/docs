@@ -11,7 +11,6 @@ Layer Minus roles describe what a process does for one route. They are not perma
 | **Entry C** | Accepts a listen or mailbox-control request and forwards it to B | Does not decrypt B's route-key command |
 | **Mailbox B** | Decrypts mailbox control and mailbox-work JSON (`NoPush`), verifies route ownership, stores business ciphertext, and manages delivery sessions | Does not decrypt user-PGP business content |
 | **UDP server client** | Receives `udp_subscribe`, obtains the symmetric key, and encrypts or decrypts application frames | Sees its UDP application plaintext |
-| **Persistent-stream endpoint** | Negotiates an application session through user-PGP business data, attaches opaque L0 receive/write lines, and authenticates ordered stream frames | Sees its own application bytes; mailbox B must not receive the endpoint stream key. SI does not parse application stream objects. |
 | **LayerMinus mining client** | Opens mining listens to SI nodes, verifies signed gossip, and reports accounting data when configured | Sees signed mining gossip, not mailbox business plaintext |
 
 The privacy boundary depends on role separation. If a user connects directly to mailbox B, B becomes both entry and mailbox for that session and sees the user's source IP.
@@ -87,7 +86,7 @@ Availability depends on current entry health, route correctness, writable sessio
 - [Security limits](security-limits.md) states that roles are not independent operators.
 - [Zero-trust mailbox routing](mailbox-routing.md) specifies entry and mailbox behavior.
 - [UDP frame forwarding](udp-forward.md) specifies the separate UDP session plane.
-- [Persistent application streams](duplex-forward.md) specifies the portable
-  stream lifecycle above L0 attachment primitives.
+- [Persistent application streams](duplex-forward.md) — historical reference;
+  the L0 attachment primitives were removed from SI on 2026-10-31.
 - [L1 Guardian nodes and staking](../l1/guardian-staking.md) covers registration and economics outside L0.
 - [SilentPass](../applications/silentpass-vpn.md) covers the product-level proxy path.

@@ -537,7 +537,7 @@ fragment arrival, and mailbox listen metadata to the infrastructure roles.
 
 HTTP `/post` remains `{ "data": "<armor>" }` only. Clients that need `NoPush` wrap the inner user-PGP armor as `{ data: innerArmor, NoPush: true }`, encrypt that object to mailbox **B route PGP**, and POST the outer armor.
 
-L0 duplex mailbox work must omit Chat/APNs `NoPush`. See [Persistent application streams](../l0/duplex-forward.md).
+L0 exclusive attachments were removed from SI on 2026-10-31; mailbox work is routed by its inner user-PGP key ID only.
 
 ---
 
