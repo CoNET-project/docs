@@ -3,6 +3,14 @@
 **Wallet-addressed, zero-trust communication capability using Layer Minus
 over CoNET L0 resources.**
 
+**Built on Layer Minus.** CoNET Chat is an application of
+[Layer Minus](../l0/layer-minus.md). Its entries, mailboxes and voice relays
+are Guardian nodes running CoNET-SI in Layer Minus roles; it uses AddressPGP
+wallet bindings, OpenPGP key-ID routing over `POST /post`, the mailbox store
+and listen pools, and the Guardian node table, and adds signed envelopes,
+receipts, call signalling and encrypted history on top. The Layer Minus page
+lists [which parts Chat uses](../l0/layer-minus.md#conet-chat).
+
 **Maturity: Implemented capability, with a privacy upgrade in rollout.** Beamio
 Consumer, Merchant OS, and POS already use this infrastructure. It is not a
 finished public messenger with channels or large groups. Real-time voice is an
@@ -12,7 +20,7 @@ coverage may lag the wire protocol. Larger groups and MLS / epoch key agreement
 remain a later crypto profile
 ([security limits](../l0/security-limits.md#chat-crypto-profile-roadmap)).
 
-**Whitepaper.** The [CoNET Chat whitepaper](depin-chat-whitepaper.md) (v0.1 discussion draft, 1 November 2026) collects the design goals, threat model, delivery and listen paths, the Chat daemon, call signalling, voice channel v2, the planned payer-signed voice channels, push, history and known limitations in one place.
+**Whitepaper.** The [CoNET Chat whitepaper](depin-chat-whitepaper.md) (v0.2 discussion draft, 2 November 2026) collects the design goals, threat model, delivery and listen paths, listen health, the Chat daemon and its warm node pools, call signalling (wake receipt, ring window, busy), voice channel v3 with payer-signed channels, push and its Android limits, history and known limitations in one place, with wire formats.
 
 ## Protocol status (November 2026)
 
@@ -21,10 +29,10 @@ belongs to; a design that is not yet deployed is never described as live.
 
 | Stage | What it covers |
 |---|---|
-| **Live** | Recipient-PGP envelopes with the sender wallet inside; A/B/C mailbox routing; voice channel v2 (opaque chunks with no per-frame metadata); the callee's own mailbox rings the callee (`voice_offer_store` with `push: 1`); voice commands carry no wallet and no wallet signature; in the iOS and Android apps the native Chat SDK holds the wallet and PGP keys, signs for itself, and keeps the mailbox SSE (chat-sdk-ios 0.1.7, chat-sdk-android 0.2.5) |
-| **Live, being replaced** | The legacy call-wake fallback through the caller's own mailbox; plaintext mailbox SSE frames; user-PGP armor posted without a mailbox layer; browser clients posting one message to several entries at once; the public-key lookup `eth_call` carrying the caller's own wallet as `from`; the legacy `mining` + `listenKind: "chat"` listen pool |
-| **In rollout** (code written, not deployed) | Every delivery wrapped to the recipient mailbox route key; a per-listen `streamKey` that seals every mailbox SSE frame; the legacy call-wake fallback removed; one entry at a time; app pages sending through the native SDK; the public-key lookup without `from`; a pre-warmed native entry pool and node table; native caller cancel prepared at dial time; ChatDaemon protocol v1 (`hello`) |
-| **Planned** | Payer-signed temporary voice channels; ChatDaemon phases P2–P4 |
+| **Live** | Recipient-PGP envelopes with the sender wallet inside; A/B/C mailbox routing; voice channel v2 (opaque chunks with no per-frame metadata; being replaced by v3); the callee's own mailbox rings the callee (`voice_offer_store` with `push: 1`); voice commands carry no wallet and no wallet signature; in the iOS and Android apps the native Chat SDK holds the wallet and PGP keys, signs for itself, and keeps the mailbox SSE (chat-sdk-ios 0.1.7, chat-sdk-android 0.2.5) |
+| **Live, being replaced** | Voice channel v2 listens and the v1 voice frames; the legacy call-wake fallback through the caller's own mailbox; plaintext mailbox SSE frames; user-PGP armor posted without a mailbox layer; browser clients posting one message to several entries at once; the public-key lookup `eth_call` carrying the caller's own wallet as `from`; the legacy `mining` + `listenKind: "chat"` listen pool |
+| **In rollout** (code written and tested on canary nodes and release-candidate builds, not released) | Every delivery wrapped to the recipient mailbox route key; a per-listen `streamKey` that seals every mailbox SSE frame; the legacy call-wake fallback removed; one entry at a time, with `no_route` as a clear failure; app pages sending only through the native SDK; the public-key lookup without `from`; listen health (listening only after the mailbox's sealed handshake, crypto-host recovery, a fresh listen on reconnect and on resume); background-warmed node pools for entries and relays; the node table from the storage root; voice channel v3 with payer-signed temporary channels; the `voice_call_ringing_v1` wake receipt; a 60-second ring window with a native caller timeout; prepared cancel and hang-up; busy signalling (still in development); Missed call for calls that never rang; late-push handling on Android; local caller avatars; ChatDaemon protocol v1 (`hello`) |
+| **Planned** | ChatDaemon phases P2–P4 |
 
 These privacy changes are not backward compatible. Clients and nodes move
 together; an old client cannot use a node that requires the new listen format.
@@ -47,6 +55,17 @@ ringing, and during a call (including with the screen locked). While it runs,
 the mailbox SSE stays open the whole time, including during dialing, ringing
 and calls, so other senders' messages still arrive mid-call.
 
+**In rollout: listen health.** A daemon reports "listening" only after it
+opens the mailbox's sealed handshake frame. After a stream that had heard from
+the mailbox drops, it signs a new listen with a new `instanceId` and
+`streamKey` instead of reusing the old one. The native SDKs rebuild their
+hidden crypto WebView when the system reclaims it, reopen the listen after a
+message fails to decrypt, and reopen it on return to the foreground when the
+last frame is more than 45 seconds old; the mailbox then sends every
+unacknowledged message again. Random entries and relays come from a
+background-warmed pool of about eight nodes, so a send or dial does not wait
+for probes.
+
 A voice call can wake a registered native device with an opaque,
 metadata-only VoIP/FCM push. A random `callId` and `sessionId` identify the
 call; neither is derived from the caller's wallet or tag. The push never
@@ -63,6 +82,19 @@ offer with `voice_offer_fetch`, decrypts it with its stored user PGP key,
 recovers the caller from `callerSignature`, and looks up `@BeamioTag` for that
 address. CallKit / Incoming then shows a larger `@tag` and a smaller shortened
 address. Mailbox nodes never decrypt the offer.
+
+**In rollout.** The caller's tag is looked up for the recovered wallet only
+(local record first, then one exact-address query for an unknown caller); the
+offer's own `callerTag` is a claim and is never shown as the name. The avatar
+is generated or read from local data, never downloaded when a call rings; iOS
+CallKit shows none. As soon as the callee's device rings it sends a
+`voice_call_ringing_v1` wake receipt to the caller's mailbox (`NoPush`); the
+caller shows "Ringing…", or after 8 seconds without one, "Their phone may be
+restricting Beamio". Every platform rings for 60 seconds from the offer's
+`createdAt`, and the caller then sends `voice_call_timeout_v1`. On Android a
+late push for a call that already ended does not ring, and a call that never
+rang shows as Missed call. Details:
+[whitepaper, Section 8](depin-chat-whitepaper.md#8-call-signalling).
 
 **Live, being removed.** If the callee mailbox does not confirm `pushed: true`
 within about 3 seconds, current clients fall back to the legacy wake: the
@@ -96,10 +128,14 @@ an AES control frame on the voice channel; receivers act on whichever arrives
 first and ignore the duplicate by `callId`.
 
 In the native apps, the caller's cancel is built when the dial starts: the SDK
-signs and encrypts it with its stored keys and keeps it in memory only. When
-the caller hangs up before the callee answers, the SDK posts it at once through
-the pre-warmed entry pool (in rollout). The page receives the result and does
-not send its own copy.
+signs and encrypts it with its stored keys and keeps it in memory only, and
+re-signs a fresh copy every 2 seconds while ringing. When the caller hangs up
+before the callee answers, the SDK posts the latest copy at once through the
+pre-warmed entry pool (in rollout). The page receives the result and does not
+send its own copy. The native caller also signs its ring timeout at dial time
+and sends it itself when the 60-second window ends. A device already in a call
+answers `voice_call_reject_v1` with `reason: "busy"` without ringing, and the
+caller plays a busy tone (in rollout, still in development).
 
 ## Encrypted file attachments
 
@@ -454,9 +490,9 @@ state. In the live voice channel v2, the node that holds a voice session
 receives only an opaque channel locator, a write key, and padded ciphertext
 chunks; voice commands carry no wallet and no wallet signature. This property
 is checked against the actual command, push payload, SSE frame, and logs; the
-mere existence of a relay is not evidence for it. The planned payer-signed
-voice channels add one visible field, the payer's wallet, to the relay that
-the payer chooses; see [Real-time voice calls](#real-time-voice-calls).
+mere existence of a relay is not evidence for it. Voice channel v3 (in
+rollout) adds one visible field, the paying callee's wallet, to every relay of
+the call; see [Real-time voice calls](#real-time-voice-calls).
 
 ---
 
@@ -661,7 +697,7 @@ That is how history recovery reconstructs **communication context**, not only me
 - Dual receipts, mailbox ACK after the client has stored the message, and offline flush
 - Encrypted-history append and recover on the Consumer path, with a Worker-local decrypted corpus and full-corpus text search
 - Native Chat daemon in the iOS and Android apps: stored keys, local signing, daemon-owned mailbox SSE
-- One-to-one voice and video calls over voice channel v2, rung by the callee's own mailbox
+- One-to-one voice and video calls over voice channel v2, rung by the callee's own mailbox (v3 in rollout)
 - Published SDKs: `@conet.project/chat-sdk` (TypeScript), [chat-sdk-ios](https://github.com/CoNET-project/chat-sdk-ios), [chat-sdk-android](https://github.com/CoNET-project/chat-sdk-android)
 
 ## Real-time voice calls
@@ -673,7 +709,7 @@ call control and offline delivery; media uses separate temporary voice
 sessions. There is no direct peer socket, WebRTC, or exchange of peer IP
 candidates.
 
-### Live: voice channel v2
+### Live, being replaced: voice channel v2
 
 ```text
 offer (signed by the caller, encrypted to the callee user PGP):
@@ -683,67 +719,87 @@ offer (signed by the caller, encrypted to the callee user PGP):
 each listening side, per direction:
   voice_listen { sessionId, v: 2, wk } to the node that holds its session
   (no wallet, no signature) → node answers voice_ready { v: 2 }
+```
 
+The session key reaches the callee only inside the signed, recipient-PGP
+offer. Voice channel v1 (per-frame JSON with an outer `seq`) remains on the
+deployed fleet only as a fallback for older clients. **In rollout:** nodes
+refuse v2 listens (`voice_listen_v3_required`) and no longer forward v1
+frames.
+
+### Media chunks (v2 and v3)
+
+```text
 each media or control chunk:
   "CVC2" ‖ channel locator (16 bytes) ‖ HMAC-SHA256(wk, locator ‖ blob)[:16] ‖ blob
   blob = AES-GCM ciphertext, padded to a multiple of 256 bytes
   sequence, capture time, media kind and fragment numbers are inside the blob
 ```
 
-- The node that holds a session sees the entry's IP, the locator, the write
-  key, and padded ciphertext with its timing. It does not see a wallet, a
-  sequence number, a timestamp, or whether a chunk is audio or video.
-- The node checks the HMAC before it forwards a chunk, so it drops forged
+- The relay sees the entry's IP, the locator, the write key, and padded
+  ciphertext with its timing. It does not see a sequence number, a timestamp,
+  or whether a chunk is audio or video.
+- The relay checks the HMAC before it forwards a chunk, so it drops forged
   chunks without decrypting anything.
 - Clients decrypt first and then reorder by the sequence numbers inside the
-  blob; the node does not reorder or decrypt.
-- The session key reaches the callee only inside the signed, recipient-PGP
-  offer. Each chunk is posted through a different random entry from a probed
-  rotation pool.
-- Voice channel v1 (per-frame JSON with an outer `seq`) remains only as a
-  fallback for older clients.
+  blob; the relay does not reorder or decrypt.
+- Each chunk is posted through a random entry from a background-warmed pool
+  that excludes both mailboxes and the call's relays.
 
 The relay still exposes ciphertext size, timing and session duration, so the
 design improves peer-address and identity privacy but does not resist traffic
 analysis. Relay success means only that a chunk entered the peer's SSE queue,
 not that it was played.
 
-### Planned: payer-signed temporary voice channels
+### In rollout: voice channel v3 (payer-signed temporary channels)
 
-Today no one pays GB for voice sessions, and the offer's temporary wallet field
-is unused. The decided next design:
+Today no one pays GB for voice sessions, and the v2 offer's temporary wallet
+field is unused. Voice channel v3 runs on canary nodes and in
+release-candidate builds and ships with the privacy rollout:
 
-- **The callee pays for every channel.** A call has up to four channels (each
-  side receiving voice, each side receiving video), all set up at the start of
-  the call. Each channel gets its own temporary wallet and its own symmetric
-  key; no key is shared between directions.
-- The caller's offer no longer carries a session key, a temporary wallet or a
-  relay. When the callee answers, it creates the four temporary wallets and
-  keys, signs the caller's channels as payer, and sends them back in an accept
-  message through the caller's mailbox (a normal Chat delivery).
-- **Each side chooses its own relay node**, so the callee cannot pick a relay
-  it colludes with for the caller's channels.
-- A `voice_listen` without a valid payer signature on its temporary wallet is
-  refused. CoNET-SI only verifies that signature.
+- **The callee pays for every channel.** A call has four channels (each side
+  receiving voice, each side receiving video), all opened when the call
+  starts. Each channel gets its own temporary wallet, AES key and write key;
+  no key is shared between directions.
+- The v3 offer carries no session key, temporary wallet or relay, and the
+  caller opens no voice stream while dialing. When the callee answers, it
+  creates the four temporary wallets and keys, signs a payer authorization
+  for each, opens its own two channels, and sends the caller's two channels
+  in an accept message through the caller's mailbox (a normal Chat delivery).
+- **Each side chooses its own relay node**, excluding both mailboxes, so the
+  callee cannot pick a relay it colludes with for the caller's channels. The
+  caller tells the callee where its channels are with an AES
+  `voice_channel_ready_v3` notice.
+- The `voice_listen` (`v: 3`) carries the temporary wallet, its signature
+  bound to that relay's key ID, and the payer authorization. The relay refuses
+  it with `voice_temp_auth`, `voice_pay_auth`, `voice_pay_expired`
+  (authorizations last at most 48 hours) or `voice_temp_reused` (one
+  temporary wallet per session), and refuses older listens with
+  `voice_listen_v3_required`. CoNET-SI only verifies these signatures.
 - A payer may split payment across several of its own wallets; the client
   composes this, and CoNET-SI does not take part.
 - This round builds the authorization architecture only. No usage is charged
   yet; settlement arrives with the GB settlement module. Voice usage will not be
   added to the existing per-wallet byte counts, which issue GB rather than
   charge it.
-- It is not backward compatible with the current call flow.
+- It is not backward compatible: old and new clients cannot call each other.
+
+Canary device tests passed two-way audio, four-channel setup, independent
+relay choice, all refusal cases, decline, cancel, cold-start answer and a
+network change mid-call. Not yet covered: moving a channel after a relay fails
+during a call. Wire format, results and latency:
+[whitepaper, Section 10](depin-chat-whitepaper.md#10-voice-channel-v3-payer-signed-temporary-channels-in-rollout).
 
 Privacy trade-off: a relay that verifies a payer signature learns that the
 payer wallet has a voice channel open, for how long, and how many bytes it
 carries. The relay still does not learn the other party: chunks arrive through
 entries and the authorization carries no call identifier. Splitting payment
-across wallets limits how much one relay can link to a single wallet. The wire
-format is not final.
+across wallets limits how much one relay can link to a single wallet.
 
 ## What remains under development
 
 - The privacy rollout described under [Protocol status](#protocol-status-november-2026), then removal of the legacy listen and call-wake paths
-- Payer-signed temporary voice channels (planned)
+- Release of voice channel v3 with the privacy rollout; bounds and revocation for payer authorizations (open)
 - ChatDaemon P2–P4: inbound verification, storage and ACK inside the daemon; sending, presence, offers, nodes and route registration inside the daemon; removal of old paths
 - Broader client coverage beyond the current Beamio surfaces
 - Product UI for Group chat V1 across Consumer / Merchant / POS (wire + SDK
@@ -760,7 +816,7 @@ format is not final.
 |---|---|---|
 | Entry A / C | Connecting IP, encrypted payload, timing, size, outer routing key ID. Live: the recipient's user key ID (A) and the key ID of each delivered message (C). In rollout: only the recipient mailbox's route key ID (A) and padded sealed frames (C) | Application plaintext, sender wallet inside the encrypted business envelope, recipient private key |
 | Mailbox B | Ciphertext, which of its own users a message is for, listen-pool membership, ACK hashes, opaque voice session/call identifiers; presence queries reveal the querier (known limitation) | Application plaintext, sender wallet, user PGP private key |
-| Voice relay (session node) | Entry IP, channel locator, write key, padded chunk ciphertext and timing. Planned: the payer wallet of the channels it serves | Session keys, media plaintext, the other party's wallet |
+| Voice relay (session node) | Entry IP, channel locator, write key, padded chunk ciphertext and timing. In rollout (v3): also the temporary wallet and payer wallet of the channels it holds | Session keys, media plaintext, the other party's wallet |
 | Push API | Opaque `callId` / `sessionId` and the registered device of the woken user | Caller wallet or tag, keys, audio |
 | CoNET RPC | Addresses whose keys are looked up and the client IP. Live: also the caller's own wallet as `from` (removed in rollout) | Message content |
 | IPFS / fragment store | Encrypted fragments and encrypted index | Readable history without wallet authority |
@@ -781,8 +837,15 @@ claims more:
   outer layer for the entry. A network observer between the phone and the
   entry sees the entry address, sizes, timing and the outer key ID (after the
   rollout, the recipient mailbox's route key ID). This is not being changed now.
-- **Payer visibility** (planned voice channels): the relay learns the payer
-  wallet of each channel it serves.
+- **Payer visibility** (voice channel v3, in rollout): the relay learns the
+  payer wallet of each channel it holds.
+- **Android push limits.** Deep sleep and force stop drop pushes on the phone
+  before the app runs; calls are missed and messages wait in the mailbox until
+  the app opens. The app detects restrictions and guides the user, and the
+  caller sees a hint when no wake receipt arrives.
+- **Unknown-caller tag lookup.** For a caller not in the local record, the
+  callee's app asks the Beamio API for the caller's tag once, so the API sees
+  that query at ring time. Kept by operator decision.
 - **Collusion and timing.** An entry colluding with a mailbox, one operator
   running several roles, or a global timing observer can relink sender, IP and
   recipient.
@@ -794,6 +857,7 @@ claims more:
 
 - [CoNET Chat whitepaper](depin-chat-whitepaper.md)
 - [CoNET Chat developer guide](../l0/chat-developer-guide.md)
+- [Layer Minus — Privacy Protocol](../l0/layer-minus.md)
 - [L0 development](../developers/l0.md)
 - [How to use Layer Minus](../l0/using-l0.md)
 - [Zero-trust mailbox routing](../l0/mailbox-routing.md)

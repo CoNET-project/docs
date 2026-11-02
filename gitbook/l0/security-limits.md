@@ -179,21 +179,28 @@ The profile provides:
   the callee user PGP;
 - an opaque `callId` that does not reuse the caller BeamioTag or EOA;
 - no wallet of either party in commands, chunk headers, SSE frames, push
-  metadata, or logs seen by a session node; and
+  metadata, or logs seen by a session node (in v3, except the paying callee's
+  wallet, below); and
 - expiry and scope binding for every session capability.
 
 Even so, a mailbox knows the users it serves, entries observe connecting IPs,
 and timing/size correlation remains.
 
-**Planned: payer-signed voice channels.** The callee pays for every channel of
-a call (up to four), with one temporary wallet and key per channel, and each
-side picks its own relay. CoNET-SI will refuse a `voice_listen` without a valid
-payer signature on its temporary wallet. This is a deliberate exception to the
+**In rollout: voice channel v3 (payer-signed temporary channels).** The callee
+pays for all four channels of a call, with one temporary wallet and key per
+channel, and each side picks its own relay, never either mailbox. CoNET-SI
+refuses a `voice_listen` without a valid temporary-wallet signature bound to
+that relay and a valid payer signature over the temporary wallet, an
+authorization that expires within 48 hours, and one temporary wallet per
+session. It runs on canary nodes and release-candidate builds and is not
+backward compatible. This is a deliberate exception to the
 rule that nodes see no wallet: the relay learns the payer wallet, how long the
 channel stays open and how many bytes it carries, and holds a signed record of
 it. It still does not learn the other party. Payers may split payment across
 several wallets to limit linkage. No usage is charged until the GB settlement
-module exists.
+module exists. Byte and duration bounds on an authorization, and payer
+revocation, are not decided; the caller holds the write keys of channels the
+callee pays for.
 
 Comparisons with other messengers must use this field-level model. Saying that
 Signal and CoNET both use relays is insufficient: call relays can hide peer IP

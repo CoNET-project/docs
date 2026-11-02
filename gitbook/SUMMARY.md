@@ -18,6 +18,7 @@
   * [UDP frame forwarding](l0/udp-forward.md)
   * [Persistent application streams (removed from SI)](l0/duplex-forward.md)
   * [Security limits and threat grades](l0/security-limits.md)
+  * [Applications on Layer Minus](l0/applications-on-layer-minus.md)
 * [L1 — CoNET Blockchain](l1/README.md)
   * [Network identity](l1/chain-identity.md)
   * [Network upgrades](l1/upgrades.md)

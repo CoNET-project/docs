@@ -20,8 +20,11 @@ time, media kind and fragment numbers are inside the AES-GCM blob, which is
 padded to a multiple of 256 bytes. Clients post each chunk through a different
 random entry, then decrypt, reorder and reassemble on the receiving side. The
 older v1 `voice_uplink` / `voice_downlink` JSON frames remain only as a
-fallback for clients that do not announce v2. Details:
-[CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v2-live).
+fallback for clients that do not announce v2. **In rollout (voice channel
+v3):** the chunk format is unchanged, but `voice_listen` must be v3 and carry a
+temporary-wallet signature bound to this node's route key ID plus a payer
+authorization, and SI no longer forwards v1 frames. Details:
+[CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v3-payer-signed-temporary-channels-in-rollout).
 `/post` remains `{ "data": "<armor>" }` only; no media metadata is added as a
 cleartext field.
 
@@ -117,7 +120,7 @@ Do not mix encryption targets.
 
 ### 1. Opaque business armor (SI forwards, does not decrypt)
 
-Encrypt to the **recipient’s user PGP**. SI only sees the OpenPGP key ID and routes to that key’s mailbox.
+Encrypt to the **recipient’s user PGP**. SI only sees the OpenPGP key ID and routes to that key’s mailbox. If SI has no route for that key ID it answers `{ "ok": false, "error": "no_route" }` (in rollout; the live SI answers an empty 200), so the client treats it as a clear failure and tries another entry.
 
 The armor must expose **exactly one** encryption key ID. If SI reads more than
 one key ID on business armor or on the inner armor of mailbox work, it rejects
@@ -198,11 +201,11 @@ Source: CoNET-SI `localNodeCommandSocket`. Encrypt the command family to **route
 | `command` | Encrypt to | HTTP / SSE | Notes |
 | --- | --- | --- | --- |
 | **`mailbox_listen`** | Own mailbox **B** route PGP | Long SSE via entry **C ≠ B** | The Chat mailbox command. Required `walletAddress`; optional opaque `instanceId`. Multiple instances per wallet are retained and receive fan-out copies. **In rollout:** required `streamKey` (32 bytes, base64); every frame is sealed with it; a listen without it is refused |
-| `voice_listen` | Route PGP of the node that holds the session | Separate temporary SSE via an entry that is not that node | Unsigned, no wallet. Fields: `sessionId` (locator), `timestamp`, `v: 2`, `wk` (write key). Node answers `voice_ready` with `v: 2`. Separate voice pool; never occupies `mailbox_listen`. **Live, being removed:** the legacy wake fields `targetWallet`, `callId`, `expiresAt`, `pushTimestamp`, `offerArmor`; in rollout the node ignores them. **Planned:** a payer signature on a per-channel temporary wallet, without which the node refuses the listen |
-| `voice_offer_store` | Callee mailbox **B** route PGP | Short POST via a random entry that is neither mailbox | The only way an offer travels. Stores user-PGP `offerArmor` by opaque `callId`+`sessionId` (16–128 chars, the capability). With `push: 1` and `pushTimestamp`, B finds its own user from the offer's recipient key ID and calls `/api/voiceCallPush`; answers `{ ok, pushed }`. Never decrypts. **In rollout:** also writes the offer to the callee's live mailbox SSE |
+| `voice_listen` | Route PGP of the node that holds the session | Separate temporary SSE via an entry that is not that node | Unsigned, no wallet. Fields: `sessionId` (locator), `timestamp`, `v: 2`, `wk` (write key). Node answers `voice_ready` with `v: 2`. Separate voice pool; never occupies `mailbox_listen`. **Live, being removed:** the legacy wake fields `targetWallet`, `callId`, `expiresAt`, `pushTimestamp`, `offerArmor`; in rollout the node ignores them. **In rollout (v3 only):** fields `v: 3`, `sessionId`, `wk`, `timestamp`, `temp`, `tempSig` (temporary wallet over `conet.voice.sse.listen.v3\|sessionId\|wk\|node route key ID\|timestamp`), `pay` (`{ payer, notAfter, maxBytes, maxSeconds, sig }`, payer EIP-191 over the temporary wallet). Refusals: `voice_listen_v3_required`, `invalid_voice_session`, `invalid_voice_timestamp`, `voice_temp_auth`, `voice_pay_auth`, `voice_pay_expired` (`notAfter` past or more than 48 h ahead), `voice_temp_reused`. Success: `voice_ready` with `listen: 3`. The node must not be either party's mailbox |
+| `voice_offer_store` | Callee mailbox **B** route PGP | Short POST via a random entry that is neither mailbox | The only way an offer travels. Stores user-PGP `offerArmor` by opaque `callId`+`sessionId` (16–128 chars, the capability). With `push: 1` and `pushTimestamp`, B finds its own user from the offer's recipient key ID and calls `/api/voiceCallPush`; answers `{ ok, pushed }`. Never decrypts. **In rollout:** also writes the offer to the callee's live mailbox SSE and answers `{ ok, delivered, pushed }` |
 | `voice_offer_fetch` | Own mailbox **B** route PGP | Short POST via entry **C ≠ B** | Return indexed `offerArmor` for a killed-app native SDK to decrypt locally. Same capability auth. |
 | v2 chunk (`CVC2` binary literal) | Route PGP of the peer's session node | Short POST via a random entry per chunk | `locator ‖ HMAC16 ‖ padded AES-GCM blob`. Answers `{ ok: true }`, `voice_chunk_auth`, `invalid_voice_chunk`, or `target_voice_session_not_found` |
-| `voice_uplink` / `voice_downlink` | Route PGP of the peer's session node | Short POST via a random entry | v1 fallback only: AES-GCM frame addressed by `targetSessionId` with outer `seq`; unsigned, no wallet |
+| `voice_uplink` / `voice_downlink` | Route PGP of the peer's session node | Short POST via a random entry | v1 fallback only: AES-GCM frame addressed by `targetSessionId` with outer `seq`; unsigned, no wallet. **In rollout:** no longer forwarded |
 | `voice_unlisten` | Own mailbox **B** route PGP | Short POST via entry **C ≠ B** | Closes one temporary voice session. |
 | `mining` + `listenKind: "chat"` | Own mailbox **B** route PGP | Long SSE via entry **C ≠ B** | Legacy Chat / Merchant OS / Alliance listen. Live: still receives Chat as plaintext frames (`algorithm` / `Securitykey` are not used for Chat). **In rollout:** receives no Chat messages; use `mailbox_listen` |
 | `mining` (omit `listenKind`) | Target SI route PGP | Infrastructure SSE | LayerMinus mining. SI defaults `listenKind` to `"mining"`. Not a Chat shortcut |

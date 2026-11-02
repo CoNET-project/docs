@@ -22,6 +22,7 @@ Public packages: [CoNET-project/chat-sdk](https://github.com/CoNET-project/chat-
 | Presence (green dot) | Contact mailbox **B route PGP** | `wallet_online_query` via **entry C ≠ B** (never dial B; that hides the querier's IP). Carries the querier's wallet: known limitation |
 | Native shell status | Contact mailbox **B route PGP** | `wallet_native_wake_query` via the **same entry C ≠ B**, after presence. Same limitation |
 | Call offer | Signed offer to callee **user PGP**, inside a route command to the callee mailbox **B route PGP** | `voice_offer_store` with `push: 1` via a random entry ≠ either mailbox |
+| Voice channel (in rollout: v3) | Relay **route PGP**; the relay is chosen by the listening side and is neither mailbox | `voice_listen` `v: 3` with temporary-wallet and payer signatures via an entry ≠ the relay; chunks via random entries |
 | Optional recover history | — | Encrypted IPFS fragments + `ChatIndexRegistry` head pointer |
 
 Protocol status (live, in rollout, planned) and the known limitations are
@@ -159,6 +160,21 @@ literal as JSON directly never finds the offer and the call stays anonymous.
 
 Do **not** put the caller wallet or tag into the push payload.
 
+**In rollout: caller display.** Show only the wallet recovered from the
+signatures. The offer's `callerTag` is outside `callerSignature`; treat it as a
+claim and never use it for the name or the avatar. Look up the tag for the
+recovered wallet in the local record first, and only then with one exact
+address query. Draw the avatar from local data (a BeamioTag avatar is a
+deterministic DiceBear fun-emoji image seeded by the tag); never fetch an image
+when a call rings. Show addresses as a short capsule (`0x1234…5678`) that
+copies the full address.
+
+**In rollout: late pushes (Android).** Before ringing, classify the push: on
+time → ring; more than 5 seconds late but inside the ring window → wait up to
+about 5 seconds for the mailbox listen and do not ring if the call has ended;
+past `expiresAt` → record a missed call without ringing; an end-only push →
+do not ring. A call that ended before it rang must never ring later.
+
 ### Call control
 
 Every online client keeps its mailbox SSE open during dialing, ringing and the
@@ -189,9 +205,36 @@ first, and ignore the second.
 In the native apps the caller's cancel is prepared when the dial starts (signed
 with the SDK's stored wallet key, encrypted to the callee, kept in memory only)
 and posted through the pre-warmed entry pool the moment the caller hangs up
-before an answer (in rollout). The page receives the result and sends no copy.
+before an answer (in rollout). While ringing, the SDK re-signs a fresh copy
+every 2 seconds so the callee records an accurate end time. The page receives
+the result and sends no copy.
 
-### Voice channel v2 (live)
+**In rollout: wake receipt.** As soon as the callee's device rings, it sends
+the caller an ordinary signed message with `NoPush`:
+
+```json
+{ "type": "voice_call_ringing_v1", "callId": "…", "sessionId": "<ring ID>", "from": "0xCallee", "to": "0xCaller", "createdAt": 0, "timestamp": 0 }
+```
+
+The caller accepts it only if `callId` matches its current dial and the
+recovered signer is the callee, then shows "Ringing…". With no receipt within
+8 seconds (`VOICE_PEER_WAKE_TIMEOUT_MS`), show that the callee's phone may be
+restricting the app, and keep ringing.
+
+**In rollout: ring window.** Every platform rings for 60 seconds from the
+offer's `createdAt`. The caller decides: at `createdAt` + 60 s it sends
+`voice_call_timeout_v1` and records `timed_out`. A native caller signs that
+timeout at dial time and sends it from its own timer; the callee closes 60
+seconds after its own ring started as a backup and also sends a timeout, not
+a decline.
+
+**In rollout: busy.** A device already in another call answers a new offer
+with `voice_call_reject_v1` and `reason: "busy"`, without ringing; the caller
+plays a busy tone and both sides record `busy`. If the same verified caller
+rings again while its earlier unanswered call is still shown, end the earlier
+call as cancelled instead. Busy handling is still in development.
+
+### Voice channel v2 (live, being replaced)
 
 Each listening side opens a temporary voice session that never occupies
 `mailbox_listen`. The command is unsigned and carries no wallet:
@@ -210,9 +253,10 @@ It is encrypted to the route PGP of the node that will hold the session and
 sent through an entry that is not that node. A v2 node answers
 `voice_ready` with `v: 2`. The listener gives the locator and write key to the
 peer only inside the signed offer or an AES control chunk, and announces v2 in
-`voice_media_caps_v1` (`chan: 2`).
+`voice_media_caps_v1` (`chan: 2`). In rollout, nodes refuse this listen with
+`voice_listen_v3_required`; new clients open channels only with v3 (below).
 
-Each chunk sent to the peer is an OpenPGP binary literal encrypted to the
+The chunk format that follows is shared by v2 and v3. Each chunk sent to the peer is an OpenPGP binary literal encrypted to the
 session node's route PGP and posted through a random entry from the rotation
 pool:
 
@@ -237,21 +281,96 @@ drop frames whose capture time is too old, and reassemble video by
 reassembly sizes are bounded. The protocol is real-time best effort.
 
 Voice channel v1 (`voice_uplink` / `voice_downlink` JSON with an outer `seq`,
-`targetSessionId` and base64 payload) stays only as the fallback when the peer
-or its node does not announce v2. A v1 receiver reorders by the outer `seq`
-before decrypting; that outer metadata is exactly what v2 removes.
+`targetSessionId` and base64 payload) stays on the deployed fleet only as the
+fallback when the peer or its node does not announce v2. A v1 receiver
+reorders by the outer `seq` before decrypting; that outer metadata is exactly
+what v2 removes. In rollout, nodes no longer forward v1 frames and new clients
+have no v1 path.
 
-### Planned: payer-signed temporary voice channels
+### Voice channel v3: payer-signed temporary channels (in rollout)
 
-The decided next step replaces the caller-generated session key and the unused
-`tempWalletAddress`: the callee creates one temporary wallet and one key per
-channel (up to four: each side receiving voice and video), signs as payer for
-all of them, and returns the caller's channels in an accept message through the
-caller's mailbox. Each side picks its own relay. CoNET-SI will refuse a
-`voice_listen` whose temporary wallet has no valid payer signature; it only
-verifies the signature, and no usage is charged until the GB settlement module
-exists. Not backward compatible; the wire format is not final. See
-[CoNET Chat — Real-time voice calls](../applications/depin-chat.md#real-time-voice-calls).
+Not backward compatible. The callee pays for all four channels of a call
+(caller receives voice / video, callee receives voice / video), each with its
+own temporary wallet, AES key and write key, all opened when the call starts.
+Each side opens its own two channels on relays it chooses at random,
+excluding both mailboxes.
+
+1. **Offer.** `voice_call_offer_v1` with `proto: 3` carries `callId`,
+   `sessionId` (ring ID only), `from`, `to`, `createdAt`, `expiresAt`,
+   `timestamp`, `codec`, `callerPgp` and `callerRoute` (base64 armors), and
+   `callerSignature` over the text below. No session key, temporary wallet or
+   relay; the caller opens no voice stream while dialing.
+
+   ```text
+   CoNET voice_call_offer_v3
+   callId:<callId>
+   sessionId:<sessionId>
+   to:<callee, lower case>
+   createdAt:<n>
+   expiresAt:<n>
+   timestamp:<n>
+   codec:<codec>
+   callerPgp:<base64>
+   callerRoute:<base64>
+   ```
+
+2. **Accept.** The callee sends `voice_call_accept_v1` with `proto: 3` as an
+   ordinary signed message to the caller's mailbox (`NoPush`). The chat
+   envelope's signature authenticates the callee. It carries
+   `ch: { cv, cV, ev, eV }`:
+
+   ```text
+   cv, cV (caller's channels):  { sid, key, wk, tk, pay }
+   ev, eV (callee's channels):  { sid, key, wk, relay, relayIp, relayKey }
+   pay = { payer, notAfter, maxBytes: 0, maxSeconds: 0, sig }
+   sig = EIP-191 by the payer over:
+     conet.voice.sse.pay.v3
+     temp=<temporary wallet address, lower case>
+     notAfter=<unix seconds>
+     maxBytes=<n>
+     maxSeconds=<n>
+   ```
+
+   `sid` is the 16-byte locator (hex), `key` the AES-256 key and `wk` the
+   32-byte write key (base64), `tk` the temporary wallet's private key, and
+   `relay` / `relayIp` / `relayKey` the callee relay's route key ID, address
+   and base64 route public key. Clients set `notAfter` to the answer time plus
+   12 hours.
+
+3. **Listen.** Each side sends, encrypted to the relay's route PGP, through an
+   entry that is neither the relay nor its own mailbox:
+
+   ```json
+   { "command": "voice_listen", "v": 3, "sessionId": "<sid>", "wk": "<base64>", "timestamp": 1710000000, "temp": "0xTemp", "tempSig": "0x…", "pay": { } }
+   ```
+
+   `tempSig` is the temporary wallet's EIP-191 signature over
+   `conet.voice.sse.listen.v3|<sessionId>|<wk base64>|<relay route key ID, upper case>|<timestamp>`.
+   The relay answers `voice_ready` with `listen: 3`, or refuses with
+   `voice_listen_v3_required`, `invalid_voice_session`,
+   `invalid_voice_timestamp`, `voice_temp_auth` (bad `tempSig`, or signed for
+   another relay), `voice_pay_auth`, `voice_pay_expired` (`notAfter` passed or
+   more than 48 hours ahead) or `voice_temp_reused` (the temporary wallet is
+   bound to another live session). A reconnect with the same temporary wallet
+   and locator is accepted. Nothing is counted or charged.
+
+4. **Channel ready.** When both its channels are up, the caller sends
+   `{ type: "voice_channel_ready_v3", callId, voice, voiceIp, voiceKey, video, videoIp, videoKey }`
+   as an AES control chunk on the callee's voice channel, retrying every 300
+   ms for up to 10 s on `target_voice_session_not_found`. The callee starts
+   media after it. Either side resends it after moving a channel to another
+   relay.
+
+5. **Media.** Audio and control go to the peer's voice channel, video to the
+   peer's video channel, in the chunk format above with that channel's keys.
+   `voice_media_caps_v1` still negotiates the video format; its `chan` / `wk`
+   fields are gone.
+
+Inside the native apps, the page hands the shell the relays' public route keys
+(`setNativeVoiceRelayNodes`), so the shell can pick its relays and encrypt
+listens; a cold-start answer uses the last cached copy. Background, results
+and privacy trade-off:
+[CoNET Chat whitepaper, Section 10](../applications/depin-chat-whitepaper.md#10-voice-channel-v3-payer-signed-temporary-channels-in-rollout).
 
 ## Native push and call-UI capability registration
 
@@ -335,6 +454,10 @@ Live `sendMessage` signs the **inner application string** (`text`), then OpenPGP
 
 A clear failure is a connection error, a reset before any response, a non-2xx
 status, a 2xx body `{"ok": false, …}`, or no response within about 8 seconds.
+In rollout, an entry with no route for the armor's key ID answers
+`{"ok": false, "error": "no_route"}` (the live SI answers an empty 200, which a
+client cannot tell from success). Pick entries from a background-warmed pool
+so a send does not wait for probes.
 Any other 2xx is success. A timed-out post may already have reached B, so the
 retry can produce a second copy of the same ciphertext; the new SI stores one
 copy per armor hash, and recipients deduplicate by `sendId`.
@@ -365,7 +488,7 @@ entryDomains:<comma-joined or empty>
 codec:<or empty>
 ```
 
-`sessionKey` and `tempWalletAddress` belong to the live flow. The planned payer-signed voice channels remove both from the offer (the callee creates the channel keys and temporary wallets when it answers), so this canonical text will get a new version with that change.
+`sessionKey` and `tempWalletAddress` belong to the live v2 flow. Voice channel v3 (in rollout) removes both from the offer and signs the `CoNET voice_call_offer_v3` text shown under [Voice channel v3](#voice-channel-v3-payer-signed-temporary-channels-in-rollout).
 
 The caller signs that string with the same EOA private key (`signMessage`). The callee recovers the address and only then looks up the tag. If recovery fails, or it disagrees with the outer-envelope signer, do not present the offer’s claimed identity. A body claim that disagrees with the recovered key may be shown only as an extra unverified line with a warning. Native wake-up stays generic until this on-device check finishes.
 
@@ -496,11 +619,30 @@ async function openFrame(line: string): Promise<unknown> {
 The plaintext of each sealed frame is the same JSON the live node writes in
 the clear: the handshake, `{ data: armor }` for a stored or live message, and
 `{ type: "mailbox_keepalive", ts }`. It is padded with spaces to a multiple of
-256 bytes, and every frame has a random IV (a reconnect may reuse the same
-encrypted command, and so the same key). Drop a frame that does not open and
-log one warning without its content; after three in a row, reconnect with a
-new key. The armor hash for the mailbox ACK is still computed over the inner
-user-PGP armor, and the ACK is sent only after the message is stored.
+256 bytes, and every frame has a random IV. Drop every frame that does not
+open, including any plaintext frame, and log one warning without its content.
+The armor hash for the mailbox ACK is still computed over the inner user-PGP
+armor, and the ACK is sent only after the message is stored.
+
+**Listen health (in rollout).** A listen that looks open but delivers nothing
+loses messages silently. Follow these rules:
+
+- Report "listening" only after the mailbox's sealed handshake frame
+  (`kind: "mailbox"`) opens, not on the entry's HTTP 200.
+- Use an idle timeout above the mailbox's longest keepalive gap of 180 seconds
+  (the SDKs use 200 s native, 240 s browser).
+- After a stream that received any sealed frame drops, sign a **new**
+  `mailbox_listen` with a new `instanceId` and `streamKey` and reconnect within
+  about half a second. Reuse the same signed command on the next entry only
+  when the mailbox never answered; a reused `instanceId` lets the old
+  connection's late close remove the new session at the mailbox.
+- If your signing and decrypting run in a host that the OS can reclaim (the
+  native SDKs use a hidden WebView), detect that, rebuild it and retry once.
+- When an inbound message fails to decrypt (other than one for a different
+  key), reopen the listen, at most every 30 seconds, so the mailbox sends the
+  unacknowledged copy again.
+- On return to the foreground, reopen the listen if the last sealed frame is
+  more than 45 seconds old.
 
 The live node ignores `streamKey`, writes plaintext frames, and does not use
 the old `algorithm` / `Securitykey` fields for Chat. After the rollout a node

@@ -29,7 +29,8 @@ This can reduce fixed-origin exposure and the amount of relationship
 information one intermediary needs. It does not remove IP from packet
 delivery or prove that role operators are independent.
 
-For CoNET Chat, that separation is used to break three direct associations:
+For [CoNET Chat](../applications/depin-chat.md), an application built on Layer
+Minus, that separation is used to break three direct associations:
 
 - the sender wallet is inside the recipient-user-PGP business envelope rather
   than a plaintext transport field;
@@ -119,14 +120,16 @@ Any role can drop, delay, replay, correlate, or misroute traffic. Applications
 therefore need signatures, deadlines, replay protection, acknowledgements,
 trusted-result handling, and local verification.
 
-## What applications add
+## Applications built on Layer Minus
 
 Layer Minus forwards encrypted envelopes. It does not define every object's
-business meaning.
+business meaning. Each application below is a composition on top of it: it
+reuses the same Guardian nodes, `/post` contract, key-ID routing and mailbox
+roles, and adds its own signed objects.
 
 | Composition | Application-layer contract |
 |---|---|
-| **CoNET Chat** | Signed messages, `mailbox_listen`, mailbox ACK, sender receipt, presence, call offers to the callee mailbox, voice channel v2, encrypted-history recovery |
+| **[CoNET Chat](../applications/depin-chat.md)** | Signed messages, `mailbox_listen`, mailbox ACK, sender receipt, presence, call offers to the callee mailbox, temporary voice sessions (voice channel v2 live, v3 in rollout), encrypted-history recovery |
 | **SilentPass** | Wallet-authorized egress command and ordinary destination TCP connection |
 | **`web3://`** | Locator, exact identity resolution, signed request, correlated encrypted response, stream lifecycle, rendering security |
 | **Beamio** | POS authorization and commerce message types |
@@ -134,6 +137,37 @@ business meaning.
 
 `web3://` is an application protocol, not a new Layer Minus command.
 Product envelopes can evolve without changing the HTTP `/post` contract.
+
+Which parts of Layer Minus each application uses:
+[Applications on Layer Minus](applications-on-layer-minus.md).
+
+### CoNET Chat
+
+[CoNET Chat](../applications/depin-chat.md) is the messaging and calling
+application of Layer Minus. Every Chat node role is a Guardian node running
+CoNET-SI in one of the Layer Minus roles above; Chat runs no servers of its
+own. What it takes from Layer Minus:
+
+| Layer Minus part | How CoNET Chat uses it |
+|---|---|
+| Wallet, user key and route key in AddressPGP | A contact is a wallet. The sender reads the recipient's user PGP key (the encryption target) and mailbox route key from AddressPGP. Clients register their own binding there |
+| `POST /post` with only `{ "data": "<armor>" }` | Every send, ACK, receipt, presence query and call command. Browsers use HTTPS to entries; the native apps use plain HTTP on port 80 |
+| OpenPGP key-ID routing, peel and forward | Entry A forwards a message by its key ID to the recipient's mailbox. In rollout, every message is wrapped once more to the mailbox route key, so the entry sees only that node key |
+| Entry A / entry C, mailbox B, `A ≠ B`, `C ≠ B` | A is a random entry for each send, excluding both mailboxes. C carries the listen stream and route-key commands. B is the recipient's mailbox |
+| Mailbox store and listen pools | B stores ciphertext before delivery, fans it out to every `mailbox_listen` session of the wallet, keeps it until `gossip_delivery_ack`, and answers `wallet_online_query`. In rollout, B seals every listen frame with a per-listen `streamKey` |
+| Route-key commands executed by B | Mailbox work with `NoPush`, `push_device_register`, `voice_offer_store` (B stores the offer and asks the push API to ring its own user), `voice_offer_fetch` |
+| Separate SI listen namespaces | Real-time calls use the `voice_listen` namespace on a relay node, never the mailbox listen. Media chunks are `CVC2` binary literals that the relay checks by HMAC and does not decrypt |
+| Guardian node table (`GuardianNodesInfoV6`) | Clients pick random entries and relays from it. The native Chat daemons follow its storage root the same way CoNET-SI does |
+| Hop signatures and GB metering | SI-to-SI forwarding of Chat traffic carries hop signatures like other Layer Minus traffic. Voice commands are not metered; the payer-signed v3 channels (in rollout) carry authorizations but no charge yet |
+
+What Chat adds above Layer Minus: EIP-191 signed envelopes and the
+recovered-signer identity rule, dual receipts, group fan-out, call signalling
+through the mailboxes, payer-signed voice channels, the client daemon, and
+encrypted history on IPFS with a `ChatIndexRegistry` pointer. Chat does not use
+the mining listen path, which is the infrastructure exception to `C ≠ B`.
+
+Details: [CoNET Chat whitepaper](../applications/depin-chat-whitepaper.md) and
+[CoNET Chat developer guide](chat-developer-guide.md).
 
 ## Guarantees and non-guarantees
 
@@ -166,4 +200,5 @@ See [Security limits and threat grades](security-limits.md).
 5. [HTTP transport and Fetch-and-Close](http-mimicry.md)
 6. [Persistent application streams](duplex-forward.md) (historical; L0 attachments removed)
 7. [`web3://` wallet-addressed applications](../applications/web3-url.md)
-8. [L0 development](../developers/l0.md)
+8. [Applications on Layer Minus](applications-on-layer-minus.md), including [CoNET Chat](../applications/depin-chat.md)
+9. [L0 development](../developers/l0.md)

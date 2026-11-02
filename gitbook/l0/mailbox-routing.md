@@ -56,7 +56,7 @@ For the intended route, `A ≠ B` and `C ≠ B`. A and C may be different entrie
 3. S encrypts the complete envelope to **R's user OpenPGP key**.
 4. **In rollout (required):** S wraps that armor as mailbox work `{ data: armor, NoPush? }` encrypted to **B's route PGP**, so A and any path observer see B's route key ID (one node key shared by many users) instead of R's user key ID. Without B's route key S fails with `recipient_mailbox_unknown`; it does not post the bare armor. Live clients still post the bare armor for ordinary messages.
 5. Optionally, S wraps the result in one or more **outer OpenPGP layers** addressed to A or to a hop chain. The first `/post` then shows the **outer** key ID to a path observer.
-6. S posts the armored ciphertext to **one** random healthy entry A over **HTTP or HTTPS**. A must be neither R's mailbox nor S's own mailbox. S tries another entry only after a clear failure (connection error, non-2xx, a `{ok:false}` body, or no response within about 8 seconds), never the same ciphertext to several entries at once (in rollout; live browser clients still post to up to four entries in parallel). The HTTP JSON is **only** `{ "data": "<OpenPGP armor>" }`. Do **not** add sibling fields (`NoPush`, `beamioNoPush`, flags). Extra plaintext fields raise inspection risk. Because the body is already ciphertext, **HTTP is sufficient** and is the intended client path where TLS SNI or JA3/JA4 would be classified or blocked.
+6. S posts the armored ciphertext to **one** random healthy entry A over **HTTP or HTTPS**. A must be neither R's mailbox nor S's own mailbox. S tries another entry only after a clear failure (connection error, non-2xx, a `{ok:false}` body such as `no_route` in rollout, or no response within about 8 seconds), never the same ciphertext to several entries at once (in rollout; live browser clients still post to up to four entries in parallel). The HTTP JSON is **only** `{ "data": "<OpenPGP armor>" }`. Do **not** add sibling fields (`NoPush`, `beamioNoPush`, flags). Extra plaintext fields raise inspection risk. Because the body is already ciphertext, **HTTP is sufficient** and is the intended client path where TLS SNI or JA3/JA4 would be classified or blocked.
 7. A reads `getEncryptionKeyIDs()`. If the key is not local, A forwards the **same armor** and signs the SI hop header. If the key **is** local, A decrypts **once**. When the plaintext is still OpenPGP and the inner side-channel key ID is not this node, A forwards the **inner** armor if hop signatures stay at or below **3**. Same-node inner PGP is an attack (`end`). A does **not** read user-PGP business plaintext.
 8. B stores the inbound armor before attempting live SSE delivery (in rollout: once per armor hash, so a retried post is not stored or pushed twice). B does not
    decrypt the **user-PGP** business envelope and therefore cannot read the
@@ -133,12 +133,13 @@ The SI runtime labels long-lived sessions so that unrelated lifecycle policies d
 | LayerMinus mining gossip | `mining` | Omitted; defaults to **mining** | Shared liveness pool, labeled mining |
 | UDP client | `udp_listen`, or `mining` | `udp` | Separate UDP client pool |
 | UDP server | `udp_server_listen`, or `mining` | `udp_server` | Separate UDP server pool |
-| Real-time voice participant | `voice_listen` | — | Separate temporary voice-session pool; v2 sessions carry a write key |
+| Real-time voice participant | `voice_listen` | — | Separate temporary voice-session pool; v2 sessions carry a write key. In rollout only v3 is accepted: a temporary wallet signature bound to this relay plus a payer authorization |
 
 Chat, mailbox, mining, UDP, and voice are distinct SI listen namespaces.
-Voice uses `voice_listen` plus unsigned, wallet-free chunk posts (v2 `CVC2`
-binary literals; v1 `voice_uplink` as fallback) only for opaque media relay;
-it never uses the normal `mailbox_listen` SSE.
+Voice uses `voice_listen` plus unsigned, wallet-free chunk posts (`CVC2`
+binary literals; v1 `voice_uplink` as a fallback on the live fleet, removed in
+rollout) only for opaque media relay; it never uses the normal
+`mailbox_listen` SSE.
 L0 exclusive occupancy (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) was removed from CoNET-SI on 2026-10-31. `l0_listen` / `l0_connect` now close the
 connection, and `listenKind: "l0"` is refused.
 
@@ -227,18 +228,27 @@ limits, and optional padding/delayed upload. These choices do not change the
 A/B/C route or create a new SI command.
 
 For real-time voice/video, the same boundary applies to media chunks. **Live
-(voice channel v2):** each chunk is an OpenPGP binary literal
+(voice channel v2), and unchanged in v3:** each chunk is an OpenPGP binary literal
 `"CVC2" ‖ locator(16) ‖ HMAC16 ‖ blob`, encrypted to the route PGP of the node
 that holds the listener's voice session and posted through one random entry
-from a probed rotation pool, a different entry per chunk. The node checks the
+from a background-warmed pool, a different entry per chunk. The node checks the
 HMAC with the session's write key and writes only the blob to the session SSE.
 Sequence numbers, capture time, media kind and fragment numbers are inside the
 AES-GCM blob (padded to a multiple of 256 bytes), so the node cannot read or
 reorder them; the client decrypts first and then reorders and reassembles.
 Voice commands carry no wallet and no wallet signature. The older v1 format
-(`voice_uplink` JSON with outer `seq`, `callId` and session IDs) remains only
-as a fallback for clients that do not announce v2. Wire details:
-[CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v2-live).
+(`voice_uplink` JSON with outer `seq`, `callId` and session IDs) remains on the
+live fleet only as a fallback for clients that do not announce v2.
+
+**In rollout (voice channel v3):** the relay that holds a session is chosen by
+the listening side and is never either party's mailbox. `voice_listen` must
+carry `v: 3`, a temporary wallet, that wallet's signature bound to this relay's
+route key ID, and the paying callee's EIP-191 authorization over the temporary
+wallet. The relay checks both signatures, an expiry at most 48 hours ahead and
+one temporary wallet per session, and refuses anything else with a specific
+error (`voice_listen_v3_required`, `voice_temp_auth`, `voice_pay_auth`,
+`voice_pay_expired`, `voice_temp_reused`). It does not forward v1 frames. Wire
+details: [CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v3-payer-signed-temporary-channels-in-rollout).
 
 ## Guarantees and non-guarantees
 
@@ -265,8 +275,9 @@ a path observer in exchange for avoiding TLS metadata.
 For real-time voice, compare the actual command fields rather than relying on
 the word “relay.” In v2, `voice_listen` carries a channel locator, a write key
 and a timestamp; chunks carry the locator, an HMAC and padded ciphertext. The
-session node does not receive either party's wallet. The planned payer-signed
-voice channels add the payer wallet for the relay the payer's side chose
+session node does not receive either party's wallet. Voice channel v3 (in
+rollout) adds the paying callee's wallet and a temporary wallet to each relay
+of the call; the relay still does not learn the other party
 ([CoNET Chat](../applications/depin-chat.md#real-time-voice-calls)).
 
 A/B/C are **roles**. Collusion of A+B, C+B, or one operator running all three reconstructs send relationships or binds a wallet to an IP. Distinct Guardian addresses are not an operator-domain proof.

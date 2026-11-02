@@ -185,8 +185,8 @@ The initiating application wallet stays inside the recipient-user-PGP offer.
 A killed-app native SDK fetches the offer with `voice_offer_fetch` and
 decrypts it with the user PGP key it holds. Current builds still have a legacy
 fallback that sends `targetWallet` and `offerArmor` to the caller's own mailbox
-in `voice_listen`; it is being removed. Payer-signed temporary voice channels
-are planned. “Both systems use a relay” is not a privacy comparison; compare
+in `voice_listen`; it is being removed. Voice channel v3, with payer-signed
+temporary channels on relays each side chooses, is in rollout. “Both systems use a relay” is not a privacy comparison; compare
 which identity, IP, content, timing, and session fields each role actually
 receives.
 
