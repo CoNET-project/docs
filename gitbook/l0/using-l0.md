@@ -33,7 +33,7 @@ correlate their observations.
 | Offline-capable messages | Chat envelope + mailbox delivery | [CoNET Chat developer guide](chat-developer-guide.md) |
 | Small group messages (≤10) | Chat group V1: one user-PGP armor per member; owner-signed roster / tombstone inside ciphertext | [CoNET Chat developer guide — Group chat V1](chat-developer-guide.md#group-chat-v1-small-groups) |
 | Voice messages | Recipient-only Chat manifest + AES-GCM IPFS fragment | [CoNET Chat developer guide](chat-developer-guide.md) |
-| Real-time voice MVP | Random temporary voice SSE per wallet + encrypted uplink/downlink frames | [CoNET Chat developer guide](chat-developer-guide.md) |
+| Real-time voice | Offer to the callee mailbox (`voice_offer_store`) + temporary voice SSE + v2 `CVC2` chunks | [CoNET Chat developer guide](chat-developer-guide.md) |
 | Presence, native shell status, and delivery receipt | `wallet_online_query`, then `wallet_native_wake_query`, plus acknowledgement. Both queries go through an entry that is not the destination mailbox, so that mailbox does not see the querier's IP | [CoNET Chat developer guide](chat-developer-guide.md) |
 | UDP frames | End-to-end AES frames over mailbox relay | [UDP forwarding](udp-forward.md) |
 | Wallet-addressed Web/API request | `web3://` caller-signed request + correlated encrypted response | [`web3://` Application Protocol](web3-application-protocol.md) |
@@ -101,11 +101,15 @@ select an arbitrary mailbox IP as their direct endpoint.
 
 Rules:
 
-1. Encrypt business data to the recipient **user PGP**.
-2. Submit it through healthy entry **A**, where A differs from B.
-3. Encrypt receive/listen commands to mailbox **B route PGP**. New Chat
-   clients use the dedicated signed `mailbox_listen` command; legacy Chat
-   clients may use `mining` with `listenKind: "chat"`.
+1. Encrypt business data to the recipient **user PGP**. In rollout, always
+   wrap that armor as mailbox work to the recipient's mailbox **B route PGP**,
+   so the entry sees B's key ID instead of the recipient's.
+2. Submit it through **one** random healthy entry **A**, where A is neither B
+   nor the sender's own mailbox; try another entry only after a clear failure.
+3. Encrypt receive/listen commands to mailbox **B route PGP**. Chat clients use
+   the signed `mailbox_listen` command (in rollout with a fresh `streamKey`,
+   which B uses to seal every SSE frame). The legacy `mining` +
+   `listenKind: "chat"` pool stops receiving Chat in the rollout.
 4. Submit those commands through healthy entry **C**, where C differs from B.
 5. Treat entry `2xx` as transport progress, not delivery or application
    success.
@@ -159,52 +163,32 @@ Playback is a recipient-local Blob/object-URL lifecycle; revoke the URL when
 the player or view is released. Do not treat a gateway response, an IPFS hash,
 or an HTTP 2xx as proof of playback or human receipt.
 
-The real-time voice MVP is a different composition. It leaves
-`mailbox_listen` untouched and creates a random temporary `voice_listen` SSE
-on each participant's own mailbox. After the recipient accepts, the two
-participants send AES-GCM ciphertext through `voice_uplink` and
-`voice_downlink` commands targeted at the peer's temporary session. This is a
-duplex application relay made from two one-way paths; it is not WebRTC, raw
-UDP, or a persistent Chat-history stream.
+Real-time voice is a different composition. It leaves `mailbox_listen`
+untouched. The caller sends the signed offer, encrypted to the callee user PGP,
+only to the callee's mailbox (`voice_offer_store` with `push: 1`, through a
+random entry); that mailbox stores it and rings its own user. Each listening
+side then opens an unsigned, wallet-free temporary `voice_listen` (voice
+channel v2, with a write key), and the peers send `CVC2` chunks: a channel
+locator, an HMAC, and padded AES-GCM ciphertext that holds the sequence number,
+capture time, media kind and fragment numbers. The node checks the HMAC and
+forwards the blob without reading it; the receiver decrypts first, then
+reorders and reassembles. This is a duplex application relay made from two
+one-way paths; it is not WebRTC, raw UDP, or a persistent Chat-history stream.
+Each chunk goes through a different random entry.
 
-Call control rides the same relay as AES-GCM frames whose plaintext is JSON
-instead of PCM: `voice_call_accept_v1`, `voice_call_reject_v1`,
-`voice_call_timeout_v1`, and `voice_end_v1` (Hang Up of a connected call, sent
-by whichever side ends it). A receiver treats any JSON control frame as
-control, never as audio, and ignores types it does not know. Control frames
-share the media stream's `seq`: a Hang Up must carry the next sequence number
-after the last media frame, because the reorder buffer drops any frame below
-what it has already delivered.
+Call control (cancel, decline, timeout, hang-up) travels as ordinary Chat
+messages through the mailbox, which every online client keeps open during the
+call. A connected call may duplicate the hang-up as an AES control chunk on the
+voice channel; receivers act on the first copy by `callId`.
 
-For live media, each uplink frame is posted to **one** entry only (`fanout: 1`);
-text gossip may still fan out. The receiving Worker authenticates each AES-GCM
-frame and maintains a bounded reorder buffer per `sessionId + direction`. It
-delivers frames by `seq`, ignores exact duplicates, rejects conflicting reuse
-of a sequence with `voice_conflict_v1`, and—when a later `seq` arrives while
-earlier ones are still missing—**immediately** emits `voice_gap_v1`
-(`skip_ahead`) and continues with the later frame (no full reorder-timeout
-wait). A short timer applies only to incomplete video-chunk groups at
-`nextSeq`. Video chunks are reassembled by
-`frameId`/`chunkIndex`/`chunkCount`; invalid or oversized input is discarded.
-The UI consumes only ordered, reassembled Worker events. AAD binds the
-session, direction, sequence, timestamp, and chunk metadata. SI remains an
-opaque relay and does not reorder or decrypt media.
-
-The voice route keeps the initiating application wallet inside the
-recipient-user-PGP offer. An outgoing `voice_listen` also carries that
-ciphertext as `offerArmor`. The caller's mailbox forwards `offerArmor` to the
-callee mailbox, indexes it under opaque `callId` + `sessionId` for
-`voice_offer_fetch`, and does not decrypt it. The calling application also
-posts the same index entry itself (`voice_offer_store`, encrypted to the callee
-mailbox route PGP, through an entry that is not that mailbox) because the
-mailbox-to-mailbox leg is best effort. Wake-up metadata still exposes
-only opaque session/call identifiers plus the callee routing target. A
-killed-app native shell decrypts locally with the recipient user PGP private
-key injected by the PWA. That shell posts `voice_offer_fetch` to
-`http://{entryIp}/post` from the Guardian IP roster it reads with `getAllNodes` (the PWA does not supply that list) and does not use a
-`*.conet.network` URL for the fetch. “Both systems use a relay” is not a privacy
-comparison; compare which identity, IP, content, timing, and session fields
-each role actually receives.
+The initiating application wallet stays inside the recipient-user-PGP offer.
+A killed-app native SDK fetches the offer with `voice_offer_fetch` and
+decrypts it with the user PGP key it holds. Current builds still have a legacy
+fallback that sends `targetWallet` and `offerArmor` to the caller's own mailbox
+in `voice_listen`; it is being removed. Payer-signed temporary voice channels
+are planned. “Both systems use a relay” is not a privacy comparison; compare
+which identity, IP, content, timing, and session fields each role actually
+receives.
 
 ## 6. Use exact wallet resolution
 

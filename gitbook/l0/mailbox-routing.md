@@ -6,37 +6,31 @@ Mailbox routing is the specified Layer Minus **forwarding** protocol. It separat
 
 L0 stops at “deliver this OpenPGP armor to the mailbox of this key.” Chat schemas, POS permission types, acknowledgements, and UI are [application combinations](using-l0.md) of the same path.
 
-Voice-call wake-up is also an application combination. The caller sends one
-route-encrypted `voice_listen` to its own mailbox B. That command carries the
-opaque wake-up fields and `offerArmor`: the call offer already encrypted to
-the callee **user PGP**. B does not decrypt `offerArmor`. Before it calls the
-push API, B forwards that ciphertext to the callee mailbox by recipient key
-id (store it when the route is local, otherwise one SI hop) and **indexes** the
-same armor under opaque `callId` + `sessionId` (`voice_offer_store`) so a
-killed-app native shell can later `voice_offer_fetch` it. The caller does
-not POST the offer as a second message. That forward-and-index leg is best
-effort and a caller mailbox that predates it indexes nothing, so the calling
-application also sends the same `voice_offer_store` itself, encrypted to the
-callee mailbox route PGP and posted through an entry that is not that
-mailbox. The index is keyed by `callId` + `sessionId`, so storing twice is
-harmless, and the caller waits for it (a few seconds at most) before the
-`voice_listen` that triggers the ring. After B attaches the voice SSE and
-writes `voice_ready`, B calls the Beamio push API. The caller PWA never calls
-that API directly, and the callee mailbox is not used as a push proxy.
-`callId` is a random wake-up reference; `sessionId` uniquely identifies one
-call. The command and push path must not carry the session key, private key,
-audio, or call plaintext. Those stay inside `offerArmor`. APNs/FCM wake-up is
-only a native ringing hint with opaque ids. The shell (or live PWA) decrypts
-the offer locally with the recipient user PGP private key.
+Voice-call wake-up is also an application combination. **Live (voice channel
+v2):** the caller posts one `voice_offer_store` command with `push: 1`,
+encrypted to the **callee's** mailbox route PGP, through a random entry that is
+neither mailbox. It carries opaque `callId` + `sessionId` and `offerArmor`: the
+signed call offer already encrypted to the callee **user PGP**. The callee
+mailbox stores that ciphertext under `callId` + `sessionId` without decrypting
+it, finds its own user from the offer's recipient key ID, and calls the Beamio
+push API. The callee mailbox already serves that wallet, so no other node
+learns the callee, and the caller never calls the push API. A killed-app native
+SDK later fetches the offer with `voice_offer_fetch` and decrypts it locally.
+`callId` is a random wake-up reference; `sessionId` identifies one offer. The
+command and push carry no wallet, session key, private key, audio, or call
+plaintext.
+
+**Live, being removed:** when the callee mailbox has not confirmed `pushed:
+true` within about 3 seconds, current clients fall back to a `voice_listen` to
+their **own** mailbox that carries `targetWallet` and `offerArmor`; that mailbox
+forwards the offer and rings the callee, and so learns the callee's wallet.
+**In rollout:** the fallback is deleted and the node ignores those fields; the
+callee mailbox also writes the offer into the callee's live mailbox SSE.
 
 Initiator-hidden voice stays in force: the plaintext initiating application
-wallet exists only inside the user-PGP offer. `voice_listen` may carry that
-ciphertext plus opaque session data and the callee routing target. The
-mailbox must not decrypt the offer, and must not put the caller wallet or
-`@BeamioTag` in the command, the push request, or logs. The Consumer PWA
-injects the recipient user PGP private into the native shell at Chat / push
-registration so CallKit / Incoming can show `@BeamioTag` + shortened address
-without a live WebView.
+wallet exists only inside the user-PGP offer. The mailbox must not decrypt the
+offer and must not put the caller wallet or `@BeamioTag` in a command, the push
+request, or logs.
 
 ## Roles
 
@@ -60,10 +54,11 @@ For the intended route, `A ≠ B` and `C ≠ B`. A and C may be different entrie
    field. That EOA does not have to be R, and R does not have to be the
    recipient's display wallet.
 3. S encrypts the complete envelope to **R's user OpenPGP key**.
-4. Optionally, S wraps that armor in one or more **outer OpenPGP layers** addressed to A or to a hop chain. The first `/post` then shows the **outer** key ID to a path observer.
-5. S posts the armored ciphertext to healthy entry A over **HTTP or HTTPS**. The HTTP JSON is **only** `{ "data": "<OpenPGP armor>" }`. Do **not** add sibling fields (`NoPush`, `beamioNoPush`, flags). Extra plaintext fields raise inspection risk. Because the body is already ciphertext, **HTTP is sufficient** and is the intended client path where TLS SNI or JA3/JA4 would be classified or blocked.
-6. A reads `getEncryptionKeyIDs()`. If the key is not local, A forwards the **same armor** and signs the SI hop header. If the key **is** local, A decrypts **once**. When the plaintext is still OpenPGP and the inner side-channel key ID is not this node, A forwards the **inner** armor if hop signatures stay at or below **3**. Same-node inner PGP is an attack (`end`). A does **not** read user-PGP business plaintext.
-7. B stores the inbound armor before attempting live SSE delivery. B does not
+4. **In rollout (required):** S wraps that armor as mailbox work `{ data: armor, NoPush? }` encrypted to **B's route PGP**, so A and any path observer see B's route key ID (one node key shared by many users) instead of R's user key ID. Without B's route key S fails with `recipient_mailbox_unknown`; it does not post the bare armor. Live clients still post the bare armor for ordinary messages.
+5. Optionally, S wraps the result in one or more **outer OpenPGP layers** addressed to A or to a hop chain. The first `/post` then shows the **outer** key ID to a path observer.
+6. S posts the armored ciphertext to **one** random healthy entry A over **HTTP or HTTPS**. A must be neither R's mailbox nor S's own mailbox. S tries another entry only after a clear failure (connection error, non-2xx, a `{ok:false}` body, or no response within about 8 seconds), never the same ciphertext to several entries at once (in rollout; live browser clients still post to up to four entries in parallel). The HTTP JSON is **only** `{ "data": "<OpenPGP armor>" }`. Do **not** add sibling fields (`NoPush`, `beamioNoPush`, flags). Extra plaintext fields raise inspection risk. Because the body is already ciphertext, **HTTP is sufficient** and is the intended client path where TLS SNI or JA3/JA4 would be classified or blocked.
+7. A reads `getEncryptionKeyIDs()`. If the key is not local, A forwards the **same armor** and signs the SI hop header. If the key **is** local, A decrypts **once**. When the plaintext is still OpenPGP and the inner side-channel key ID is not this node, A forwards the **inner** armor if hop signatures stay at or below **3**. Same-node inner PGP is an attack (`end`). A does **not** read user-PGP business plaintext.
+8. B stores the inbound armor before attempting live SSE delivery (in rollout: once per armor hash, so a retried post is not stored or pushed twice). B does not
    decrypt the **user-PGP** business envelope and therefore cannot read the
    sender wallet or the sender PGP key carried inside it. Only R learns those
    after local decrypt and EIP-191 verification. The recovered signer is R's view of the
@@ -91,7 +86,7 @@ inner user-PGP armor
 | Mailbox work | `{ data: innerArmor }` only | **Mailbox B** route PGP |
 | Business | Chat / application offer | Recipient **user PGP** |
 
-`NoPush` in mailbox work only means Chat/APNs “skip native badge.”
+`NoPush` in mailbox work only means Chat/APNs “skip native badge.” **Live defect, fixed in rollout:** the live SI keeps only `data` when it unwraps mailbox work, so `NoPush` has no effect. In the rollout every user-PGP delivery is mailbox work (ordinary messages omit `NoPush`), and the flag is honoured again.
 
 **Required B behavior after unwrapping mailbox work:** read the inner armor’s encryption key ID (user PGP, 16-hex, case-insensitive) and `getRoute` it: store and deliver to the Chat listen when the route is local, otherwise forward one SI hop. L0 exclusive occupancy (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) was removed from CoNET-SI on 2026-10-31. SI no longer keeps an idle L0 pool or matches mailbox work against it.
 
@@ -111,20 +106,21 @@ A earns GB for forwarding, not for reading content
 ### Listen: R → C → B → R
 
 1. R resolves B's route public key.
-2. R signs a mailbox listen command and encrypts it to **B's route OpenPGP key**.
+2. R signs a `mailbox_listen` command and encrypts it to **B's route OpenPGP key**. In rollout the command carries a fresh 32-byte `streamKey` (base64), generated for every listen and kept only in memory; B refuses a listen without it.
 3. R opens an HTTP/SSE request to healthy entry C.
 4. C forwards the opaque command to B over HTTP on port 80. If the client wrapped the listen command to C’s route key, C peels once and must hop-sign the **inner UTF-8 armor string**. Prefer the peel plaintext when it already contains `BEGIN PGP MESSAGE`. Do **not** pass an OpenPGP.js 6 `Message.armor()` stream / thenable into `Buffer.byteLength`. Hop-sign failure, non-UTF-8 armor, or C→B TCP timeout (~8s) must return a fast **404** and close the client socket. A log-only `uncaughtException` that leaves the SSE open is a protocol bug: the client waits until its ~12s `connect_timeout` while **B is never dialed**. Field lesson: [Peel, hop-sig, and listen timeouts](peel-hop-listen.md).
 5. B decrypts the control command, verifies that R belongs to its route, and attaches the SSE response to the appropriate listen pool.
 6. B pushes stored and live business ciphertext through C; only R decrypts the business envelope. Dedicated `mailbox_listen` sessions are keyed by a connection instance, not by wallet, so every healthy device session for R receives the same encrypted armor.
+7. **Live:** B writes each frame as plaintext JSON (`data: {"data": "<armor>"}`), so C sees the recipient key ID of every delivered message. **In rollout:** B seals every frame it writes on that SSE (handshake, offline flush, live message, keepalive, UDP notice) as `data: base64(iv[12] ‖ AES-256-GCM ciphertext ‖ tag[16])`, with a random IV per frame and the plaintext JSON padded with spaces to a multiple of 256 bytes. C then sees only B's address, frame timing and bucketed length. The ACK still hashes the inner user-PGP armor.
 
 ```text
 R ── route-PGP listen ──▶ C ── HTTP :80 ──▶ B
-R ◀──── encrypted business frames over SSE through C ──── B
+R ◀──── business frames over SSE through C (in rollout: sealed with streamKey) ──── B
 ```
 
 Client-to-entry `/post` may use **HTTP or HTTPS**. Native and censorship-sensitive clients should prefer HTTP so that delivery does not depend on a TLS handshake. Browser pages served over HTTPS may still be forced to HTTPS by mixed-content policy. SI-to-SI forwarding uses HTTP on port 80. An entry's HTTPS certificate failure is therefore not evidence that the forwarding plane is broken, and it is not a reason to require TLS for `/post`.
 
-A **native shell** (iOS / Android) does not use `https://{domain}.conet.network/post` for ciphertext delivery. It reads `GuardianNodesInfoV6.getAllNodes` itself and stores `ip_addr` (field `node[3]`), plus the diagnostic `PGPKey` and region. The PWA does not supply or refresh that list. The shell POSTs `{ "data": "<armor>" }` to `http://{ip}/post` or `http://[{ipv6}]/post` on port 80, picks the entry IP, and excludes mailbox B's IP (`A ≠ B`, `C ≠ B` still apply). It derives mailbox B's IP by matching the stored route public key to a node's PGP. The PWA bridge (`postPgpCiphertext`) must not pass an entry, domain, or URL. Domain strings stay diagnostic. If the roster is empty, the bridge returns `no_si_roster` and the PWA may fall back to the browser HTTPS URL until the shell's own `getAllNodes` refresh succeeds. Once a roster exists, the shell does not fall back to a Guardian hostname. Live listen SSE from the WebView still uses the browser HTTPS domain until a shell SSE proxy exists. This is not a new hostname.
+A **native app** (iOS / Android) does not use `https://{domain}.conet.network/post` for ciphertext delivery. Its native Chat SDK reads `GuardianNodesInfoV6.getAllNodes` itself and stores `ip_addr` (field `node[3]`), plus the diagnostic `PGPKey` and region. The PWA does not supply or refresh that list. (In rollout the SDK polls the contract's storage root and pulls the full table only when it changes, the same way CoNET-SI does, and keeps a pool of probed healthy entries warm while the daemon is active.) The shell POSTs `{ "data": "<armor>" }` to `http://{ip}/post` or `http://[{ipv6}]/post` on port 80, picks the entry IP, and excludes mailbox B's IP (`A ≠ B`, `C ≠ B` still apply). It derives mailbox B's IP by matching the stored route public key to a node's PGP. The PWA bridge (`postPgpCiphertext`) must not pass an entry, domain, or URL. Domain strings stay diagnostic. If the roster is empty, the bridge returns `no_si_roster` and the PWA may fall back to the browser HTTPS URL until the shell's own `getAllNodes` refresh succeeds. Once a roster exists, the shell does not fall back to a Guardian hostname. Since chat-sdk-ios 0.1.7 / chat-sdk-android 0.2.5 the native SDK also owns the mailbox SSE (plain HTTP to an entry IP, port 80), signed with the keys the page provisioned; the WebView no longer opens its own listen. Native posts and SSE are plain HTTP without an extra entry layer; this is a known limitation, not being changed now.
 
 ## Listen namespaces
 
@@ -132,16 +128,17 @@ The SI runtime labels long-lived sessions so that unrelated lifecycle policies d
 
 | Use | Command | `listenKind` | Pool |
 | --- | --- | --- | --- |
-| Chat, Merchant OS, Alliance (legacy) | `mining` | **`chat`** | Shared liveness pool, labeled chat |
-| Mailbox B, multi-device Chat | **`mailbox_listen`** | — | Dedicated mailbox pool; one wallet may have multiple SSE instances and each receives a fan-out copy |
+| Chat, Merchant OS, Alliance (legacy) | `mining` | **`chat`** | Shared liveness pool, labeled chat. In rollout it receives no Chat messages (its frames cannot be sealed); it keeps presence only |
+| Mailbox B, multi-device Chat | **`mailbox_listen`** | — | Dedicated mailbox pool; one wallet may have multiple SSE instances and each receives a fan-out copy. In rollout: `streamKey` required, every frame sealed |
 | LayerMinus mining gossip | `mining` | Omitted; defaults to **mining** | Shared liveness pool, labeled mining |
 | UDP client | `udp_listen`, or `mining` | `udp` | Separate UDP client pool |
 | UDP server | `udp_server_listen`, or `mining` | `udp_server` | Separate UDP server pool |
-| Real-time voice participant | `voice_listen` | — | Separate random temporary voice-session pool |
+| Real-time voice participant | `voice_listen` | — | Separate temporary voice-session pool; v2 sessions carry a write key |
 
 Chat, mailbox, mining, UDP, and voice are distinct SI listen namespaces.
-Voice uses `voice_listen` plus signed `voice_uplink`/`voice_downlink` commands
-only for opaque frame relay; it never uses the normal `mailbox_listen` SSE.
+Voice uses `voice_listen` plus unsigned, wallet-free chunk posts (v2 `CVC2`
+binary literals; v1 `voice_uplink` as fallback) only for opaque media relay;
+it never uses the normal `mailbox_listen` SSE.
 L0 exclusive occupancy (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) was removed from CoNET-SI on 2026-10-31. `l0_listen` / `l0_connect` now close the
 connection, and `listenKind: "l0"` is refused.
 
@@ -229,21 +226,19 @@ contacts-only or recipient-only delivery, local retention limits, recording
 limits, and optional padding/delayed upload. These choices do not change the
 A/B/C route or create a new SI command.
 
-For real-time voice/video, the same mailbox boundary applies to opaque
-`voice_uplink` and `voice_downlink` frame ciphertext. Each media frame posts
-to **one** entry (`fanout: 1`); text gossip may still fan out. The receiving
-Worker must isolate each stream by `sessionId + direction`, authenticate
-before buffering, and deliver by `seq`. Exact duplicates are discarded; a
-different payload or chunk metadata for an already-pending sequence is
-rejected with `voice_conflict_v1`. When a later `seq` is buffered while
-earlier sequences are still missing, the Worker **immediately** reports
-`voice_gap_v1` (`skip_ahead`) and continues with the later frame—it does not
-wait out a full reorder timeout before skipping. A short timer may apply only
-to incomplete video-chunk groups at `nextSeq`. Video chunks are reassembled
-only for a complete valid `frameId`/`chunkIndex`/`chunkCount` set. Payload,
-buffer, and reassembly limits are mandatory. AAD binds all of those fields.
-UI code consumes only ordered Worker output; B never decrypts or reorders the
-media.
+For real-time voice/video, the same boundary applies to media chunks. **Live
+(voice channel v2):** each chunk is an OpenPGP binary literal
+`"CVC2" ‖ locator(16) ‖ HMAC16 ‖ blob`, encrypted to the route PGP of the node
+that holds the listener's voice session and posted through one random entry
+from a probed rotation pool, a different entry per chunk. The node checks the
+HMAC with the session's write key and writes only the blob to the session SSE.
+Sequence numbers, capture time, media kind and fragment numbers are inside the
+AES-GCM blob (padded to a multiple of 256 bytes), so the node cannot read or
+reorder them; the client decrypts first and then reorders and reassembles.
+Voice commands carry no wallet and no wallet signature. The older v1 format
+(`voice_uplink` JSON with outer `seq`, `callId` and session IDs) remains only
+as a fallback for clients that do not announce v2. Wire details:
+[CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v2-live).
 
 ## Guarantees and non-guarantees
 
@@ -252,7 +247,7 @@ When routing and encryption rules are followed:
 - A and C cannot decrypt **business** content (user-PGP innermost armor);
 - the application sender wallet is inside that business armor, so A, B, and C
   do not receive it as a plaintext routing field;
-- A and C **can** read the OpenPGP key ID on the layer they handle. If the client used an outer envelope, the first-hop observer sees A's key, not R's. After a local decrypt, A still sees the next key ID — that is the routing primitive, not a leak of message text;
+- A and C **can** read the OpenPGP key ID on the layer they handle. If the client used an outer envelope, the first-hop observer sees A's key, not R's. After a local decrypt, A still sees the next key ID — that is the routing primitive, not a leak of message text. In the live protocol that next key ID is R's user key (public on chain), so A learns the recipient, and C sees R's key ID on every plaintext SSE frame. In rollout, A sees only B's route key ID and C sees only sealed frames;
 - B can decrypt mailbox control and mailbox-work JSON (`NoPush`) but not user-PGP business content;
 - B sees an entry connection instead of a direct client connection;
 - client `/post` confidentiality does not require HTTPS; and
@@ -268,9 +263,11 @@ forwarding requires them. HTTP `/post` makes the application shape visible to
 a path observer in exchange for avoiding TLS metadata.
 
 For real-time voice, compare the actual command fields rather than relying on
-the word “relay.” `voice_listen` uses an opaque session ID, wake-up `callId`,
-and callee routing target; frame relay uses opaque source/target session IDs.
-The mailbox relay does not receive the initiating application wallet.
+the word “relay.” In v2, `voice_listen` carries a channel locator, a write key
+and a timestamp; chunks carry the locator, an HMAC and padded ciphertext. The
+session node does not receive either party's wallet. The planned payer-signed
+voice channels add the payer wallet for the relay the payer's side chose
+([CoNET Chat](../applications/depin-chat.md#real-time-voice-calls)).
 
 A/B/C are **roles**. Collusion of A+B, C+B, or one operator running all three reconstructs send relationships or binds a wallet to an IP. Distinct Guardian addresses are not an operator-domain proof.
 
@@ -297,7 +294,7 @@ Group roster, tombstone, and admin proposal objects live **inside** the recipien
 
 - SI key-ID routing, peel-and-forward, and HTTP :80 forward: `src/CoNET-SI/src/util/localNodeCommand.ts` (`getEncryptionKeyIDs`, `getSingleEncryptionKeyId` / `rejected_multi_recipient_armor`, local decrypt then inner-key forward, `forwardEncryptedSocket`, `BandwidthCount`)
 - Mailbox persistence, acknowledgement, presence, and socket health: `src/CoNET-SI/src/util/util.ts`
-- Chat listen command and worker-owned SSE loop: `src/SilentPassUI/src/vendor/beamio-chat-sdk/worker/gossip-core.ts`
+- Chat listen command and worker-owned SSE loop: `src/SilentPassUI/vendor/conet-chat-sdk/src/worker/gossip-core.ts`; native daemons in chat-sdk-ios / chat-sdk-android (`BeamioConetChatListenSession`)
 - Route diagnostic: `scripts/testConetDepinMessage.ts`
 
 ## Next

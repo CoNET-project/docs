@@ -70,12 +70,15 @@ There is **one** budget: **3 miner signatures**. Do not add a second `maxPeels` 
 
 An application can wrap a user-PGP business message to entry A, or use a short hop chain. A first-hop path observer then sees the **outer** key ID, not R's. Each peel node still learns the **next** key ID, time, and size. Extra hops are extra **GB**. This is not a mix network and does not replace padding.
 
-Current Chat clients may still post a single user-PGP layer (A forwards without decrypting when the key maps to a mailbox). The peel rule is available to any client that wraps.
+Live Chat clients still post a single user-PGP layer for ordinary messages (A forwards without decrypting when the key maps to a mailbox), which shows A the recipient's user key ID. In rollout every delivery carries a mailbox layer encrypted to B's route key, so A sees only B's key ID. The peel rule is available to any client that wraps.
+
+Native apps post and listen over plain HTTP on port 80 without an extra entry layer. A network observer on that link sees the outer key ID (after the rollout, B's route key ID), sizes and timing. This is a known limitation that is not being changed now.
 
 ## Long-lived SSE is a primary L0 traffic fingerprint
 
 CoNET Chat’s recipient opens a long-lived HTTP/SSE listen through entry **C**
-(`command: "mining"`, `listenKind: "chat"`). Mining collectors, UDP listeners,
+(`command: "mailbox_listen"`; native apps keep it open in the foreground, while
+ringing and during calls). Mining collectors, UDP listeners,
 and voice participants also keep SSE sessions. Exclusive application
 attachments (`l0_listen` / `l0_connect`) were removed from SI on 2026-10-31.
 
@@ -89,13 +92,14 @@ An ISP or entry C can observe:
 - traffic peaks;
 - online / offline cadence.
 
-Content remains OpenPGP-encrypted. Metadata can still support inferences about when a user is online, how often messages arrive, device sleep/wake, and that a chat-like application is in use.
+Content remains OpenPGP-encrypted. In the live protocol each SSE frame is plaintext JSON that shows the delivered armor's recipient key ID to C; the rollout seals frames with a per-listen key and pads them to 256-byte buckets, which hides the key ID and coarse sizes but not the timing. Metadata can still support inferences about when a user is online, how often messages arrive, device sleep/wake, and that a chat-like application is in use.
 
 ### Receive modes
 
 | Mode | Mechanism | Status |
 | --- | --- | --- |
-| **Realtime** | Long-lived SSE. The listen command inside route-PGP carries the user’s `Securitykey`; the node encrypts SSE downlink with that key. Intermediate entries that only forward armor do not receive it. | **Implemented** |
+| **Realtime** | Long-lived SSE. Frames are plaintext JSON today; the legacy `Securitykey` field is not used for Chat. | **Implemented** |
+| **Sealed realtime** | `mailbox_listen` carries a per-listen `streamKey` inside the route-PGP command; B seals every frame with AES-256-GCM and 256-byte padding; entries never receive the key. | **In rollout** |
 | **Entry rotation** | The user may close C and open another SSE through a different healthy entry at any time. That breaks a long-lived bind to one ingress. It does **not** remove the SSE shape on the new C. | **Implemented** (client choice) |
 | **Privacy poll** | Randomized short polls, batch fetch, optional padding and dummy polls | **Not implemented** |
 
@@ -151,37 +155,45 @@ presence, or endpoint compromise from the current infrastructure roles.
 
 ## Real-time voice: relay presence is not the privacy property
 
-The real-time voice MVP avoids a direct peer socket and WebRTC candidate
-exchange. Audio frames are AES-256-GCM ciphertext and use temporary
-`voice_listen` SSE sessions. This protects media plaintext and prevents the
-two endpoints from learning one another's direct IP through the media
-channel.
+Real-time voice avoids a direct peer socket and WebRTC candidate exchange.
+Media is AES-256-GCM ciphertext carried through temporary `voice_listen` SSE
+sessions. This protects media plaintext and prevents the two endpoints from
+learning one another's direct IP through the media channel.
 
-The initiator-hidden field boundary is now enforced for voice route commands.
-`voice_listen` has no business-wallet `walletAddress`; wake-up metadata uses
-only an opaque random `callId`, and voice frames target an opaque session ID.
-The initiating application wallet remains inside the recipient-user-PGP offer.
-An outgoing `voice_listen` may attach that offer as `offerArmor`. The
-executing mailbox forwards the ciphertext to the callee mailbox, indexes it
-by opaque `callId` + `sessionId` for killed-app `voice_offer_fetch`, and must
-not decrypt it. Native shells decrypt only with the recipient user PGP private
-key injected by the PWA; do not put EOA mnemonics or caller identity into the
-push payload.
+**Live (voice channel v2).** Voice commands carry no wallet and no wallet
+signature. The session node receives a channel locator and a write key when the
+session opens, and afterwards only `CVC2` chunks: locator, HMAC and padded
+ciphertext. Sequence numbers, timestamps, media kind and fragment numbers are
+inside the ciphertext. The call offer, signed by the caller and encrypted to the
+callee user PGP, goes only to the callee's own mailbox (`voice_offer_store`
+with `push: 1`), which rings its own user; the push payload carries only opaque
+`callId` / `sessionId`.
 
-The implemented initiator-hidden profile provides:
+**Live, being removed.** The legacy wake fallback sends `targetWallet` and
+`offerArmor` in a `voice_listen` to the caller's own mailbox, which then learns
+the callee's wallet. The rollout deletes it.
+
+The profile provides:
 
 - the initiating application wallet only inside a signed offer encrypted to
   the callee user PGP;
 - an opaque `callId` that does not reuse the caller BeamioTag or EOA;
-- no initiating application EOA in mailbox-visible commands, SSE frames,
-  push metadata, or logs; and
-- expiry, replay rejection, and scope binding for every routing/session
-  capability.
+- no wallet of either party in commands, chunk headers, SSE frames, push
+  metadata, or logs seen by a session node; and
+- expiry and scope binding for every session capability.
 
-Even after that upgrade, the mailbox knows the separate routing identity it
-serves, entries still observe connecting IPs, and timing/size correlation
-remains. The stronger claim is specifically that the **mailbox is not given
-the initiating application wallet as a field**.
+Even so, a mailbox knows the users it serves, entries observe connecting IPs,
+and timing/size correlation remains.
+
+**Planned: payer-signed voice channels.** The callee pays for every channel of
+a call (up to four), with one temporary wallet and key per channel, and each
+side picks its own relay. CoNET-SI will refuse a `voice_listen` without a valid
+payer signature on its temporary wallet. This is a deliberate exception to the
+rule that nodes see no wallet: the relay learns the payer wallet, how long the
+channel stays open and how many bytes it carries, and holds a signed record of
+it. It still does not learn the other party. Payers may split payment across
+several wallets to limit linkage. No usage is charged until the GB settlement
+module exists.
 
 Comparisons with other messengers must use this field-level model. Saying that
 Signal and CoNET both use relays is insufficient: call relays can hide peer IP
@@ -278,6 +290,8 @@ If a future Fetch-and-Close client uses TLS 1.3 0-RTT for performance, 0-RTT has
 ## Mailbox isolation fails under collusion
 
 A/B/C separation prevents an ordinary mailbox from seeing the client’s direct IP. CoNET Chat presence (`wallet_online_query`) and native shell status (`wallet_native_wake_query`) both require that entry hop: the querier posts to C, and C forwards to B. A direct post to B would hand B the querier's IP and is non-compliant. Native shells apply the same split by IP: `POST http://{entryIp}/post` must not target mailbox B's `ip_addr`. The split is a **role** split, not a proof that A, B, and C are independent operators.
+
+The entry hop hides the querier's **IP**, not the querier's **wallet**: both queries carry the querier's `walletAddress` and are signed with it, so the contact's mailbox learns who asks about whom. This is a known limitation that will be solved with the `web3://` protocol; clients must not patch it ad hoc or add other commands that hand the sender's wallet to the peer's mailbox.
 
 | Collusion | Combined view |
 | --- | --- |

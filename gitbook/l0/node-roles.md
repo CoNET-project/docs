@@ -49,7 +49,7 @@ The connection direction matters: the LayerMinus worker dials the SI node. The c
 
 This direct mining connection is an infrastructure collection path, not the privacy-preserving mailbox-delivery path. It is the deliberate exception to the application rule `C ≠ B`. Chat listens, presence queries, mailbox ACKs, and UDP control must still be encrypted to mailbox B and sent through an independent entry C.
 
-Chat clients reuse the `mining` command for transport compatibility but set `listenKind: "chat"`. This label prevents chat-only session policy from being applied to mining pipes.
+Chat clients use the dedicated `mailbox_listen` command (in rollout with a per-listen `streamKey` that seals every frame). Legacy clients reuse the `mining` command with `listenKind: "chat"`; that label keeps chat-only session policy away from mining pipes, and in the rollout that legacy pool stops receiving Chat messages.
 
 ## Registration, liveness, and accounting
 

@@ -168,7 +168,18 @@ Documentary names. HTTP/socket behavior is what clients observe.
 
 ## SSE return path (not a hop signature)
 
-The listen command inside route-PGP carries the user’s **symmetric** `Securitykey` (`algorithm: "aes-256-cbc"` for Chat). The node encrypts SSE downlink with that key. Intermediate entries that only forward armor do not receive it.
+**Live:** the mailbox writes Chat SSE frames as plaintext JSON
+(`data: {"data": "<armor>"}`). Older listen commands carry
+`algorithm: "aes-256-cbc"` and a `Securitykey`, but SI does not use them for
+Chat, so entry C sees every frame, including the recipient key ID of each
+delivered armor.
+
+**In rollout:** `mailbox_listen` carries a fresh 32-byte `streamKey` inside the
+route-PGP command, which only mailbox B can read. B seals every frame on that
+SSE with AES-256-GCM (random 12-byte IV per frame, plaintext padded to a
+multiple of 256 bytes) and refuses a listen without the key. Intermediate
+entries that only forward armor never receive it. See
+[mailbox routing](mailbox-routing.md).
 
 The user may **change entry C at any time** and open another SSE. That rotates the listen ingress. It does not remove the SSE traffic shape on the new C. See [security limits](security-limits.md).
 

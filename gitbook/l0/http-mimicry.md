@@ -92,7 +92,7 @@ HTTP status is also not application delivery evidence:
 
 - Native HTTP entry and optional HTTPS listener: `src/CoNET-SI/src/endpoint/server.ts`
 - Recipient key-ID routing, HTTP :80 `socketForward`, and `BandwidthCount`: `src/CoNET-SI/src/util/localNodeCommand.ts`
-- Chat SSE worker: `src/SilentPassUI/src/vendor/beamio-chat-sdk/worker/gossip-core.ts`
+- Chat SSE worker: `src/SilentPassUI/vendor/conet-chat-sdk/src/worker/gossip-core.ts`; native daemons in chat-sdk-ios / chat-sdk-android
 - Product-level per-connection routing context: [SilentPass](../applications/silentpass-vpn.md)
 - Planned piece-oriented use, explicitly under development: [BT download / DePIN DCDN](../applications/bt-dcdn.md)
 

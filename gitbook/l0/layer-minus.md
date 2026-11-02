@@ -126,7 +126,7 @@ business meaning.
 
 | Composition | Application-layer contract |
 |---|---|
-| **CoNET Chat** | Signed messages, `listenKind: "chat"`, mailbox ACK, sender receipt, presence, encrypted-history recovery |
+| **CoNET Chat** | Signed messages, `mailbox_listen`, mailbox ACK, sender receipt, presence, call offers to the callee mailbox, voice channel v2, encrypted-history recovery |
 | **SilentPass** | Wallet-authorized egress command and ordinary destination TCP connection |
 | **`web3://`** | Locator, exact identity resolution, signed request, correlated encrypted response, stream lifecycle, rendering security |
 | **Beamio** | POS authorization and commerce message types |

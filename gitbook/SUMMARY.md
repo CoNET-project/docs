@@ -52,6 +52,7 @@
     * [Cash and USDC](applications/beamio/cash-and-usdc.md)
     * [Merchant card custody handoff](applications/beamio/merchant-card-custody-handoff.md)
   * [CoNET Chat](applications/depin-chat.md)
+    * [Whitepaper](applications/depin-chat-whitepaper.md)
   * [Privacy-first Decentralized AI](applications/privacy-first-ai.md)
     * [Whitepaper](applications/privacy-first-ai-whitepaper.md)
   * [Institutional multisig AA](applications/institutional-multisig-aa.md)
