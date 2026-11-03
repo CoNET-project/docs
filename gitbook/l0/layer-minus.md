@@ -129,7 +129,7 @@ roles, and adds its own signed objects.
 
 | Composition | Application-layer contract |
 |---|---|
-| **[CoNET Chat](../applications/depin-chat.md)** | Signed messages, `mailbox_listen`, mailbox ACK, sender receipt, presence, call offers to the callee mailbox, temporary voice sessions (voice channel v2 live, v3 in rollout), encrypted-history recovery |
+| **[CoNET Chat](../applications/depin-chat.md)** | Signed messages, `mailbox_listen`, mailbox ACK, sender receipt, presence, call offers to the callee mailbox, temporary voice sessions (voice channel v3), encrypted-history recovery |
 | **SilentPass** | Wallet-authorized egress command and ordinary destination TCP connection |
 | **`web3://`** | Locator, exact identity resolution, signed request, correlated encrypted response, stream lifecycle, rendering security |
 | **Beamio** | POS authorization and commerce message types |
@@ -150,15 +150,15 @@ own. What it takes from Layer Minus:
 
 | Layer Minus part | How CoNET Chat uses it |
 |---|---|
-| Wallet, user key and route key in AddressPGP | A contact is a wallet. The sender reads the recipient's user PGP key (the encryption target) and mailbox route key from AddressPGP. Clients register their own binding there |
+| Wallet, user key and route key in AddressPGP | A contact is a wallet. The sender reads the recipient's user PGP key (the encryption target) and mailbox route key from AddressPGP. Clients register their own binding there with a wallet-signed request |
 | `POST /post` with only `{ "data": "<armor>" }` | Every send, ACK, receipt, presence query and call command. Browsers use HTTPS to entries; the native apps use plain HTTP on port 80 |
 | OpenPGP key-ID routing, peel and forward | Entry A forwards a message by its key ID to the recipient's mailbox. In rollout, every message is wrapped once more to the mailbox route key, so the entry sees only that node key |
 | Entry A / entry C, mailbox B, `A ≠ B`, `C ≠ B` | A is a random entry for each send, excluding both mailboxes. C carries the listen stream and route-key commands. B is the recipient's mailbox |
-| Mailbox store and listen pools | B stores ciphertext before delivery, fans it out to every `mailbox_listen` session of the wallet, keeps it until `gossip_delivery_ack`, and answers `wallet_online_query`. In rollout, B seals every listen frame with a per-listen `streamKey` |
+| Mailbox store and listen pools | B stores ciphertext before delivery, fans it out to every `mailbox_listen` session of the wallet, keeps it until `gossip_delivery_ack`, and answers `wallet_online_query`. B seals every listen frame with a per-listen `streamKey` |
 | Route-key commands executed by B | Mailbox work with `NoPush`, `push_device_register`, `voice_offer_store` (B stores the offer and asks the push API to ring its own user), `voice_offer_fetch` |
 | Separate SI listen namespaces | Real-time calls use the `voice_listen` namespace on a relay node, never the mailbox listen. Media chunks are `CVC2` binary literals that the relay checks by HMAC and does not decrypt |
 | Guardian node table (`GuardianNodesInfoV6`) | Clients pick random entries and relays from it. The native Chat daemons follow its storage root the same way CoNET-SI does |
-| Hop signatures and GB metering | SI-to-SI forwarding of Chat traffic carries hop signatures like other Layer Minus traffic. Voice commands are not metered; the payer-signed v3 channels (in rollout) carry authorizations but no charge yet |
+| Hop signatures and GB metering | SI-to-SI forwarding of Chat traffic carries hop signatures like other Layer Minus traffic. Voice commands are not metered; the payer-signed v3 channels carry authorizations but no charge yet |
 
 What Chat adds above Layer Minus: EIP-191 signed envelopes and the
 recovered-signer identity rule, dual receipts, group fan-out, call signalling

@@ -31,8 +31,10 @@ AddressPGP on CoNET L1 stores the public bindings used by Layer Minus. A typical
 1. Generate the user's OpenPGP key pair on the client.
 2. Select the encryption subkey ID used for routing encrypted business envelopes.
 3. Select a mailbox route and obtain its route key ID.
-4. Sign and submit the public material through the compatibility API named `regiestChatRoute`.
+4. Sign the request with the wallet (EIP-191 over the fields, a millisecond timestamp and a single-use nonce) and submit it to the register API named `regiestChatRoute`. Unsigned requests, requests signed by another wallet, stale timestamps and replays are refused. Format: [SI developer guide](si-developer-guide.md#sample-register-a-mailbox-route).
 5. Resolve the wallet with `searchKey(walletAddress)` before sending or listening.
+
+A client registers only when a **successful** read of its own record shows no record, a recorded key that differs from the local key, or no mailbox. A failed or timed-out read is retried; it never triggers registration, a new mailbox or a new key. A registration keeps the existing mailbox (on chain, else the one the device uses); only a new wallet with no mailbox anywhere gets a random one. Changing the mailbox is a deliberate choice, not a recovery step.
 
 Usable EOA and OpenPGP private keys must remain client-controlled. Public lookup returns the recipient key and mailbox route material needed by other peers.
 
@@ -71,7 +73,7 @@ Routing wallet (separate EOA)
 
 **How to wire it:**
 
-1. Create a routing EOA. Generate the **inbox** user PGP on the client. Register AddressPGP (`regiestChatRoute`) **on the routing wallet**.
+1. Create a routing EOA. Generate the **inbox** user PGP on the client. Register AddressPGP (`regiestChatRoute`, signed by the routing wallet) **on the routing wallet**.
 2. Listen, `gossip_delivery_ack`, and `wallet_online_query` sign with the **routing** wallet. `isMyRoute` is that EOA.
 3. Encrypt business armor to the **inbox user PGP** registered on the routing wallet (that key ID is what SI routes).
 4. Put the **sender / recipient** EOAs only inside the encrypted application object (`from`, display id, payment id).

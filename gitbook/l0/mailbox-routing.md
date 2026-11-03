@@ -6,8 +6,7 @@ Mailbox routing is the specified Layer Minus **forwarding** protocol. It separat
 
 L0 stops at “deliver this OpenPGP armor to the mailbox of this key.” Chat schemas, POS permission types, acknowledgements, and UI are [application combinations](using-l0.md) of the same path.
 
-Voice-call wake-up is also an application combination. **Live (voice channel
-v2):** the caller posts one `voice_offer_store` command with `push: 1`,
+Voice-call wake-up is also an application combination. The caller posts one `voice_offer_store` command with `push: 1`,
 encrypted to the **callee's** mailbox route PGP, through a random entry that is
 neither mailbox. It carries opaque `callId` + `sessionId` and `offerArmor`: the
 signed call offer already encrypted to the callee **user PGP**. The callee
@@ -20,12 +19,10 @@ SDK later fetches the offer with `voice_offer_fetch` and decrypts it locally.
 command and push carry no wallet, session key, private key, audio, or call
 plaintext.
 
-**Live, being removed:** when the callee mailbox has not confirmed `pushed:
-true` within about 3 seconds, current clients fall back to a `voice_listen` to
-their **own** mailbox that carries `targetWallet` and `offerArmor`; that mailbox
-forwards the offer and rings the callee, and so learns the callee's wallet.
-**In rollout:** the fallback is deleted and the node ignores those fields; the
-callee mailbox also writes the offer into the callee's live mailbox SSE.
+The callee mailbox also writes the offer into the callee's live mailbox SSE.
+There is no other wake path: every node ignores the old fallback fields
+(`targetWallet`, `offerArmor` on a `voice_listen` to the caller's own mailbox)
+since 2 November 2026, and new clients no longer send them.
 
 Initiator-hidden voice stays in force: the plaintext initiating application
 wallet exists only inside the user-PGP offer. The mailbox must not decrypt the
@@ -56,9 +53,9 @@ For the intended route, `A ≠ B` and `C ≠ B`. A and C may be different entrie
 3. S encrypts the complete envelope to **R's user OpenPGP key**.
 4. **In rollout (required):** S wraps that armor as mailbox work `{ data: armor, NoPush? }` encrypted to **B's route PGP**, so A and any path observer see B's route key ID (one node key shared by many users) instead of R's user key ID. Without B's route key S fails with `recipient_mailbox_unknown`; it does not post the bare armor. Live clients still post the bare armor for ordinary messages.
 5. Optionally, S wraps the result in one or more **outer OpenPGP layers** addressed to A or to a hop chain. The first `/post` then shows the **outer** key ID to a path observer.
-6. S posts the armored ciphertext to **one** random healthy entry A over **HTTP or HTTPS**. A must be neither R's mailbox nor S's own mailbox. S tries another entry only after a clear failure (connection error, non-2xx, a `{ok:false}` body such as `no_route` in rollout, or no response within about 8 seconds), never the same ciphertext to several entries at once (in rollout; live browser clients still post to up to four entries in parallel). The HTTP JSON is **only** `{ "data": "<OpenPGP armor>" }`. Do **not** add sibling fields (`NoPush`, `beamioNoPush`, flags). Extra plaintext fields raise inspection risk. Because the body is already ciphertext, **HTTP is sufficient** and is the intended client path where TLS SNI or JA3/JA4 would be classified or blocked.
+6. S posts the armored ciphertext to **one** random healthy entry A over **HTTP or HTTPS**. A must be neither R's mailbox nor S's own mailbox. S tries another entry only after a clear failure (connection error, non-2xx, a `{ok:false}` body such as `no_route`, or no response within about 8 seconds), never the same ciphertext to several entries at once (in rollout; live browser clients still post to up to four entries in parallel). The HTTP JSON is **only** `{ "data": "<OpenPGP armor>" }`. Do **not** add sibling fields (`NoPush`, `beamioNoPush`, flags). Extra plaintext fields raise inspection risk. Because the body is already ciphertext, **HTTP is sufficient** and is the intended client path where TLS SNI or JA3/JA4 would be classified or blocked.
 7. A reads `getEncryptionKeyIDs()`. If the key is not local, A forwards the **same armor** and signs the SI hop header. If the key **is** local, A decrypts **once**. When the plaintext is still OpenPGP and the inner side-channel key ID is not this node, A forwards the **inner** armor if hop signatures stay at or below **3**. Same-node inner PGP is an attack (`end`). A does **not** read user-PGP business plaintext.
-8. B stores the inbound armor before attempting live SSE delivery (in rollout: once per armor hash, so a retried post is not stored or pushed twice). B does not
+8. B stores the inbound armor before attempting live SSE delivery (once per armor hash, so a retried post is not stored or pushed twice). B does not
    decrypt the **user-PGP** business envelope and therefore cannot read the
    sender wallet or the sender PGP key carried inside it. Only R learns those
    after local decrypt and EIP-191 verification. The recovered signer is R's view of the
@@ -86,7 +83,7 @@ inner user-PGP armor
 | Mailbox work | `{ data: innerArmor }` only | **Mailbox B** route PGP |
 | Business | Chat / application offer | Recipient **user PGP** |
 
-`NoPush` in mailbox work only means Chat/APNs “skip native badge.” **Live defect, fixed in rollout:** the live SI keeps only `data` when it unwraps mailbox work, so `NoPush` has no effect. In the rollout every user-PGP delivery is mailbox work (ordinary messages omit `NoPush`), and the flag is honoured again.
+`NoPush` in mailbox work only means Chat/APNs “skip native badge.” Every node honours the flag when it unwraps mailbox work (since 2 November 2026). New clients send every user-PGP delivery as mailbox work (ordinary messages omit `NoPush`).
 
 **Required B behavior after unwrapping mailbox work:** read the inner armor’s encryption key ID (user PGP, 16-hex, case-insensitive) and `getRoute` it: store and deliver to the Chat listen when the route is local, otherwise forward one SI hop. L0 exclusive occupancy (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) was removed from CoNET-SI on 2026-10-31. SI no longer keeps an idle L0 pool or matches mailbox work against it.
 
@@ -106,16 +103,16 @@ A earns GB for forwarding, not for reading content
 ### Listen: R → C → B → R
 
 1. R resolves B's route public key.
-2. R signs a `mailbox_listen` command and encrypts it to **B's route OpenPGP key**. In rollout the command carries a fresh 32-byte `streamKey` (base64), generated for every listen and kept only in memory; B refuses a listen without it.
+2. R signs a `mailbox_listen` command and encrypts it to **B's route OpenPGP key**. The command carries a fresh 32-byte `streamKey` (base64), generated for every listen and kept only in memory; B refuses a listen without it.
 3. R opens an HTTP/SSE request to healthy entry C.
 4. C forwards the opaque command to B over HTTP on port 80. If the client wrapped the listen command to C’s route key, C peels once and must hop-sign the **inner UTF-8 armor string**. Prefer the peel plaintext when it already contains `BEGIN PGP MESSAGE`. Do **not** pass an OpenPGP.js 6 `Message.armor()` stream / thenable into `Buffer.byteLength`. Hop-sign failure, non-UTF-8 armor, or C→B TCP timeout (~8s) must return a fast **404** and close the client socket. A log-only `uncaughtException` that leaves the SSE open is a protocol bug: the client waits until its ~12s `connect_timeout` while **B is never dialed**. Field lesson: [Peel, hop-sig, and listen timeouts](peel-hop-listen.md).
 5. B decrypts the control command, verifies that R belongs to its route, and attaches the SSE response to the appropriate listen pool.
 6. B pushes stored and live business ciphertext through C; only R decrypts the business envelope. Dedicated `mailbox_listen` sessions are keyed by a connection instance, not by wallet, so every healthy device session for R receives the same encrypted armor.
-7. **Live:** B writes each frame as plaintext JSON (`data: {"data": "<armor>"}`), so C sees the recipient key ID of every delivered message. **In rollout:** B seals every frame it writes on that SSE (handshake, offline flush, live message, keepalive, UDP notice) as `data: base64(iv[12] ‖ AES-256-GCM ciphertext ‖ tag[16])`, with a random IV per frame and the plaintext JSON padded with spaces to a multiple of 256 bytes. C then sees only B's address, frame timing and bucketed length. The ACK still hashes the inner user-PGP armor.
+7. B seals every frame it writes on that SSE (handshake, offline flush, live message, keepalive, UDP notice) as `data: base64(iv[12] ‖ AES-256-GCM ciphertext ‖ tag[16])`, with a random IV per frame and the plaintext JSON padded with spaces to a multiple of 256 bytes. C then sees only B's address, frame timing and bucketed length. The ACK still hashes the inner user-PGP armor.
 
 ```text
 R ── route-PGP listen ──▶ C ── HTTP :80 ──▶ B
-R ◀──── business frames over SSE through C (in rollout: sealed with streamKey) ──── B
+R ◀──── business frames over SSE through C (sealed with streamKey) ──── B
 ```
 
 Client-to-entry `/post` may use **HTTP or HTTPS**. Native and censorship-sensitive clients should prefer HTTP so that delivery does not depend on a TLS handshake. Browser pages served over HTTPS may still be forced to HTTPS by mixed-content policy. SI-to-SI forwarding uses HTTP on port 80. An entry's HTTPS certificate failure is therefore not evidence that the forwarding plane is broken, and it is not a reason to require TLS for `/post`.
@@ -128,17 +125,16 @@ The SI runtime labels long-lived sessions so that unrelated lifecycle policies d
 
 | Use | Command | `listenKind` | Pool |
 | --- | --- | --- | --- |
-| Chat, Merchant OS, Alliance (legacy) | `mining` | **`chat`** | Shared liveness pool, labeled chat. In rollout it receives no Chat messages (its frames cannot be sealed); it keeps presence only |
-| Mailbox B, multi-device Chat | **`mailbox_listen`** | — | Dedicated mailbox pool; one wallet may have multiple SSE instances and each receives a fan-out copy. In rollout: `streamKey` required, every frame sealed |
+| Chat, Merchant OS, Alliance (legacy) | `mining` | **`chat`** | Shared liveness pool, labeled chat. Receives no Chat messages (its frames cannot be sealed); presence only |
+| Mailbox B, multi-device Chat | **`mailbox_listen`** | — | Dedicated mailbox pool; one wallet may have multiple SSE instances and each receives a fan-out copy. `streamKey` required, every frame sealed |
 | LayerMinus mining gossip | `mining` | Omitted; defaults to **mining** | Shared liveness pool, labeled mining |
 | UDP client | `udp_listen`, or `mining` | `udp` | Separate UDP client pool |
 | UDP server | `udp_server_listen`, or `mining` | `udp_server` | Separate UDP server pool |
-| Real-time voice participant | `voice_listen` | — | Separate temporary voice-session pool; v2 sessions carry a write key. In rollout only v3 is accepted: a temporary wallet signature bound to this relay plus a payer authorization |
+| Real-time voice participant | `voice_listen` | — | Separate temporary voice-session pool. Only v3 is accepted: a write key, a temporary wallet signature bound to this relay, and a payer authorization |
 
 Chat, mailbox, mining, UDP, and voice are distinct SI listen namespaces.
 Voice uses `voice_listen` plus unsigned, wallet-free chunk posts (`CVC2`
-binary literals; v1 `voice_uplink` as a fallback on the live fleet, removed in
-rollout) only for opaque media relay; it never uses the normal
+binary literals) only for opaque media relay; it never uses the normal
 `mailbox_listen` SSE.
 L0 exclusive occupancy (`l0_listen`, `l0_connect`, `mining` with `listenKind: "l0"`, and idle-L0 delivery of mailbox work) was removed from CoNET-SI on 2026-10-31. `l0_listen` / `l0_connect` now close the
 connection, and `listenKind: "l0"` is refused.
@@ -227,8 +223,7 @@ contacts-only or recipient-only delivery, local retention limits, recording
 limits, and optional padding/delayed upload. These choices do not change the
 A/B/C route or create a new SI command.
 
-For real-time voice/video, the same boundary applies to media chunks. **Live
-(voice channel v2), and unchanged in v3:** each chunk is an OpenPGP binary literal
+For real-time voice/video, the same boundary applies to media chunks. Each chunk is an OpenPGP binary literal
 `"CVC2" ‖ locator(16) ‖ HMAC16 ‖ blob`, encrypted to the route PGP of the node
 that holds the listener's voice session and posted through one random entry
 from a background-warmed pool, a different entry per chunk. The node checks the
@@ -236,11 +231,12 @@ HMAC with the session's write key and writes only the blob to the session SSE.
 Sequence numbers, capture time, media kind and fragment numbers are inside the
 AES-GCM blob (padded to a multiple of 256 bytes), so the node cannot read or
 reorder them; the client decrypts first and then reorders and reassembles.
-Voice commands carry no wallet and no wallet signature. The older v1 format
-(`voice_uplink` JSON with outer `seq`, `callId` and session IDs) remains on the
-live fleet only as a fallback for clients that do not announce v2.
+Voice chunks carry no wallet and no wallet signature. The older v1 format
+(`voice_uplink` JSON with outer `seq`, `callId` and session IDs) and v2 listens
+are no longer accepted by any node since 2 November 2026.
 
-**In rollout (voice channel v3):** the relay that holds a session is chosen by
+**Voice channel v3** (every node since 2 November 2026; clients in release
+candidates): the relay that holds a session is chosen by
 the listening side and is never either party's mailbox. `voice_listen` must
 carry `v: 3`, a temporary wallet, that wallet's signature bound to this relay's
 route key ID, and the paying callee's EIP-191 authorization over the temporary
@@ -257,7 +253,7 @@ When routing and encryption rules are followed:
 - A and C cannot decrypt **business** content (user-PGP innermost armor);
 - the application sender wallet is inside that business armor, so A, B, and C
   do not receive it as a plaintext routing field;
-- A and C **can** read the OpenPGP key ID on the layer they handle. If the client used an outer envelope, the first-hop observer sees A's key, not R's. After a local decrypt, A still sees the next key ID — that is the routing primitive, not a leak of message text. In the live protocol that next key ID is R's user key (public on chain), so A learns the recipient, and C sees R's key ID on every plaintext SSE frame. In rollout, A sees only B's route key ID and C sees only sealed frames;
+- A and C **can** read the OpenPGP key ID on the layer they handle. If the client used an outer envelope, the first-hop observer sees A's key, not R's. After a local decrypt, A still sees the next key ID — that is the routing primitive, not a leak of message text. When a client posts the business armor without the mailbox layer (released clients do), that next key ID is R's user key (public on chain), so A learns the recipient. New clients always add the mailbox layer, so A sees only B's route key ID; C sees only sealed frames;
 - B can decrypt mailbox control and mailbox-work JSON (`NoPush`) but not user-PGP business content;
 - B sees an entry connection instead of a direct client connection;
 - client `/post` confidentiality does not require HTTPS; and
@@ -273,11 +269,11 @@ forwarding requires them. HTTP `/post` makes the application shape visible to
 a path observer in exchange for avoiding TLS metadata.
 
 For real-time voice, compare the actual command fields rather than relying on
-the word “relay.” In v2, `voice_listen` carries a channel locator, a write key
-and a timestamp; chunks carry the locator, an HMAC and padded ciphertext. The
-session node does not receive either party's wallet. Voice channel v3 (in
-rollout) adds the paying callee's wallet and a temporary wallet to each relay
-of the call; the relay still does not learn the other party
+the word “relay.” A v3 `voice_listen` carries a channel locator, a write key,
+a timestamp, a temporary wallet and the paying callee's authorization; chunks
+carry the locator, an HMAC and padded ciphertext. Each relay of the call
+learns the paying callee's wallet and a temporary wallet; it does not learn
+the other party
 ([CoNET Chat](../applications/depin-chat.md#real-time-voice-calls)).
 
 A/B/C are **roles**. Collusion of A+B, C+B, or one operator running all three reconstructs send relationships or binds a wallet to an IP. Distinct Guardian addresses are not an operator-domain proof.

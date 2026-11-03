@@ -267,7 +267,7 @@ for one routing wallet.
 The implemented sequence is:
 
 1. Accept one local TCP connection.
-2. Create and register a temporary communication route for that line.
+2. Create and register a temporary communication route for that line (the registration request is signed by that route's own wallet; see [register a mailbox route](../l0/si-developer-guide.md#sample-register-a-mailbox-route)).
 3. Wait until AddressPGP returns the expected route key.
 4. Establish the temporary receive session.
 5. Send a signed `duplex_offer`, optionally with the first application bytes.

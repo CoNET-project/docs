@@ -29,13 +29,15 @@ belongs to; a design that is not yet deployed is never described as live.
 
 | Stage | What it covers |
 |---|---|
-| **Live** | Recipient-PGP envelopes with the sender wallet inside; A/B/C mailbox routing; voice channel v2 (opaque chunks with no per-frame metadata; being replaced by v3); the callee's own mailbox rings the callee (`voice_offer_store` with `push: 1`); voice commands carry no wallet and no wallet signature; in the iOS and Android apps the native Chat SDK holds the wallet and PGP keys, signs for itself, and keeps the mailbox SSE (chat-sdk-ios 0.1.7, chat-sdk-android 0.2.5) |
-| **Live, being replaced** | Voice channel v2 listens and the v1 voice frames; the legacy call-wake fallback through the caller's own mailbox; plaintext mailbox SSE frames; user-PGP armor posted without a mailbox layer; browser clients posting one message to several entries at once; the public-key lookup `eth_call` carrying the caller's own wallet as `from`; the legacy `mining` + `listenKind: "chat"` listen pool |
-| **In rollout** (code written and tested on canary nodes and release-candidate builds, not released) | Every delivery wrapped to the recipient mailbox route key; a per-listen `streamKey` that seals every mailbox SSE frame; the legacy call-wake fallback removed; one entry at a time, with `no_route` as a clear failure; app pages sending only through the native SDK; the public-key lookup without `from`; listen health (listening only after the mailbox's sealed handshake, crypto-host recovery, a fresh listen on reconnect and on resume); background-warmed node pools for entries and relays; the node table from the storage root; voice channel v3 with payer-signed temporary channels; the `voice_call_ringing_v1` wake receipt; a 60-second ring window with a native caller timeout; prepared cancel and hang-up; busy signalling (still in development); Missed call for calls that never rang; late-push handling on Android; local caller avatars; ChatDaemon protocol v1 (`hello`) |
+| **Live** | Recipient-PGP envelopes with the sender wallet inside; A/B/C mailbox routing; opaque voice chunks with no per-frame metadata; the callee's own mailbox rings the callee (`voice_offer_store` with `push: 1`); in the iOS and Android apps the native Chat SDK holds the wallet and PGP keys, signs for itself, and keeps the mailbox SSE (chat-sdk-ios 0.1.7, chat-sdk-android 0.2.5) |
+| **Live, being replaced** (behaviour of the released clients) | User-PGP armor posted without a mailbox layer; browser clients posting one message to several entries at once; the public-key lookup `eth_call` carrying the caller's own wallet as `from`; unsigned route registration, and re-registering on a random mailbox or with a new key when a chain read fails. The nodes stopped serving the rest on 2 November 2026, so released clients have no real-time receive and no calls: unsealed mailbox listens, the `mining` + `listenKind: "chat"` pool, voice channel v2 listens, v1 voice frames and the call-wake fallback through the caller's own mailbox |
+| **In rollout** (code written and tested; the node side runs on every Guardian node since 2 November 2026, the clients are release-candidate builds, not released) | Every delivery wrapped to the recipient mailbox route key; a per-listen `streamKey` that seals every mailbox SSE frame; the legacy call-wake fallback removed; one entry at a time, with `no_route` as a clear failure; app pages sending only through the native SDK; the public-key lookup without `from`; listen health (listening only after the mailbox's sealed handshake, crypto-host recovery, a fresh listen on reconnect and on resume); background-warmed node pools for entries and relays; the node table from the storage root; voice channel v3 with payer-signed temporary channels; the `voice_call_ringing_v1` wake receipt; a 60-second ring window with a native caller timeout; prepared cancel and hang-up; busy signalling (still in development); Missed call for calls that never rang; late-push handling on Android; local caller avatars; ChatDaemon protocol v1 (`hello`); route registration signed by the wallet, and registering only after a successful chain read shows no record, a different key or no mailbox, keeping the existing mailbox |
 | **Planned** | ChatDaemon phases P2–P4 |
 
-These privacy changes are not backward compatible. Clients and nodes move
-together; an old client cannot use a node that requires the new listen format.
+These privacy changes are not backward compatible. Every node has required
+the new listen and voice formats since 2 November 2026 (operator decision: no
+support for old versions), so the released clients stop receiving in real time
+and cannot call until the new builds reach them.
 The known limitations that remain after the rollout are listed under
 [Known limitations](#known-limitations).
 
@@ -96,15 +98,12 @@ late push for a call that already ended does not ring, and a call that never
 rang shows as Missed call. Details:
 [whitepaper, Section 8](depin-chat-whitepaper.md#8-call-signalling).
 
-**Live, being removed.** If the callee mailbox does not confirm `pushed: true`
-within about 3 seconds, current clients fall back to the legacy wake: the
-caller's `voice_listen` to its own mailbox carries `targetWallet` and
-`offerArmor`, and the caller's mailbox forwards the offer and calls the push
-API. That fallback shows the callee's wallet to the caller's mailbox.
-**In rollout:** the fallback is deleted on every client and ignored by the
-node; the callee-mailbox ring is the only wake path, and `voice_offer_store`
-also writes the offer into the callee's live mailbox SSE, so browser callees
-receive it without the legacy leg.
+The callee-mailbox ring is the only wake path. `voice_offer_store` also
+writes the offer into the callee's live mailbox SSE, so browser callees
+receive it with no other leg. Released clients still have a fallback that
+sends `targetWallet` and `offerArmor` in a `voice_listen` to the caller's own
+mailbox; every node ignores those fields since 2 November 2026, and new
+clients no longer send them.
 
 A caller first learns whether the contact is online, then asks that contact's
 mailbox `wallet_native_wake_query`. The command is encrypted to the contact
@@ -561,9 +560,10 @@ session; clients deduplicate by application `sendId`. Mailbox keepalives use a
 bounded 60–180 second per-session `setTimeout` schedule with jitter for
 connection reliability and load distribution, not traffic masquerading.
 
-**In rollout:** `mailbox_listen` must carry a fresh 32-byte `streamKey`, and B
-refuses a listen without one. The legacy `mining` + `listenKind: "chat"` pool
-no longer receives Chat messages (it keeps only presence and mining). A send
+`mailbox_listen` must carry a fresh 32-byte `streamKey`, and every node
+refuses a listen without one (since 2 November 2026). The legacy `mining` +
+`listenKind: "chat"` pool no longer receives Chat messages (it keeps only
+presence and mining). **In rollout** (clients): a send
 whose recipient mailbox route key cannot be found fails with
 `recipient_mailbox_unknown` instead of going out without the mailbox layer.
 
@@ -697,7 +697,7 @@ That is how history recovery reconstructs **communication context**, not only me
 - Dual receipts, mailbox ACK after the client has stored the message, and offline flush
 - Encrypted-history append and recover on the Consumer path, with a Worker-local decrypted corpus and full-corpus text search
 - Native Chat daemon in the iOS and Android apps: stored keys, local signing, daemon-owned mailbox SSE
-- One-to-one voice and video calls over voice channel v2, rung by the callee's own mailbox (v3 in rollout)
+- One-to-one voice and video calls, rung by the callee's own mailbox (released clients use voice channel v2, which the nodes no longer accept since 2 November 2026; v3 clients are release candidates)
 - Published SDKs: `@conet.project/chat-sdk` (TypeScript), [chat-sdk-ios](https://github.com/CoNET-project/chat-sdk-ios), [chat-sdk-android](https://github.com/CoNET-project/chat-sdk-android)
 
 ## Real-time voice calls
@@ -709,7 +709,7 @@ call control and offline delivery; media uses separate temporary voice
 sessions. There is no direct peer socket, WebRTC, or exchange of peer IP
 candidates.
 
-### Live, being replaced: voice channel v2
+### Voice channel v2 (removed from nodes)
 
 ```text
 offer (signed by the caller, encrypted to the callee user PGP):
@@ -721,11 +721,10 @@ each listening side, per direction:
   (no wallet, no signature) → node answers voice_ready { v: 2 }
 ```
 
-The session key reaches the callee only inside the signed, recipient-PGP
-offer. Voice channel v1 (per-frame JSON with an outer `seq`) remains on the
-deployed fleet only as a fallback for older clients. **In rollout:** nodes
-refuse v2 listens (`voice_listen_v3_required`) and no longer forward v1
-frames.
+The session key reached the callee only inside the signed, recipient-PGP
+offer. Since 2 November 2026 every node refuses v2 listens
+(`voice_listen_v3_required`) and no longer forwards voice channel v1 frames
+(per-frame JSON with an outer `seq`).
 
 ### Media chunks (v2 and v3)
 
@@ -754,8 +753,9 @@ not that it was played.
 ### In rollout: voice channel v3 (payer-signed temporary channels)
 
 Today no one pays GB for voice sessions, and the v2 offer's temporary wallet
-field is unused. Voice channel v3 runs on canary nodes and in
-release-candidate builds and ships with the privacy rollout:
+field was unused. Every node accepts only v3 voice listens since 2 November
+2026; the v3 clients are release-candidate builds and ship with the privacy
+rollout:
 
 - **The callee pays for every channel.** A call has four channels (each side
   receiving voice, each side receiving video), all opened when the call
@@ -782,7 +782,7 @@ release-candidate builds and ships with the privacy rollout:
   yet; settlement arrives with the GB settlement module. Voice usage will not be
   added to the existing per-wallet byte counts, which issue GB rather than
   charge it.
-- It is not backward compatible: old and new clients cannot call each other.
+- It is not backward compatible: released clients cannot open a voice channel on any node.
 
 Canary device tests passed two-way audio, four-channel setup, independent
 relay choice, all refusal cases, decline, cancel, cold-start answer and a
@@ -798,8 +798,8 @@ across wallets limits how much one relay can link to a single wallet.
 
 ## What remains under development
 
-- The privacy rollout described under [Protocol status](#protocol-status-november-2026), then removal of the legacy listen and call-wake paths
-- Release of voice channel v3 with the privacy rollout; bounds and revocation for payer authorizations (open)
+- Release of the clients for the privacy rollout described under [Protocol status](#protocol-status-november-2026); the node side is on every node since 2 November 2026
+- Release of the voice channel v3 clients with the privacy rollout; bounds and revocation for payer authorizations (open)
 - ChatDaemon P2–P4: inbound verification, storage and ACK inside the daemon; sending, presence, offers, nodes and route registration inside the daemon; removal of old paths
 - Broader client coverage beyond the current Beamio surfaces
 - Product UI for Group chat V1 across Consumer / Merchant / POS (wire + SDK
@@ -814,13 +814,13 @@ across wallets limits how much one relay can link to a single wallet.
 
 | Participant | Can see | Must not see |
 |---|---|---|
-| Entry A / C | Connecting IP, encrypted payload, timing, size, outer routing key ID. Live: the recipient's user key ID (A) and the key ID of each delivered message (C). In rollout: only the recipient mailbox's route key ID (A) and padded sealed frames (C) | Application plaintext, sender wallet inside the encrypted business envelope, recipient private key |
+| Entry A / C | Connecting IP, encrypted payload, timing, size, outer routing key ID. C sees only padded sealed frames (every node). A sees the recipient's user key ID when a released client posts without the mailbox layer; with new clients only the recipient mailbox's route key ID | Application plaintext, sender wallet inside the encrypted business envelope, recipient private key |
 | Mailbox B | Ciphertext, which of its own users a message is for, listen-pool membership, ACK hashes, opaque voice session/call identifiers; presence queries reveal the querier (known limitation) | Application plaintext, sender wallet, user PGP private key |
-| Voice relay (session node) | Entry IP, channel locator, write key, padded chunk ciphertext and timing. In rollout (v3): also the temporary wallet and payer wallet of the channels it holds | Session keys, media plaintext, the other party's wallet |
+| Voice relay (session node) | Entry IP, channel locator, write key, padded chunk ciphertext and timing; also the temporary wallet and payer wallet of the channels it holds (v3) | Session keys, media plaintext, the other party's wallet |
 | Push API | Opaque `callId` / `sessionId` and the registered device of the woken user | Caller wallet or tag, keys, audio |
 | CoNET RPC | Addresses whose keys are looked up and the client IP. Live: also the caller's own wallet as `from` (removed in rollout) | Message content |
 | IPFS / fragment store | Encrypted fragments and encrypted index | Readable history without wallet authority |
-| Beamio API | Gas-sponsored writes such as ChatIndexRegistry pointer updates | Private keys, plaintext history |
+| Beamio API | Gas-sponsored writes such as ChatIndexRegistry pointer updates; wallet-signed AddressPGP route registrations (the wallet, its public key, its encrypted key backup and its mailbox) | Private keys, plaintext history |
 | Recipient wallet | Decrypted application objects after local verification | Other users' private keys |
 
 Zero trust does not mean zero metadata. The design goal is to avoid putting identity, relationship, routing, content, and readable history in one trusted messaging provider.

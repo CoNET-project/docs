@@ -92,14 +92,13 @@ An ISP or entry C can observe:
 - traffic peaks;
 - online / offline cadence.
 
-Content remains OpenPGP-encrypted. In the live protocol each SSE frame is plaintext JSON that shows the delivered armor's recipient key ID to C; the rollout seals frames with a per-listen key and pads them to 256-byte buckets, which hides the key ID and coarse sizes but not the timing. Metadata can still support inferences about when a user is online, how often messages arrive, device sleep/wake, and that a chat-like application is in use.
+Content remains OpenPGP-encrypted. Since 2 November 2026 every node seals each SSE frame with a per-listen key and pads it to a 256-byte bucket (it refuses an unsealed listen), which hides the recipient key ID and coarse sizes from C but not the timing. Metadata can still support inferences about when a user is online, how often messages arrive, device sleep/wake, and that a chat-like application is in use.
 
 ### Receive modes
 
 | Mode | Mechanism | Status |
 | --- | --- | --- |
-| **Realtime** | Long-lived SSE. Frames are plaintext JSON today; the legacy `Securitykey` field is not used for Chat. | **Implemented** |
-| **Sealed realtime** | `mailbox_listen` carries a per-listen `streamKey` inside the route-PGP command; B seals every frame with AES-256-GCM and 256-byte padding; entries never receive the key. | **In rollout** |
+| **Sealed realtime** | Long-lived SSE. `mailbox_listen` carries a per-listen `streamKey` inside the route-PGP command; B seals every frame with AES-256-GCM and 256-byte padding; entries never receive the key. A listen without `streamKey` is refused; the legacy `Securitykey` field is not used for Chat. | **Implemented** on every node since 2 November 2026; clients in release candidates |
 | **Entry rotation** | The user may close C and open another SSE through a different healthy entry at any time. That breaks a long-lived bind to one ingress. It does **not** remove the SSE shape on the new C. | **Implemented** (client choice) |
 | **Privacy poll** | Randomized short polls, batch fetch, optional padding and dummy polls | **Not implemented** |
 
@@ -160,18 +159,18 @@ Media is AES-256-GCM ciphertext carried through temporary `voice_listen` SSE
 sessions. This protects media plaintext and prevents the two endpoints from
 learning one another's direct IP through the media channel.
 
-**Live (voice channel v2).** Voice commands carry no wallet and no wallet
-signature. The session node receives a channel locator and a write key when the
-session opens, and afterwards only `CVC2` chunks: locator, HMAC and padded
+Voice chunks carry no wallet and no wallet signature. The session node
+receives a channel locator and a write key when the session opens (in v3 also
+the paying callee's wallet and a temporary wallet, below), and afterwards only `CVC2` chunks: locator, HMAC and padded
 ciphertext. Sequence numbers, timestamps, media kind and fragment numbers are
 inside the ciphertext. The call offer, signed by the caller and encrypted to the
 callee user PGP, goes only to the callee's own mailbox (`voice_offer_store`
 with `push: 1`), which rings its own user; the push payload carries only opaque
 `callId` / `sessionId`.
 
-**Live, being removed.** The legacy wake fallback sends `targetWallet` and
-`offerArmor` in a `voice_listen` to the caller's own mailbox, which then learns
-the callee's wallet. The rollout deletes it.
+There is no other wake path. Every node ignores the old fallback fields
+(`targetWallet`, `offerArmor` in a `voice_listen` to the caller's own mailbox)
+since 2 November 2026.
 
 The profile provides:
 
@@ -186,14 +185,14 @@ The profile provides:
 Even so, a mailbox knows the users it serves, entries observe connecting IPs,
 and timing/size correlation remains.
 
-**In rollout: voice channel v3 (payer-signed temporary channels).** The callee
+**Voice channel v3 (payer-signed temporary channels).** The callee
 pays for all four channels of a call, with one temporary wallet and key per
 channel, and each side picks its own relay, never either mailbox. CoNET-SI
 refuses a `voice_listen` without a valid temporary-wallet signature bound to
 that relay and a valid payer signature over the temporary wallet, an
 authorization that expires within 48 hours, and one temporary wallet per
-session. It runs on canary nodes and release-candidate builds and is not
-backward compatible. This is a deliberate exception to the
+session. Every node runs it since 2 November 2026 and refuses older voice
+listens; the clients are release-candidate builds. This is a deliberate exception to the
 rule that nodes see no wallet: the relay learns the payer wallet, how long the
 channel stays open and how many bytes it carries, and holds a signed record of
 it. It still does not learn the other party. Payers may split payment across

@@ -1,6 +1,6 @@
 # CoNET Chat developer guide
 
-**Evidence level: Implemented capability, with a privacy upgrade in rollout.** This page is a developer how-to for **CoNET Chat** on Layer Minus. Unmarked envelopes, commands, and APIs match current Beamio / chat-sdk clients. Text marked **In rollout** describes code that is written but not deployed; **Planned** describes decided designs that are not implemented. Write new clients to the rollout form. It is not a claim that Chat is a finished replacement for mainstream messengers.
+**Evidence level: Implemented capability, with a privacy upgrade in rollout.** This page is a developer how-to for **CoNET Chat** on Layer Minus. Unmarked envelopes, commands, and APIs match current Beamio / chat-sdk clients. Text marked **In rollout** describes code that is written and tested: its node side runs on every Guardian node since 2 November 2026, and its client side is in release-candidate builds, not yet released; **Planned** describes decided designs that are not implemented. Write new clients to the rollout form. It is not a claim that Chat is a finished replacement for mainstream messengers.
 
 CoNET Chat is relationship-private communication infrastructure: wallet identity, zero-trust mailbox routing, encrypted application envelopes, and wallet-controlled encrypted history. Use it to add wallet-addressed communication **without** first building a centralized user-and-relationship database. Product thesis, Beamio integration, and maturity limits live on [CoNET Chat](../applications/depin-chat.md).
 
@@ -14,21 +14,24 @@ Public packages: [CoNET-project/chat-sdk](https://github.com/CoNET-project/chat-
 
 | Step | Encrypt to | Transport |
 | --- | --- | --- |
-| Register user PGP + mailbox | — | `POST https://beamio.app/api/regiestChatRoute`, then confirm with AddressPGP `searchKey` |
+| Register user PGP + mailbox | — | `POST https://beamio.app/api/regiestChatRoute` signed by the wallet (EIP-191, timestamp, single-use nonce), then confirm with AddressPGP `searchKey`. Register only when a successful read shows no record, a different key or no mailbox; keep the existing mailbox ([rules](si-developer-guide.md#sample-register-a-mailbox-route)) |
 | Look up a contact | — | `AddressPGP.searchKey(contact)` over CoNET RPC, **without** an `eth_call` `from` (in rollout; the live Consumer PWA still sends its own wallet as `from`) |
 | Send a message | Recipient **EOA user PGP**; in rollout always wrapped as mailbox work to the recipient mailbox **B route PGP** | `POST /post` to **one** random entry **A** (not the recipient's or the sender's mailbox); the next entry only after a clear failure |
-| Listen | Own mailbox **B route PGP** | `command: "mailbox_listen"` as SSE via entry **C ≠ B**. In rollout it must carry a fresh `streamKey` and every frame is sealed. The legacy `mining` + `listenKind: "chat"` pool stops receiving Chat in the rollout |
+| Listen | Own mailbox **B route PGP** | `command: "mailbox_listen"` as SSE via entry **C ≠ B**. It must carry a fresh `streamKey` and every frame is sealed. The legacy `mining` + `listenKind: "chat"` pool receives no Chat |
 | After inbound ingest | (1) **B route PGP** ACK · (2) sender user PGP receipt, then mailbox-work wrap `NoPush` to sender mailbox B | ACK only after the message is stored. ACK and receipt both via entries ≠ B; HTTP still `{ data }` only. `NoPush` is **Chat/APNs only** |
 | Presence (green dot) | Contact mailbox **B route PGP** | `wallet_online_query` via **entry C ≠ B** (never dial B; that hides the querier's IP). Carries the querier's wallet: known limitation |
 | Native shell status | Contact mailbox **B route PGP** | `wallet_native_wake_query` via the **same entry C ≠ B**, after presence. Same limitation |
 | Call offer | Signed offer to callee **user PGP**, inside a route command to the callee mailbox **B route PGP** | `voice_offer_store` with `push: 1` via a random entry ≠ either mailbox |
-| Voice channel (in rollout: v3) | Relay **route PGP**; the relay is chosen by the listening side and is neither mailbox | `voice_listen` `v: 3` with temporary-wallet and payer signatures via an entry ≠ the relay; chunks via random entries |
+| Voice channel (v3) | Relay **route PGP**; the relay is chosen by the listening side and is neither mailbox | `voice_listen` `v: 3` with temporary-wallet and payer signatures via an entry ≠ the relay; chunks via random entries |
 | Optional recover history | — | Encrypted IPFS fragments + `ChatIndexRegistry` head pointer |
 
 Protocol status (live, in rollout, planned) and the known limitations are
 listed on [CoNET Chat](../applications/depin-chat.md#protocol-status-november-2026).
-The rollout is not backward compatible: a mailbox on the new SI refuses a
-`mailbox_listen` without `streamKey`.
+Every Guardian node runs the new CoNET-SI since 2 November 2026, with no
+backward compatibility: every mailbox refuses a `mailbox_listen` without
+`streamKey`, and every relay refuses a `voice_listen` that is not v3. The
+clients that follow these rules are release candidates; released clients no
+longer receive in real time or call.
 
 ## Relationship-privacy field contract
 
@@ -46,7 +49,7 @@ recipient decrypts:
 | --- | --- | --- |
 | **Entry A** | Client IP, ciphertext, timing, size, outer key ID. Live: that key ID is the recipient's user key. In rollout: the recipient mailbox's route key | Plaintext sender wallet or Chat body |
 | **Mailbox B** | Destination route, stored armor, listen state | Sender wallet inside the business envelope or Chat body |
-| **Listen entry C** | Recipient-side connection IP, encrypted listen traffic. Live: plaintext SSE frames that show each message's recipient key ID. In rollout: sealed, padded frames | Decrypted Chat body |
+| **Listen entry C** | Recipient-side connection IP, encrypted listen traffic: sealed, padded SSE frames (every node refuses an unsealed listen) | Decrypted Chat body, recipient key ID of each message |
 | **Recipient** | Decrypted envelope and verified sender wallet | Other users' private keys |
 
 This attempts to break three direct associations: sender wallet ↔ recipient,
@@ -81,7 +84,7 @@ Do **not** encrypt business Chat to an AA Smart Wallet unless that AA has its ow
 
 ## Voice-call wake-up and offer delivery
 
-**Live (voice channel v2).** A device may need a native wake-up before its
+A device may need a native wake-up before its
 mailbox SSE is up. The caller delivers the signed call offer, already
 encrypted to the callee's **user PGP**, to the **callee's own mailbox** with one
 route command. It is encrypted to the callee mailbox route PGP and posted
@@ -108,25 +111,21 @@ no `walletAddress` and no wallet signature.
 The callee mailbox stores the ciphertext under `callId` + `sessionId`, finds its
 own user from the offer's recipient key ID, and asks `/api/voiceCallPush` to
 ring that user's registered devices (`ios_voip` uses APNs PushKit/CallKit,
-`android` uses high-priority FCM). It answers `{ ok, pushed }`. `pushed: false`
+`android` uses high-priority FCM). It answers `{ ok, delivered, pushed }`. `pushed: false`
 means the callee has no push device; the call still proceeds over a live SSE.
 The callee mailbox already knows its own user, so no other node learns whom the
 caller is calling, and the caller never calls the push API. The mailbox never
 decrypts or logs the offer and never forwards keys or audio. A push response is
 not proof that the offer was read or the call answered.
 
-**In rollout.** The callee mailbox also writes the offer into the callee's live
-mailbox SSE (stored without a chat push), so a browser callee receives it with
-no other leg. A failed store is a failed dial; `pushed: false` is not.
+The callee mailbox also writes the offer into the callee's live mailbox SSE
+(stored without a chat push), so a browser callee receives it with no other
+leg. A failed store is a failed dial; `pushed: false` is not.
 
-**Live, being removed: legacy wake fallback.** Current clients also encrypt a
-`voice_listen` for their own mailbox that carries `targetWallet`, `callId`,
-`expiresAt`, `pushTimestamp` and `offerArmor`, and post it only when the callee
-mailbox has not confirmed `pushed: true` within about 3 seconds. The caller's
-mailbox then forwards the offer and calls the push API. That shows the callee's
-wallet to the caller's mailbox. In rollout, every client deletes this leg and
-the node ignores those fields on `voice_listen`. New clients must not send
-them.
+There is no other wake path. Released clients still send a fallback
+`voice_listen` to their own mailbox carrying `targetWallet`, `callId`,
+`expiresAt`, `pushTimestamp` and `offerArmor`; every node ignores those fields
+since 2 November 2026. New clients must not send them.
 
 ### Killed-app identity (CallKit / Incoming)
 
@@ -234,7 +233,7 @@ plays a busy tone and both sides record `busy`. If the same verified caller
 rings again while its earlier unanswered call is still shown, end the earlier
 call as cancelled instead. Busy handling is still in development.
 
-### Voice channel v2 (live, being replaced)
+### Voice channel v2 (removed from nodes)
 
 Each listening side opens a temporary voice session that never occupies
 `mailbox_listen`. The command is unsigned and carries no wallet:
@@ -249,12 +248,13 @@ Each listening side opens a temporary voice session that never occupies
 }
 ```
 
-It is encrypted to the route PGP of the node that will hold the session and
-sent through an entry that is not that node. A v2 node answers
-`voice_ready` with `v: 2`. The listener gives the locator and write key to the
-peer only inside the signed offer or an AES control chunk, and announces v2 in
-`voice_media_caps_v1` (`chan: 2`). In rollout, nodes refuse this listen with
-`voice_listen_v3_required`; new clients open channels only with v3 (below).
+It was encrypted to the route PGP of the node that held the session and
+sent through an entry that is not that node; the node answered `voice_ready`
+with `v: 2`. The listener gave the locator and write key to the peer only
+inside the signed offer or an AES control chunk, and announced v2 in
+`voice_media_caps_v1` (`chan: 2`). Since 2 November 2026 every node refuses
+this listen with `voice_listen_v3_required`; clients open channels only with
+v3 (below).
 
 The chunk format that follows is shared by v2 and v3. Each chunk sent to the peer is an OpenPGP binary literal encrypted to the
 session node's route PGP and posted through a random entry from the rotation
@@ -281,15 +281,14 @@ drop frames whose capture time is too old, and reassemble video by
 reassembly sizes are bounded. The protocol is real-time best effort.
 
 Voice channel v1 (`voice_uplink` / `voice_downlink` JSON with an outer `seq`,
-`targetSessionId` and base64 payload) stays on the deployed fleet only as the
-fallback when the peer or its node does not announce v2. A v1 receiver
-reorders by the outer `seq` before decrypting; that outer metadata is exactly
-what v2 removes. In rollout, nodes no longer forward v1 frames and new clients
-have no v1 path.
+`targetSessionId` and base64 payload, reordered by the outer `seq` before
+decryption) is gone: no node forwards v1 frames since 2 November 2026, and new
+clients have no v1 path.
 
 ### Voice channel v3: payer-signed temporary channels (in rollout)
 
-Not backward compatible. The callee pays for all four channels of a call
+Not backward compatible. Every node accepts only v3 listens since 2 November
+2026; the clients are release-candidate builds. The callee pays for all four channels of a call
 (caller receives voice / video, callee receives voice / video), each with its
 own temporary wallet, AES key and write key, all opened when the call starts.
 Each side opens its own two channels on relays it chooses at random,
@@ -454,12 +453,11 @@ Live `sendMessage` signs the **inner application string** (`text`), then OpenPGP
 
 A clear failure is a connection error, a reset before any response, a non-2xx
 status, a 2xx body `{"ok": false, …}`, or no response within about 8 seconds.
-In rollout, an entry with no route for the armor's key ID answers
-`{"ok": false, "error": "no_route"}` (the live SI answers an empty 200, which a
-client cannot tell from success). Pick entries from a background-warmed pool
-so a send does not wait for probes.
+An entry with no route for the armor's key ID answers
+`{"ok": false, "error": "no_route"}`. Pick entries from a background-warmed
+pool so a send does not wait for probes.
 Any other 2xx is success. A timed-out post may already have reached B, so the
-retry can produce a second copy of the same ciphertext; the new SI stores one
+retry can produce a second copy of the same ciphertext; the mailbox stores one
 copy per armor hash, and recipients deduplicate by `sendId`.
 
 Inbound: decrypt with the recipient user PGP private key → parse ③ → `ethers.verifyMessage(text, signMessage)` must recover `from`. The **recovered address is the sender**. The JSON `from` field is only a claim; a nested `from: "me"` is a direction flag, not an address. Drop the message only when recovery fails. When the claim differs from the recovered address, keep the message under the recovered address and show a warning on that message that names the claimed address (native SDKs pass both to the app; they do not drop it). Then look up `@BeamioTag` for the recovered EOA. Do not display a tag or wallet copied out of ① or ②.
@@ -488,7 +486,7 @@ entryDomains:<comma-joined or empty>
 codec:<or empty>
 ```
 
-`sessionKey` and `tempWalletAddress` belong to the live v2 flow. Voice channel v3 (in rollout) removes both from the offer and signs the `CoNET voice_call_offer_v3` text shown under [Voice channel v3](#voice-channel-v3-payer-signed-temporary-channels-in-rollout).
+`sessionKey` and `tempWalletAddress` belong to the v2 flow, which no node supports since 2 November 2026. Voice channel v3 removes both from the offer and signs the `CoNET voice_call_offer_v3` text shown under [Voice channel v3](#voice-channel-v3-payer-signed-temporary-channels-in-rollout).
 
 The caller signs that string with the same EOA private key (`signMessage`). The callee recovers the address and only then looks up the tag. If recovery fails, or it disagrees with the outer-envelope signer, do not present the offer’s claimed identity. A body claim that disagrees with the recovered key may be shown only as an extra unverified line with a warning. Native wake-up stays generic until this on-device check finishes.
 
@@ -599,12 +597,12 @@ const command = {
   command: 'mailbox_listen',
   walletAddress: wallet.address,
   instanceId: crypto.randomUUID(),
-  streamKey: btoa(String.fromCharCode(...streamKeyRaw)), // in rollout: required
+  streamKey: btoa(String.fromCharCode(...streamKeyRaw)), // required
 }
 // sign JSON.stringify(command); encrypt { message, signMessage } to own route PGP
 // POST { data } to entry C ≠ mailbox B; read the SSE.
 
-/** In rollout every SSE `data:` line is base64(iv[12] ‖ AES-256-GCM ciphertext ‖ tag[16]). */
+/** Every SSE `data:` line is base64(iv[12] ‖ AES-256-GCM ciphertext ‖ tag[16]). */
 async function openFrame(line: string): Promise<unknown> {
   const raw = Uint8Array.from(atob(line), (c) => c.charCodeAt(0))
   const plain = await crypto.subtle.decrypt(
@@ -644,10 +642,9 @@ loses messages silently. Follow these rules:
 - On return to the foreground, reopen the listen if the last sealed frame is
   more than 45 seconds old.
 
-The live node ignores `streamKey`, writes plaintext frames, and does not use
-the old `algorithm` / `Securitykey` fields for Chat. After the rollout a node
-refuses a listen without `streamKey`, and the legacy `mining` +
-`listenKind: "chat"` pool no longer receives Chat messages.
+Every node refuses a listen without `streamKey` and never writes plaintext
+Chat frames; the old `algorithm` / `Securitykey` fields are not used for Chat.
+The legacy `mining` + `listenKind: "chat"` pool receives no Chat messages.
 
 | Frame | Treat as |
 | --- | --- |
@@ -990,7 +987,7 @@ If you hand-roll, keep the same A/B/C and envelope rules so mailboxes stay inter
 Walk this order. Do not skip to “the parser is broken.”
 
 1. Recipient EOA equals the AddressPGP row you encrypted to (not AA, not a prefix-search collision). Never take `search-users` `results[0]`.
-2. Recipient listen is up as `mailbox_listen` (with `streamKey` once its mailbox runs the rollout SI) and SSE Connected. A legacy `mining` + `listenKind: "chat"` listen stops receiving Chat after the rollout. Epoch / listing heartbeats prove the pipe is alive; they are not inbound Chat. If the console shows only `[Gossip] Unknown format` and no message, the business armor never entered **this** mailbox — do not conclude “the parser is broken.”
+2. Recipient listen is up as `mailbox_listen` (with `streamKey`) and SSE Connected. A legacy `mining` + `listenKind: "chat"` listen receives no Chat. Epoch / listing heartbeats prove the pipe is alive; they are not inbound Chat. If the console shows only `[Gossip] Unknown format` and no message, the business armor never entered **this** mailbox — do not conclude “the parser is broken.”
 3. If the Worker reports `connect_timeout` (~12s) and changing C still fails: check whether C **peeled** then threw on hop-sign (`string` / instance of `h`) and **never** `socketForward` to B. A log-only `uncaughtException` leaves the SSE open until the client timer. See [Peel, hop-sig, and listen timeouts](peel-hop-listen.md).
 4. SI `forward <ip>` after peel is the **client source IP**, not mailbox B.
 5. Mailbox logged `forWard SUCCESS` or `save to Local`. Offline users get a flush on next listen; the client must process that flush (do not skip the first SSE event) and dedupe `sendId`.
@@ -1067,7 +1064,8 @@ Reference implementation: `vendor/conet-chat-sdk` (`group.ts`,
 
 ## Checklist
 
-- [ ] Sender registered (`regiestChatRoute` + `searchKey` shows the local subkey)
+- [ ] Sender registered with a wallet-signed `regiestChatRoute` (fresh timestamp and nonce per attempt) + `searchKey` shows the local subkey
+- [ ] A failed or timed-out read of your own record is retried, never answered by registering, picking a new mailbox or generating a new key
 - [ ] Business encrypt-to recipient **EOA user PGP**; listen/ACK/presence/offer store encrypt-to **route PGP**
 - [ ] (rollout) Every delivery wrapped to the recipient mailbox route PGP; no route key → `recipient_mailbox_unknown`
 - [ ] One entry at a time, excluding both mailboxes; next entry only after a clear failure

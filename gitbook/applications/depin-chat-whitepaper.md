@@ -1,14 +1,14 @@
 # CoNET Chat Whitepaper: Relationship-Private Messaging and Calls on Layer Minus
 
-**Version:** v0.2 (discussion draft) | **Date:** 2 November 2026 | **Basis:** operator decisions of 31 October to 2 November 2026; CoNET-SI `main` as deployed on the Guardian fleet, and the canary branch running on a few test mailbox and relay nodes; chat-sdk-ios 0.1.7, chat-sdk-android 0.2.5 and the Consumer PWA 0.52.925 as released, plus the release-candidate builds under device test; the [CoNET Chat](depin-chat.md) product page and the [CoNET Chat developer guide](../l0/chat-developer-guide.md) | **Status:** discussion draft. Parts are live, parts are on canary nodes and test builds, and parts are designed only. Each section is labelled.
+**Version:** v0.2.1 (discussion draft) | **Date:** 2 November 2026 | **Basis:** operator decisions of 31 October to 2 November 2026; CoNET-SI `main` (74c6cfd) as deployed on every Guardian node on 2 November 2026; chat-sdk-ios 0.1.7, chat-sdk-android 0.2.5 and the Consumer PWA 0.52.925 as released, plus the release-candidate builds under device test; the [CoNET Chat](depin-chat.md) product page and the [CoNET Chat developer guide](../l0/chat-developer-guide.md) | **Status:** discussion draft. Parts are live, parts run on every node but only in test builds of the clients, and parts are designed only. Each section is labelled.
 
 Wallet-addressed messages and calls in which no single node learns who talks to whom.
 
 **How to read the labels**
 
-- **[Live]**: deployed on the CoNET-SI fleet and in released clients.
-- **[Live, being replaced]**: deployed today, and removed by the in-rollout work.
-- **[In rollout]**: code is written and tested. It runs on a few canary nodes and in release-candidate builds, and is not released. Not backward compatible unless stated.
+- **[Live]**: deployed on every Guardian node and in released clients.
+- **[Live, being replaced]**: the behaviour of the released clients, removed by the in-rollout work. Where it needs a node, the nodes stopped supporting it on 2 November 2026, so it no longer works (Section 15).
+- **[In rollout]**: code is written and tested. The node side runs on every Guardian node since 2 November 2026 (CoNET-SI 74c6cfd); the client side is in release-candidate builds and is not released. Not backward compatible unless stated.
 - **[Planned]**: the design is decided by the operator; no code is written or deployed.
 - **[Open]**: not decided; listed in Appendix B.
 - **[Known limitation]**: a gap that stays after the rollout and is stated so that no page claims more.
@@ -161,6 +161,24 @@ A wallet registers its user PGP key and its mailbox binding in the AddressPGP
 contract on CoNET L1. `@BeamioTag` is a display label looked up by address,
 never an identity.
 
+- **[In rollout]** The registration request must be signed by the wallet
+  itself (EIP-191 over the request fields, a timestamp and a single-use
+  nonce). The registration API rejects unsigned requests, requests signed by another
+  wallet, stale timestamps and replays. Format: [SI developer
+  guide](../l0/si-developer-guide.md#sample-register-a-mailbox-route).
+- **[In rollout]** A client registers only after a **successful** chain read
+  shows that the wallet has no record, that the recorded key differs from
+  the local key, or that the record has no mailbox. A failed or timed-out
+  read is retried and never triggers registration; a client that already
+  knows its mailbox keeps listening there meanwhile.
+- **[In rollout]** A registration keeps the existing mailbox (the one on
+  chain, else the one the device uses). Only a new wallet with no mailbox
+  anywhere gets a random one. A device without its key generates a new key
+  only when a successful read shows that no usable key exists.
+- **[Live, being replaced]** Released clients send the registration unsigned,
+  so the registration API refuses it; they also re-register on a random
+  mailbox, or with a new key, when the chain read fails.
+
 ### 3.2 Looking up a contact
 
 A client reads `AddressPGP.searchKey(contact)` over CoNET RPC to get the
@@ -244,7 +262,7 @@ mailbox unwraps layer ⑤ for messages and receipts.
   is a connection error, a reset before any response, a non-2xx status, a 2xx
   body `{"ok": false}`, or no response within about 8 seconds. An entry that
   has no route for the armor's key ID answers `{"ok": false, "error": "no_route"}`
-  (the deployed SI answers an empty 200, which the sender takes for success).
+  (every node since 2 November 2026).
   **[Live, being replaced]** Browser clients post one message to up to four
   entries in parallel; native SDKs were already sequential.
 - A timeout may hide a delivery that did arrive, so a retry can create a second
@@ -259,9 +277,8 @@ listen session of that user. Store comes first: a message is never only in
 flight. B keeps the offline copy until the recipient's ACK, and sends every
 unacknowledged copy again to each new listen.
 
-`NoPush` means "do not send a native push for this delivery". **[Live, being
-replaced]** The deployed SI drops the flag when it unwraps the work envelope.
-**[In rollout]** The flag is honoured.
+`NoPush` means "do not send a native push for this delivery". Every node
+honours the flag when it unwraps the work envelope (since 2 November 2026).
 
 ### 4.4 Receipts and ACK
 
@@ -316,9 +333,10 @@ message out to all of them. Entry C must not be B. Keepalives are sent on a
 
 ### 5.2 Sealed listen stream
 
-**[Live, being replaced]** B writes each frame as plaintext JSON
-`data: {"data": "<armor>"}`. Entry C therefore sees the recipient key ID of
-every delivered message.
+**[Live, being replaced]** Released clients listen without a key and expect
+plaintext frames `data: {"data": "<armor>"}`, in which entry C would see the
+recipient key ID of every delivered message. No node accepts such a listen
+since 2 November 2026.
 
 **[In rollout]** The listen command carries a fresh 32-byte `streamKey`,
 created for each listen and kept only in memory. B refuses a listen without
@@ -369,9 +387,10 @@ listens was drafted and not adopted (Appendix B).
 
 ### 5.4 Legacy listen pool
 
-**[Live, being replaced]** Older clients listen with `mining` +
-`listenKind: "chat"`. **[In rollout]** That pool receives no Chat messages,
-because its frames cannot be sealed; it keeps presence and mining only.
+**[Live, being replaced]** Released Merchant OS and Alliance builds listen
+with `mining` + `listenKind: "chat"`. Since 2 November 2026 that pool receives
+no Chat messages on any node, because its frames cannot be sealed; it keeps
+presence and mining only.
 
 ---
 
@@ -497,15 +516,15 @@ offer store fails the dial.
 **[Live, being replaced]** The v2 offer carries a caller-generated
 `sessionKey`, an unused `tempWalletAddress`, entry domains, and, from native
 callers, the caller's relay. If the callee mailbox does not confirm
-`pushed: true` within about three seconds, current clients send a legacy
+`pushed: true` within about three seconds, released clients send a legacy
 `voice_listen` to the **caller's** own mailbox carrying `targetWallet` and
-`offerArmor`; that mailbox forwards the offer and rings the callee, and so
-learns the callee's wallet.
+`offerArmor`, which would let that mailbox learn the callee's wallet. Every
+node ignores those fields since 2 November 2026.
 
 **[In rollout]**
 
-- The legacy fallback is deleted from every client and ignored by the node.
-  The callee-mailbox ring is the only wake path.
+- The legacy fallback is deleted from every client; the nodes already ignore
+  it. The callee-mailbox ring is the only wake path.
 - The callee mailbox also writes the offer into the callee's live listen
   stream, so an online callee needs nothing else, and answers
   `{ok, delivered, pushed}`.
@@ -604,8 +623,7 @@ is secret) and the recovered signer is the callee. The caller then shows
 restricting Beamio" and keeps ringing until the normal timeout. In device
 tests, push to receipt at the caller's mailbox took a median of about 2.3
 seconds (95th percentile about 3.1 seconds, 16 calls), so 8 seconds leaves a
-margin of about 5 seconds. Old clients send no receipt, so a new caller shows
-the hint for them.
+margin of about 5 seconds.
 
 ### 8.6 Ring window and timeout **[In rollout]**
 
@@ -693,13 +711,14 @@ mailbox listen:
 
 It is encrypted to the route PGP of the node that will hold the session, sent
 through an entry that is not that node, and carries **no wallet and no
-signature**. The locator and the write key are the only credentials. A v2 node
-answers `voice_ready` with `v: 2`. The listener hands the locator and write key
+signature**. The locator and the write key were the only credentials. The node
+answered `voice_ready` with `v: 2`. The listener hands the locator and write key
 to the peer only inside the signed offer or an AES control chunk, and
 announces v2 in `voice_media_caps_v1` (`chan: 2`).
 
-**[In rollout]** A node on the new CoNET-SI refuses this listen with
-`voice_listen_v3_required`. Section 10 replaces it.
+Since 2 November 2026 every node refuses this listen with
+`voice_listen_v3_required`, so released clients cannot open a voice channel.
+Section 10 replaces it.
 
 ### 9.2 Chunks
 
@@ -737,16 +756,17 @@ capture time is too old, and reassembles video by `frameId` / `fragIdx` /
 ### 9.5 Voice channel v1 **[Live, being replaced]**
 
 Voice channel v1 (`voice_uplink` / `voice_downlink` JSON with outer `seq`,
-`callId` and session IDs, reordered before decryption) remains on the deployed
-fleet only for peers that do not announce v2. **[In rollout]** The new
-CoNET-SI no longer forwards v1 frames, and new clients have no v1 path.
+`callId` and session IDs, reordered before decryption) was kept for peers that
+do not announce v2. No node forwards v1 frames since 2 November 2026, and new
+clients have no v1 path.
 
 ---
 
 ## 10. Voice channel v3: payer-signed temporary channels **[In rollout]**
 
-v3 runs on a few canary mailbox and relay nodes and in release-candidate
-builds of all three clients. It ships together with the privacy rollout.
+The node side of v3 runs on every Guardian node since 2 November 2026
+(CoNET-SI 74c6cfd). The clients are release-candidate builds of all three
+apps and ship together with the privacy rollout.
 
 ### 10.1 Why
 
@@ -922,7 +942,7 @@ No charge exists yet, so nothing can be drained today.
   tokens are not logged.
 - **Message push [Live].** When a mailbox stores a message for a user with a
   registered device, it asks the push API to show a badge, unless the delivery
-  carries `NoPush` (honoured in rollout). ACKs, receipts and wake receipts
+  carries `NoPush` (honoured by every node). ACKs, receipts and wake receipts
   never push.
 - **Call push [Live].** Only the callee's own mailbox rings, on
   `voice_offer_store` with `push: 1`. iOS uses PushKit / CallKit and Android
@@ -1017,13 +1037,13 @@ peer's mailbox.
 | Unknown-caller tag lookup | The Beamio API sees the callee's IP query the caller's wallet at ring time | Kept by operator decision |
 | Android push limits | Deep sleep and force stop drop pushes on the phone; calls are missed and messages wait for the app to open | Detection, guidance, wake receipt, Missed call (Section 11.1) |
 | No paid-channel bounds | A caller could fill channels the callee pays for | Bounds and revocation [Open]; no charge exists yet |
-| Old clients | After the rollout, old clients lose real-time receive and calls on upgraded nodes, and old and new clients cannot call each other | Not backward compatible by decision; release all clients together |
+| Released clients | Since every node moved to the new CoNET-SI on 2 November 2026, released clients (chat-sdk-ios 0.1.7, chat-sdk-android 0.2.5, Consumer PWA 0.52.925 and the shells that embed it) get no real-time receive and cannot call; their unsigned route registration is refused | Not backward compatible by decision; the new clients ship as soon as possible |
 | Untested paths | Moving a channel after a relay fails during a call; video in the second direction; the latency targets of Section 10.4 | Next release-candidate round |
 | Half-closed listens at the node | A client that reuses an `instanceId` can still lose its new session at B; our clients no longer do | Node-side cleanup drafted, not adopted |
 | Timing and size | Padding hides coarse sizes, not timing | Out of scope |
 | Collusion | Entry + mailbox, or one operator in several roles, can relink sender, IP and recipient | Out of scope |
 | Long-term PGP keys | No forward secrecy for stored ciphertext | Chat crypto V3 research |
-| Replay | A valid old armor can be posted again | Application dedupe by `sendId`; mailbox dedupe by armor hash (in rollout) |
+| Replay | A valid old armor can be posted again | Application dedupe by `sendId`; mailbox dedupe by armor hash (every node) |
 | Endpoints | A compromised device exposes what it can decrypt | Out of scope |
 
 Fixed since v0.1, all **[In rollout]**:
@@ -1044,34 +1064,36 @@ Fixed since v0.1, all **[In rollout]**:
 
 The other fixes listed as in rollout in v0.1 (mailbox layer, one entry,
 sealed listen, `NoPush`, lookup without `from`, removal of the legacy call
-wake) passed device tests on canary nodes and are still in rollout.
+wake) passed device tests on canary nodes. Their node side runs on every node
+since 2 November 2026; the clients are still release candidates.
 
 ---
 
 ## 15. Compatibility and rollout
 
-The in-rollout changes are **not backward compatible**: a mailbox on the new
-CoNET-SI refuses a listen without `streamKey` and gives no Chat to the legacy
-pool, a relay refuses any `voice_listen` that is not v3, new clients drop
-unsealed frames and never send the legacy call-wake fields, and old and new
-clients cannot call each other. The privacy changes and voice channel v3
-ship together.
+The in-rollout changes are **not backward compatible**. Every Guardian node
+runs the new CoNET-SI (74c6cfd) since 2 November 2026, by operator decision
+("upgrade every SI node; no need to consider old-version users"). Every node
+now refuses a mailbox listen without `streamKey`, gives no Chat to the legacy
+pool, refuses any `voice_listen` that is not v3, no longer forwards v1 voice
+frames, ignores the legacy call-wake fields, and answers `no_route` when it
+cannot route. New clients drop unsealed frames and never send the legacy
+fields. Released clients therefore have no real-time receive and no calls
+until the new builds reach them. The privacy changes and voice channel v3
+ship together in those builds.
 
-Release order, decided by the operator on 2 November 2026 ("test everything,
-package, then deploy at the same time"); each step needs operator approval:
+Remaining steps; each needs operator approval:
 
-1. Finish device tests on the canary nodes and release-candidate builds.
+1. Finish device tests on the release-candidate builds.
 2. Commit the work of all sessions and tag chat-sdk-ios and chat-sdk-android.
-3. Build the iOS and Android apps and submit the iOS app for review.
-4. In one window: deploy CoNET-SI to the whole fleet (each node's build
-   checked), push the PWA over the air, and release the Android app.
-   Entries upgrade with the fleet; mailboxes and relays execute the new rules.
-5. iOS users on the old app lose Chat until the new app is approved.
-6. GitBook pages move labels from [In rollout] to [Live].
+3. Build the iOS and Android apps, submit them, and push the PWA over the air.
+4. Deploy the signed route registration API after the new clients are out
+   (released clients' unsigned registrations are refused from then on).
+5. GitBook pages move labels from [In rollout] to [Live].
 
-Other clients that share the browser SDK (merchant and POS apps) must take the
-same update, or their real-time receive stops when their mailbox upgrades. The
-POS copy of the SDK has not yet received the listen-health fixes.
+Other clients that share the browser SDK (merchant and POS apps) need the same
+update; until they have it, their real-time receive is stopped. The POS copy
+of the SDK has not yet received the listen-health fixes.
 
 ---
 
@@ -1080,7 +1102,7 @@ POS copy of the SDK has not yet received the listen-health fixes.
 | Command / object | Encrypted to | Sent through | Signed by wallet | Status |
 |---|---|---|---|---|
 | Message (layers ①–⑤) | Recipient user PGP, then recipient mailbox route PGP | One random entry ≠ both mailboxes | Yes, inside the user layer | Live; layer ⑤ always and one entry at a time in rollout |
-| `mailbox_listen` | Own mailbox route PGP | Entry C ≠ B | Yes | Live; `streamKey` required in rollout |
+| `mailbox_listen` | Own mailbox route PGP | Entry C ≠ B | Yes | Live; `streamKey` required by every node since 2 November 2026 |
 | `gossip_delivery_ack` | Own mailbox route PGP | Entry ≠ B | Yes | Live |
 | `beamio_chat_delivery_receipt_v1` | Sender user PGP + sender mailbox layer, `NoPush` | Random entry | Yes, inside the user layer | Live |
 | `wallet_online_query` / `wallet_native_wake_query` | Contact mailbox route PGP | Entry ≠ B | Yes (known limitation) | Live |
@@ -1095,10 +1117,10 @@ POS copy of the SDK has not yet received the listen-health fixes.
 | Caller cancel, `voice_end_v1` | Peer user PGP + mailbox layer, and an AES control chunk once connected | Random entry | Yes, inside the user layer | Live; prepared copies in rollout |
 | `voice_listen` v3 | Relay route PGP | Entry ≠ relay, ≠ own mailbox | No; temporary wallet and payer signatures | In rollout |
 | `voice_channel_ready_v3` | AES control chunk on the callee's voice channel | Random entry | No (AES-authenticated) | In rollout |
-| `voice_listen` v2 | Session node route PGP | Entry ≠ that node | No | Live, being replaced |
+| `voice_listen` v2 | Session node route PGP | Entry ≠ that node | No | Refused by every node since 2 November 2026 (`voice_listen_v3_required`) |
 | `CVC2` chunk | Relay route PGP | Random entry per chunk | No | Live; shared by v2 and v3 |
-| `voice_uplink` / `voice_downlink` v1 | Session node route PGP | Random entry | No | Live, being replaced |
-| `voice_listen` with `targetWallet` / `offerArmor` | Own mailbox route PGP | Entry ≠ B | No | Live, being replaced |
+| `voice_uplink` / `voice_downlink` v1 | Session node route PGP | Random entry | No | Not forwarded by any node since 2 November 2026 |
+| `voice_listen` with `targetWallet` / `offerArmor` | Own mailbox route PGP | Entry ≠ B | No | Fields ignored by every node since 2 November 2026 |
 
 ## Appendix B — Open items
 
@@ -1110,8 +1132,9 @@ POS copy of the SDK has not yet received the listen-health fixes.
 6. Whether native apps move to an entry outer layer or TLS for `/post` and the listen stream.
 
 Settled since v0.1: the v3 wire format (Section 10.3, final at release);
-retirement of voice channel v1 and of Chat on the legacy listen pool (both
-removed in the rollout, no backward compatibility).
+retirement of voice channel v1, voice channel v2 listens and Chat on the
+legacy listen pool (all removed from every node on 2 November 2026, no
+backward compatibility).
 
 ## Appendix C — Revision history
 
@@ -1119,3 +1142,4 @@ removed in the rollout, no backward compatibility).
 |---|---|---|
 | v0.1 | 1 November 2026 | First draft, from the operator decisions of 31 October and 1 November 2026 and the deployed and in-rollout code |
 | v0.2 | 2 November 2026 | Voice channel v3 moves from Planned to In rollout, with its wire format, refusal codes and canary results. New: listen health (5.3), warm node pools (7.4), native-only sending in the apps (4.5), `no_route`, mailbox alignment before dialing (8.2), late-push handling (8.3), incoming identity and local avatars (8.4), the `voice_call_ringing_v1` wake receipt (8.5), the 60-second ring window and native caller timeout (8.6), prepared cancel and hang-up, busy and Missed call (8.7), Android push limits (11.1). Known limitations and open items updated; rollout order as decided on 2 November. Chat described as an application of Layer Minus, with node roles in Layer Minus terms |
+| v0.2.1 | 2 November 2026 | Every Guardian node runs the new CoNET-SI (74c6cfd): label definitions, Section 15 and Appendix A state what nodes now refuse; released clients lose real-time receive and calls. Route registration must be signed by the wallet; a client registers only after a successful chain read shows no record, a different key or no mailbox, and keeps its mailbox (Section 3.1) |

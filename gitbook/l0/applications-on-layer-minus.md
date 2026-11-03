@@ -44,7 +44,7 @@ The messaging and calling application. Every node it uses is a Guardian node
 running CoNET-SI as an entry, a mailbox or a voice relay; Chat runs no servers
 of its own. It adds EIP-191 signed envelopes with the recovered-signer
 identity rule, dual receipts, group fan-out, call signalling through the
-mailboxes, payer-signed voice channels (in rollout), a client daemon, and
+mailboxes, payer-signed voice channels, a client daemon, and
 encrypted history on IPFS. Part-by-part mapping:
 [Layer Minus — CoNET Chat](layer-minus.md#conet-chat). Full design:
 [CoNET Chat whitepaper](../applications/depin-chat-whitepaper.md).

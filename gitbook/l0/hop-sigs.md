@@ -34,7 +34,7 @@ Entry A therefore:
 
 B sees hop signatures because A created them. B never trusts a client-supplied hop header.
 
-Live SI `main` still forwards a headerless non-local outer key when AddressPGP / Guardian lookup succeeds (one-layer Chat). When lookup fails it currently returns an empty 200. The **frozen** miss is **404**.
+Live SI `main` still forwards a headerless non-local outer key when AddressPGP / Guardian lookup succeeds (one-layer Chat). When lookup fails it answers HTTP 200 with `{"ok": false, "error": "no_route"}` (since 2 November 2026), which clients treat as a clear failure. The **frozen** miss is **404**.
 
 ## Nested PGP (one peel per node)
 
@@ -158,7 +158,7 @@ Documentary names. HTTP/socket behavior is what clients observe.
 | Code | When | Client / previous hop sees |
 | --- | --- | --- |
 | `ERR_NOT_PGP` | Body is not OpenPGP armor | **404** (`body has not PGP message`) |
-| `ERR_OUTER_KEY_UNROUTABLE` | Headerless POST; outer key ID is not a node / mailbox route | **404** (frozen; live miss may still be empty 200) |
+| `ERR_OUTER_KEY_UNROUTABLE` | Headerless POST; outer key ID is not a node / mailbox route | **404** (frozen; live SI answers 200 `{"ok": false, "error": "no_route"}`) |
 | `ERR_HOP_HEADER_INVALID` | Header present but not a valid compact array | socket `end` |
 | `ERR_HOP_LIMIT` | More than 3 signatures, or no room to append | socket `end`; packet discarded |
 | `ERR_ROUTE_LOOP` | Inner key is this node, or this miner `w` already in the header | socket `end` |

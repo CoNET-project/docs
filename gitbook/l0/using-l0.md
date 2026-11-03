@@ -33,7 +33,7 @@ correlate their observations.
 | Offline-capable messages | Chat envelope + mailbox delivery | [CoNET Chat developer guide](chat-developer-guide.md) |
 | Small group messages (≤10) | Chat group V1: one user-PGP armor per member; owner-signed roster / tombstone inside ciphertext | [CoNET Chat developer guide — Group chat V1](chat-developer-guide.md#group-chat-v1-small-groups) |
 | Voice messages | Recipient-only Chat manifest + AES-GCM IPFS fragment | [CoNET Chat developer guide](chat-developer-guide.md) |
-| Real-time voice | Offer to the callee mailbox (`voice_offer_store`) + temporary voice SSE + v2 `CVC2` chunks | [CoNET Chat developer guide](chat-developer-guide.md) |
+| Real-time voice | Offer to the callee mailbox (`voice_offer_store`) + temporary voice SSE (v3) + `CVC2` chunks | [CoNET Chat developer guide](chat-developer-guide.md) |
 | Presence, native shell status, and delivery receipt | `wallet_online_query`, then `wallet_native_wake_query`, plus acknowledgement. Both queries go through an entry that is not the destination mailbox, so that mailbox does not see the querier's IP | [CoNET Chat developer guide](chat-developer-guide.md) |
 | UDP frames | End-to-end AES frames over mailbox relay | [UDP forwarding](udp-forward.md) |
 | Wallet-addressed Web/API request | `web3://` caller-signed request + correlated encrypted response | [`web3://` Application Protocol](web3-application-protocol.md) |
@@ -107,9 +107,9 @@ Rules:
 2. Submit it through **one** random healthy entry **A**, where A is neither B
    nor the sender's own mailbox; try another entry only after a clear failure.
 3. Encrypt receive/listen commands to mailbox **B route PGP**. Chat clients use
-   the signed `mailbox_listen` command (in rollout with a fresh `streamKey`,
-   which B uses to seal every SSE frame). The legacy `mining` +
-   `listenKind: "chat"` pool stops receiving Chat in the rollout.
+   the signed `mailbox_listen` command with a fresh `streamKey`, which B uses
+   to seal every SSE frame; B refuses a listen without it. The legacy
+   `mining` + `listenKind: "chat"` pool receives no Chat.
 4. Submit those commands through healthy entry **C**, where C differs from B.
 5. Treat entry `2xx` as transport progress, not delivery or application
    success.
@@ -167,8 +167,9 @@ Real-time voice is a different composition. It leaves `mailbox_listen`
 untouched. The caller sends the signed offer, encrypted to the callee user PGP,
 only to the callee's mailbox (`voice_offer_store` with `push: 1`, through a
 random entry); that mailbox stores it and rings its own user. Each listening
-side then opens an unsigned, wallet-free temporary `voice_listen` (voice
-channel v2, with a write key), and the peers send `CVC2` chunks: a channel
+side then opens a temporary `voice_listen` on a relay it chooses (voice
+channel v3: a write key, a temporary wallet signature and the paying callee's
+authorization, no wallet of the other party), and the peers send `CVC2` chunks: a channel
 locator, an HMAC, and padded AES-GCM ciphertext that holds the sequence number,
 capture time, media kind and fragment numbers. The node checks the HMAC and
 forwards the blob without reading it; the receiver decrypts first, then
@@ -183,10 +184,11 @@ voice channel; receivers act on the first copy by `callId`.
 
 The initiating application wallet stays inside the recipient-user-PGP offer.
 A killed-app native SDK fetches the offer with `voice_offer_fetch` and
-decrypts it with the user PGP key it holds. Current builds still have a legacy
-fallback that sends `targetWallet` and `offerArmor` to the caller's own mailbox
-in `voice_listen`; it is being removed. Voice channel v3, with payer-signed
-temporary channels on relays each side chooses, is in rollout. “Both systems use a relay” is not a privacy comparison; compare
+decrypts it with the user PGP key it holds. Every node ignores the old
+fallback fields (`targetWallet`, `offerArmor` in a `voice_listen` to the
+caller's own mailbox) and accepts only voice channel v3: payer-signed
+temporary channels on relays each side chooses (on every node since
+2 November 2026; clients in release candidates). “Both systems use a relay” is not a privacy comparison; compare
 which identity, IP, content, timing, and session fields each role actually
 receives.
 

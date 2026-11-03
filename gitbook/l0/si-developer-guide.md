@@ -11,19 +11,18 @@ Use this page to build a client against SI. Developer-track index: [L0 developme
 ## Opaque real-time media relay
 
 SI carries media chunks for a temporary voice session that the listener
-opened with an unsigned, wallet-free `voice_listen`. **Live (voice channel
-v2):** each chunk is an OpenPGP binary literal
+opened with a v3 `voice_listen` (voice channel v3, on every node since
+2 November 2026). Each chunk is an OpenPGP binary literal
 `"CVC2" ‖ locator(16) ‖ HMAC16 ‖ blob`; SI checks the HMAC with the session's
 write key, rate-limits, and writes only the blob to the session SSE. SI does
 not decrypt, reorder, persist, or interpret media. Sequence numbers, capture
 time, media kind and fragment numbers are inside the AES-GCM blob, which is
 padded to a multiple of 256 bytes. Clients post each chunk through a different
-random entry, then decrypt, reorder and reassemble on the receiving side. The
-older v1 `voice_uplink` / `voice_downlink` JSON frames remain only as a
-fallback for clients that do not announce v2. **In rollout (voice channel
-v3):** the chunk format is unchanged, but `voice_listen` must be v3 and carry a
+random entry, then decrypt, reorder and reassemble on the receiving side.
+The `voice_listen` carries no wallet of either party; it carries a
 temporary-wallet signature bound to this node's route key ID plus a payer
-authorization, and SI no longer forwards v1 frames. Details:
+authorization. SI refuses v2 listens and no longer forwards v1
+`voice_uplink` / `voice_downlink` frames. Details:
 [CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v3-payer-signed-temporary-channels-in-rollout).
 `/post` remains `{ "data": "<armor>" }` only; no media metadata is added as a
 cleartext field.
@@ -120,7 +119,7 @@ Do not mix encryption targets.
 
 ### 1. Opaque business armor (SI forwards, does not decrypt)
 
-Encrypt to the **recipient’s user PGP**. SI only sees the OpenPGP key ID and routes to that key’s mailbox. If SI has no route for that key ID it answers `{ "ok": false, "error": "no_route" }` (in rollout; the live SI answers an empty 200), so the client treats it as a clear failure and tries another entry.
+Encrypt to the **recipient’s user PGP**. SI only sees the OpenPGP key ID and routes to that key’s mailbox. If SI has no route for that key ID it answers `{ "ok": false, "error": "no_route" }`, so the client treats it as a clear failure and tries another entry.
 
 The armor must expose **exactly one** encryption key ID. If SI reads more than
 one key ID on business armor or on the inner armor of mailbox work, it rejects
@@ -200,14 +199,14 @@ Source: CoNET-SI `localNodeCommandSocket`. Encrypt the command family to **route
 
 | `command` | Encrypt to | HTTP / SSE | Notes |
 | --- | --- | --- | --- |
-| **`mailbox_listen`** | Own mailbox **B** route PGP | Long SSE via entry **C ≠ B** | The Chat mailbox command. Required `walletAddress`; optional opaque `instanceId`. Multiple instances per wallet are retained and receive fan-out copies. **In rollout:** required `streamKey` (32 bytes, base64); every frame is sealed with it; a listen without it is refused |
-| `voice_listen` | Route PGP of the node that holds the session | Separate temporary SSE via an entry that is not that node | Unsigned, no wallet. Fields: `sessionId` (locator), `timestamp`, `v: 2`, `wk` (write key). Node answers `voice_ready` with `v: 2`. Separate voice pool; never occupies `mailbox_listen`. **Live, being removed:** the legacy wake fields `targetWallet`, `callId`, `expiresAt`, `pushTimestamp`, `offerArmor`; in rollout the node ignores them. **In rollout (v3 only):** fields `v: 3`, `sessionId`, `wk`, `timestamp`, `temp`, `tempSig` (temporary wallet over `conet.voice.sse.listen.v3\|sessionId\|wk\|node route key ID\|timestamp`), `pay` (`{ payer, notAfter, maxBytes, maxSeconds, sig }`, payer EIP-191 over the temporary wallet). Refusals: `voice_listen_v3_required`, `invalid_voice_session`, `invalid_voice_timestamp`, `voice_temp_auth`, `voice_pay_auth`, `voice_pay_expired` (`notAfter` past or more than 48 h ahead), `voice_temp_reused`. Success: `voice_ready` with `listen: 3`. The node must not be either party's mailbox |
-| `voice_offer_store` | Callee mailbox **B** route PGP | Short POST via a random entry that is neither mailbox | The only way an offer travels. Stores user-PGP `offerArmor` by opaque `callId`+`sessionId` (16–128 chars, the capability). With `push: 1` and `pushTimestamp`, B finds its own user from the offer's recipient key ID and calls `/api/voiceCallPush`; answers `{ ok, pushed }`. Never decrypts. **In rollout:** also writes the offer to the callee's live mailbox SSE and answers `{ ok, delivered, pushed }` |
+| **`mailbox_listen`** | Own mailbox **B** route PGP | Long SSE via entry **C ≠ B** | The Chat mailbox command. Required `walletAddress`; optional opaque `instanceId`. Multiple instances per wallet are retained and receive fan-out copies. Required `streamKey` (32 bytes, base64); every frame is sealed with it; a listen without it is refused |
+| `voice_listen` | Route PGP of the node that holds the session | Separate temporary SSE via an entry that is not that node | v3 only; no wallet of either party. Separate voice pool; never occupies `mailbox_listen`. The legacy wake fields (`targetWallet`, `callId`, `expiresAt`, `pushTimestamp`, `offerArmor`) are ignored. Fields: `v: 3`, `sessionId`, `wk`, `timestamp`, `temp`, `tempSig` (temporary wallet over `conet.voice.sse.listen.v3\|sessionId\|wk\|node route key ID\|timestamp`), `pay` (`{ payer, notAfter, maxBytes, maxSeconds, sig }`, payer EIP-191 over the temporary wallet). Refusals: `voice_listen_v3_required`, `invalid_voice_session`, `invalid_voice_timestamp`, `voice_temp_auth`, `voice_pay_auth`, `voice_pay_expired` (`notAfter` past or more than 48 h ahead), `voice_temp_reused`. Success: `voice_ready` with `listen: 3`. The node must not be either party's mailbox |
+| `voice_offer_store` | Callee mailbox **B** route PGP | Short POST via a random entry that is neither mailbox | The only way an offer travels. Stores user-PGP `offerArmor` by opaque `callId`+`sessionId` (16–128 chars, the capability). With `push: 1` and `pushTimestamp`, B finds its own user from the offer's recipient key ID and calls `/api/voiceCallPush`. Also writes the offer to the callee's live mailbox SSE. Answers `{ ok, delivered, pushed }`. Never decrypts |
 | `voice_offer_fetch` | Own mailbox **B** route PGP | Short POST via entry **C ≠ B** | Return indexed `offerArmor` for a killed-app native SDK to decrypt locally. Same capability auth. |
 | v2 chunk (`CVC2` binary literal) | Route PGP of the peer's session node | Short POST via a random entry per chunk | `locator ‖ HMAC16 ‖ padded AES-GCM blob`. Answers `{ ok: true }`, `voice_chunk_auth`, `invalid_voice_chunk`, or `target_voice_session_not_found` |
-| `voice_uplink` / `voice_downlink` | Route PGP of the peer's session node | Short POST via a random entry | v1 fallback only: AES-GCM frame addressed by `targetSessionId` with outer `seq`; unsigned, no wallet. **In rollout:** no longer forwarded |
+| `voice_uplink` / `voice_downlink` | — | — | **Removed 2026-11-02.** v1 frames are no longer forwarded |
 | `voice_unlisten` | Own mailbox **B** route PGP | Short POST via entry **C ≠ B** | Closes one temporary voice session. |
-| `mining` + `listenKind: "chat"` | Own mailbox **B** route PGP | Long SSE via entry **C ≠ B** | Legacy Chat / Merchant OS / Alliance listen. Live: still receives Chat as plaintext frames (`algorithm` / `Securitykey` are not used for Chat). **In rollout:** receives no Chat messages; use `mailbox_listen` |
+| `mining` + `listenKind: "chat"` | Own mailbox **B** route PGP | Long SSE via entry **C ≠ B** | Legacy Chat / Merchant OS / Alliance listen. Receives no Chat messages since 2026-11-02 (its frames cannot be sealed); presence only. Use `mailbox_listen` |
 | `mining` (omit `listenKind`) | Target SI route PGP | Infrastructure SSE | LayerMinus mining. SI defaults `listenKind` to `"mining"`. Not a Chat shortcut |
 | `gossip_delivery_ack` | **B** route PGP | Entry **C ≠ B** | After the client ingested user-PGP armor. Fields: `walletAddress`, `armorHash` (`keccak256(utf8(full armor))`), `timestamp` (unix seconds, ±600s), optional `sendId` |
 | `wallet_online_query` | Contact’s mailbox **B** route PGP | Entry **C ≠ B** | Presence. Fields: `walletAddress` (signer), `targetWallet`, `timestamp` (±600s). The signer is visible to B: known limitation, to be solved with `web3://`. Success: `{ ok: true, wallet, online, listenAgeMs, nodeWallet }`. Do **not** use chain `routeOnline` |
@@ -217,10 +216,10 @@ Source: CoNET-SI `localNodeCommandSocket`. Encrypt the command family to **route
 | `l0_listen`, `l0_connect`, or `mining` + `listenKind: "l0"` | — | — | **Removed 2026-10-31.** SI closes the connection |
 | `SilentPass` / `SaaS_Sock5` / `SaaS_Sock5_v2` | Egress node route PGP | Product-specific | Paid proxy; not a Chat path |
 
-Old clients that omit `listenKind` on `mining` are treated as mining.
+A `mining` listen without `listenKind` is treated as mining.
 `mining` + `listenKind: "chat"` is a legacy single-session mailbox path that
-stops receiving Chat in the rollout (its frames cannot be sealed). Chat clients
-send `mailbox_listen`:
+receives no Chat (its frames cannot be sealed). Chat clients send
+`mailbox_listen`:
 the session is indexed by `(wallet, instanceId)` and one encrypted business
 frame is attempted on every healthy session for that wallet. A failed device
 session is evicted independently. Mailbox keepalives use a bounded,
@@ -251,7 +250,7 @@ Optional outer wrap: encrypt a user-PGP business message to an **entry** route k
 | Read RPC | `https://rpc1.conet.network` (primary), `https://publicrpc.conet.network` (backup). Do not use deprecated `rpc.conet.network` |
 | AddressPGP | [`0x684b0ac760cEE9c9b85de36d69746420648Cf9e2`](https://mainnet.conet.network/address/0x684b0ac760cEE9c9b85de36d69746420648Cf9e2) |
 | GuardianNodesInfoV6 | [`0xBC6b53065b5647261396d002bDBA0d3396E0722f`](https://mainnet.conet.network/address/0xBC6b53065b5647261396d002bDBA0d3396E0722f) |
-| Compatibility register API | `POST https://beamio.app/api/regiestChatRoute` (spelling is live) |
+| Register API | `POST https://beamio.app/api/regiestChatRoute` (spelling is live). The request must be signed by the wallet (EIP-191); see [Sample: register a mailbox route](#sample-register-a-mailbox-route) |
 
 ## Sample: discover Guardian nodes
 
@@ -338,7 +337,25 @@ Encrypt **business** armor to `userPublicKeyArmored` of the recipient **EOA**. A
 
 ## Sample: register a mailbox route
 
-Current clients generate an ECC OpenPGP key, take the **encryption subkey** ID (`getKeyIDs()[1]`, uppercase hex), choose a Guardian **domain** as mailbox, and call the compatibility API. The live field name is `routeKeyID`; clients pass that **domain**, not the hex key ID.
+Current clients generate an ECC OpenPGP key, take the **encryption subkey** ID (`getKeyIDs()[1]`, uppercase hex), choose a Guardian **domain** as mailbox, and call the register API. The live field name is `routeKeyID`; clients pass that **domain**, not the hex key ID.
+
+The API writes the record with an operator wallet, so the request itself must prove that the owner of `wallet` asked for it. The wallet signs (EIP-191 `personal_sign`) these lines joined with `\n`:
+
+```text
+Beamio regiestChatRoute
+wallet:<lowercase address>
+keyID:<keyID>
+publicKeyArmoredHash:<keccak256(utf8(publicKeyArmored))>
+encrypKeyArmoredHash:<keccak256(utf8(encrypKeyArmored))>
+routeKeyID:<routeKeyID>
+timestamp:<unix milliseconds>
+nonce:<0x + 32 hex characters>
+```
+
+- The hashes cover the field values **exactly as sent** (`publicKeyArmored` is the base64 string). Trim every string field before hashing; the server trims before it verifies and before it writes.
+- `timestamp` is an integer in **milliseconds** and must be within 10 minutes of server time.
+- `nonce` is 16 random bytes, fresh for every request, including retries. The server accepts each `wallet` + `nonce` once.
+- The body carries `wallet, keyID, publicKeyArmored, encrypKeyArmored, routeKeyID, timestamp, nonce, signature`. A request without a signature is refused.
 
 ```ts
 import { generateKey } from 'openpgp'
@@ -356,6 +373,27 @@ export async function generateUserPgp() {
   return { privateKey, publicKey, keyID }
 }
 
+function regiestChatRouteMessage(f: {
+  wallet: string
+  keyID: string
+  publicKeyArmored: string
+  encrypKeyArmored: string
+  routeKeyID: string
+  timestamp: number
+  nonce: string
+}): string {
+  return [
+    'Beamio regiestChatRoute',
+    `wallet:${f.wallet.toLowerCase()}`,
+    `keyID:${f.keyID}`,
+    `publicKeyArmoredHash:${ethers.keccak256(ethers.toUtf8Bytes(f.publicKeyArmored))}`,
+    `encrypKeyArmoredHash:${ethers.keccak256(ethers.toUtf8Bytes(f.encrypKeyArmored))}`,
+    `routeKeyID:${f.routeKeyID}`,
+    `timestamp:${f.timestamp}`,
+    `nonce:${f.nonce.toLowerCase()}`,
+  ].join('\n')
+}
+
 export async function registerChatRoute(opts: {
   eoaPrivateKey: string
   publicKeyArmored: string
@@ -364,25 +402,45 @@ export async function registerChatRoute(opts: {
   mailboxDomain: string
 }): Promise<boolean> {
   const wallet = new ethers.Wallet(opts.eoaPrivateKey)
+  // Sign a fresh request on every attempt: new timestamp, new nonce.
+  const fields = {
+    wallet: wallet.address,
+    keyID: opts.keyID.trim(),
+    publicKeyArmored: Buffer.from(opts.publicKeyArmored, 'utf8').toString('base64').trim(),
+    encrypKeyArmored: opts.encrypKeyArmored.trim(),
+    routeKeyID: opts.mailboxDomain.trim(),
+    timestamp: Date.now(), // milliseconds
+    nonce: ethers.hexlify(ethers.randomBytes(16)),
+  }
+  const signature = await wallet.signMessage(regiestChatRouteMessage(fields))
   const res = await fetch('https://beamio.app/api/regiestChatRoute', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      wallet: wallet.address,
-      keyID: opts.keyID,
-      publicKeyArmored: Buffer.from(opts.publicKeyArmored, 'utf8').toString('base64'),
-      encrypKeyArmored: opts.encrypKeyArmored,
-      routeKeyID: opts.mailboxDomain,
-    }),
+    body: JSON.stringify({ ...fields, signature }),
   })
   const json = await res.json().catch(() => ({}))
   return res.ok && !!json?.ok
 }
 ```
 
+Refusals:
+
+| Status | Meaning |
+| --- | --- |
+| 400 | Malformed field: wallet, keyID, armor, routeKeyID, nonce, or a timestamp that is not milliseconds |
+| 401 | `Missing signature`, `Invalid signature`, or `Expired timestamp` (more than 10 minutes from server time) |
+| 403 | `Signature does not match wallet` |
+| 409 | The same `wallet` + `nonce` was already accepted (replay) |
+
 `encrypKeyArmored` is an application backup of the user PGP private key (current clients AES-GCM encrypt it with material derived from the EOA). **Do not log** the EOA key, mnemonic, PGP private armor, `Securitykey`, or full hop signatures.
 
 After register, wait and re-read `searchKey(eoa)` until `userPgpKeyID` matches the local subkey ID.
+
+When to register:
+
+- Register only after a **successful** read of your own record shows one of: no record, a recorded user key that differs from the local key, or no mailbox route. A failed or timed-out read is never a reason to register. Retry the read with backoff; if you already know your mailbox, keep listening there meanwhile.
+- Keep the existing mailbox: use the route on chain, else the mailbox this device already uses. Pick a random Guardian domain only for a new wallet that has no mailbox anywhere.
+- A device without its user key generates a new one only after a successful read shows that no usable key exists. Generating a key because a read failed would overwrite the wallet's real key, and earlier messages could no longer be decrypted.
 
 ## Sample: encrypt a signed SI command
 
@@ -443,7 +501,7 @@ export async function postArmor(
 
 ### Legacy chat listen (`listenKind: "chat"`)
 
-Legacy only. Live mailboxes still deliver Chat on this pool as plaintext frames; mailboxes on the rollout SI do not. New clients use [Mailbox listen](#mailbox-listen).
+Legacy only. Since 2 November 2026 no mailbox delivers Chat on this pool; it carries presence only. Chat clients use [Mailbox listen](#mailbox-listen).
 
 ```ts
 export async function openChatListen(opts: {
@@ -479,7 +537,7 @@ export async function openChatListen(opts: {
 Use `mailbox_listen` for Chat. `instanceId` is an opaque per-device/session
 value; it must not contain an address, route key, or private material.
 `streamKey` is 32 random bytes generated for every listen and kept only in
-memory (in rollout: required; live nodes ignore it).
+memory. It is required: a listen without it is refused.
 
 ```ts
 export async function openMailboxListen(opts: {
@@ -519,7 +577,7 @@ wallet has three healthy `mailbox_listen` sessions, B attempts delivery to all
 three; an individual write failure does not cancel the other attempts. Clients
 must still deduplicate by their application `sendId`.
 
-**In rollout,** every frame B writes on this SSE is
+Every frame B writes on this SSE is
 `data: base64(iv[12] ‖ AES-256-GCM ciphertext ‖ tag[16])\r\n\r\n`: the plaintext
 is the same frame JSON padded with spaces to a multiple of 256 bytes, with a
 random IV per frame and no AAD. Open each frame with `streamKey` before
