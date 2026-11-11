@@ -1,6 +1,6 @@
 # Permissionless cloud and zero-trust applications
 
-**Evidence level: mixed.** The forwarding plane, hop **GB** metering, mailbox ciphertext store, and fragment APIs are live. Storage, WASM / container, and GPU work that a given node actually offers is deployment-specific. Decentralized AI is an **application composition**, not a shipped L0 product.
+**Evidence level: mixed.** The forwarding plane, hop **GB** metering, mailbox ciphertext store, and fragment APIs are live; GB issuance from metering is paused. Storage, WASM / container, and GPU work that a given node actually offers is deployment-specific. Decentralized AI is an **application composition**, not a shipped L0 product.
 
 Layer Minus is a **permissionless, decentralized cloud**. Anyone may use it. Anyone may join by offering resources. Developers build **privacy-first** applications on top of it. They must assume that **any one node can be malicious**.
 
@@ -14,7 +14,7 @@ Layer Minus is not a licensed SaaS and not a single operator’s data center. It
 | **Storage** | Hold ciphertext fragments, mailbox offline armor, or sealed indexes | Useful retention and retrieval, not custody of plaintext |
 | **CPU / GPU compute** | Run a signed job (storage command, WASM / container, inference helper) | Work the client can **verify** without trusting the host |
 
-The reward asset for DePIN service is **GB** (`GBToken` on CoNET L1). Forwarding is the live, byte-metered path. Storage and compute settlement follow the same rule: pay for **useful ciphertext work**, never for reading user plaintext.
+The reward asset for DePIN service is **GB**. The previous `GBToken` is no longer recognised and its services have stopped; the new GB design is [approved, not yet live](../l1/gb-billing.md). Forwarding is the live, byte-metered path, and GB issuance from it is paused. Storage and compute settlement follow the same rule: pay for **useful ciphertext work**, never for reading user plaintext.
 
 **Use of the plane is permissionless.** A developer does not apply to CoNET to send Chat, store fragments, or schedule a job. A user does not need an account issued by a node operator.
 
@@ -82,7 +82,7 @@ These are **what developers build**. They are not extra L0 protocols.
 | **Compute** | Send a sealed job to one or more nodes (WASM / container / GPU). Verify the result or use redundancy | Treat the host’s stdout as truth |
 | **Decentralized AI** | Private prompts and weights as fragments; inference as untrusted compute; results returned encrypted to the user | Upload a model or prompt in the clear to “the AI node” |
 
-Chat, SilentPass, fragment history, and hop **GB** are the current production building blocks. Bulk DCDN, copyright delivery, and a general GPU / AI marketplace remain **application designs** on the same zero-trust cloud. Document them as compositions, not as automatic SI policy.
+Chat, SilentPass, fragment history, and hop **GB** metering are the current production building blocks. Bulk DCDN, copyright delivery, and a general GPU / AI marketplace remain **application designs** on the same zero-trust cloud. Document them as compositions, not as automatic SI policy.
 
 ## Future direction: privacy-first decentralized AI
 

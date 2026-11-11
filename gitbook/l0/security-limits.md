@@ -70,7 +70,7 @@ There is **one** budget: **3 miner signatures**. Do not add a second `maxPeels` 
 
 An application can wrap a user-PGP business message to entry A, or use a short hop chain. A first-hop path observer then sees the **outer** key ID, not R's. Each peel node still learns the **next** key ID, time, and size. Extra hops are extra **GB**. This is not a mix network and does not replace padding.
 
-Live Chat clients still post a single user-PGP layer for ordinary messages (A forwards without decrypting when the key maps to a mailbox), which shows A the recipient's user key ID. In rollout every delivery carries a mailbox layer encrypted to B's route key, so A sees only B's key ID. The peel rule is available to any client that wraps.
+Older Chat clients post a single user-PGP layer for ordinary messages (A forwards without decrypting when the key maps to a mailbox), which shows A the recipient's user key ID. The web app (Consumer PWA 0.52.930) wraps every delivery in a mailbox layer encrypted to B's route key, so A sees only B's key ID. The peel rule is available to any client that wraps.
 
 Native apps post and listen over plain HTTP on port 80 without an extra entry layer. A network observer on that link sees the outer key ID (after the rollout, B's route key ID), sizes and timing. This is a known limitation that is not being changed now.
 
@@ -98,7 +98,7 @@ Content remains OpenPGP-encrypted. Since 2 November 2026 every node seals each S
 
 | Mode | Mechanism | Status |
 | --- | --- | --- |
-| **Sealed realtime** | Long-lived SSE. `mailbox_listen` carries a per-listen `streamKey` inside the route-PGP command; B seals every frame with AES-256-GCM and 256-byte padding; entries never receive the key. A listen without `streamKey` is refused; the legacy `Securitykey` field is not used for Chat. | **Implemented** on every node since 2 November 2026; clients in release candidates |
+| **Sealed realtime** | Long-lived SSE. `mailbox_listen` carries a per-listen `streamKey` inside the route-PGP command; B seals every frame with AES-256-GCM and 256-byte padding; entries never receive the key. A listen without `streamKey` is refused; the legacy `Securitykey` field is not used for Chat. | **Live** on every node since 2 November 2026 and in the released clients (chat-sdk-ios v0.1.8, chat-sdk-android v0.2.6) |
 | **Entry rotation** | The user may close C and open another SSE through a different healthy entry at any time. That breaks a long-lived bind to one ingress. It does **not** remove the SSE shape on the new C. | **Implemented** (client choice) |
 | **Privacy poll** | Randomized short polls, batch fetch, optional padding and dummy polls | **Not implemented** |
 
@@ -192,12 +192,17 @@ refuses a `voice_listen` without a valid temporary-wallet signature bound to
 that relay and a valid payer signature over the temporary wallet, an
 authorization that expires within 48 hours, and one temporary wallet per
 session. Every node runs it since 2 November 2026 and refuses older voice
-listens; the clients are release-candidate builds. This is a deliberate exception to the
+listens; the released clients use it. Only the format and the payer
+signatures are live; payment is not implemented. This is a deliberate exception to the
 rule that nodes see no wallet: the relay learns the payer wallet, how long the
 channel stays open and how many bytes it carries, and holds a signed record of
 it. It still does not learn the other party. Payers may split payment across
 several wallets to limit linkage. No usage is charged until the GB settlement
-module exists. Byte and duration bounds on an authorization, and payer
+module exists. The service-fee model the operator decided on 6 November 2026
+(the user approves the execution node, which collects in 0.1 GB steps and
+pays earlier hops every 12 hours) is not deployed; see
+[CoNET Chat whitepaper, Section 16.2](../applications/depin-chat-whitepaper.md#162-service-fees-in-gb-approved-not-yet-live).
+Its payments make the user-to-execution-node relationship public on chain. Byte and duration bounds on an authorization, and payer
 revocation, are not decided; the caller holds the write keys of channels the
 callee pays for.
 

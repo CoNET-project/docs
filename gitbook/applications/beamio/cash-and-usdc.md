@@ -1,7 +1,7 @@
 # Beamio cash and USDC
 
-**Maturity: Production reference.** Coinbase / Treasury `walletDeposit` and
-Stripe Crypto Onramp session APIs are live on `https://beamio.app`. Onramp
+**Maturity: mixed.** Stripe Crypto Onramp session APIs are live on
+`https://beamio.app`. The CONET-USDC minting path behind `walletDeposit` (Treasury LockMint) is stopped. In the current app the Coinbase row funds Base USDC. Onramp
 settlement depends on Stripe Crypto Onramp being enabled for the operator
 account and on the webhook event set. This page is not a claim that every paid
 session has already settled.
@@ -39,7 +39,7 @@ absence of all processing, contract, or network infrastructure.
 
 | Rail | User pays | On-chain result | Destination | Implementation |
 | --- | --- | --- | --- | --- |
-| **Coinbase / `walletDeposit`** | Coinbase Onramp / x402 settle | TreasuryBridgeV3 **LockMint** | **CONET-USDC** on CoNET | Existing wallet-deposit workflow. Do **not** retarget it to Base USDC. |
+| **Coinbase / `walletDeposit`** | Coinbase Onramp / x402 settle | TreasuryBridgeV3 **LockMint** | **CONET-USDC** on CoNET | **Stopped.** In the current app the Coinbase row funds Base USDC |
 | **Buy USDC with card** | Stripe Crypto Onramp (card / Stripe policy) | Stripe sends native USDC | **Native USDC on Base** to the owner **EOA** | `eoaUsdcStripe` — independent of `walletDeposit` |
 | **Merchant Kit Stripe** | Card (CAD kits) | Kit fulfillment | **B-Units / Ket** on CoNET | Merchant fuel / kit product — **not** a consumer USDC deposit |
 | **Merchant card Stripe** | Stripe-hosted Checkout link | Program-card top-up or membership fulfillment | Destination charge to the merchant's Connected Account | Checkout Session rail; Beamio supplies no customer/receipt email, and it is not a wallet deposit |
@@ -123,11 +123,11 @@ saved Connected Account and OAuth credentials. The action blocks all new
 Checkout sessions for the card but does not close, delete, or restrict the
 merchant's Stripe account.
 
-Treasury (sole active): **TreasuryBridgeV3** `0xa208982212978550594A7FEEB70a61665d129003`.
+Treasury: **TreasuryBridgeV3** `0xa208982212978550594A7FEEB70a61665d129003`; its cross-chain bridge is paused.
 
 Canonical CoNET-USDC for CoNET L1 application settlement is
 [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA)
-(6 decimals). The legacy USDC factory address
+(6 decimals). It will be replaced by a newly deployed contract (decided, not yet live); the switch-over plan will be announced. The current contract will not be upgraded. The legacy USDC factory address
 `0xfD0D7B0706AaB5E4351bcED37bC3C77ed6813907` is deprecated and must not be
 used in new application modules or accounting.
 
@@ -137,13 +137,15 @@ Base RPC for these reads: `https://base-rpc.conet.network`. Beamio does **not** 
 
 ## Coinbase / Treasury (`walletDeposit`)
 
-Coinbase `walletDeposit` is still the CONET-USDC LockMint path. Home **Fund Wallet** includes a **Coinbase** row: one tap fetches the Onramp session and opens Coinbase in the system browser or native `openURL`, with no second confirmation sheet. That row does not share fulfillment with **Debit card** (`eoaUsdcStripe`) or **Receive from a wallet**. **Receive via QR** remains a follow-on view (peer-to-peer EIP-681 to the owner EOA on Base), not a deposit rail. The **Receive from a wallet** sheet has no USDC amount field and no “Receive Funds” row. In the **native shell**, it always lists Phantom, MetaMask, OKX Wallet, and Trust Wallet, then opens the **PWA-built** deep link so that app can send Base USDC to the same EOA. In an **ordinary browser**, it lists only already-installed EIP-6963 / injected extensions; if none are present, the sheet shows an on-panel empty alert. Tapping an injected row connects and switches/adds Base. Neither the deep link nor the injected connect is a deposit rail. Clients must keep `WALLET_USDC_DEPOSIT_WORKFLOW = 'walletDeposit'` for the Coinbase row.
+**Stopped:** the CONET-USDC LockMint path behind Coinbase `walletDeposit`. In the current app, Home **Fund Wallet** includes a **Coinbase** row that funds Base USDC: one tap fetches the Onramp session and opens Coinbase in the system browser or native `openURL`, with no second confirmation sheet. That row does not share fulfillment with **Debit card** (`eoaUsdcStripe`) or **Receive from a wallet**. **Receive via QR** remains a follow-on view (peer-to-peer EIP-681 to the owner EOA on Base), not a deposit rail. The **Receive from a wallet** sheet has no USDC amount field and no “Receive Funds” row. In the **native shell**, it always lists Phantom, MetaMask, OKX Wallet, and Trust Wallet, then opens the **PWA-built** deep link so that app can send Base USDC to the same EOA. In an **ordinary browser**, it lists only already-installed EIP-6963 / injected extensions; if none are present, the sheet shows an on-panel empty alert. Tapping an injected row connects and switches/adds Base. Neither the deep link nor the injected connect is a deposit rail.
+
+How the stopped path worked:
 
 1. User completes Coinbase / x402 settle.
 2. Master occupies the **Base** settle pool for the lock step.
 3. Treasury V3 LockMint produces **CONET-USDC** for the user on CoNET.
 
-This rail is unchanged by the Stripe Onramp product. Clients must keep `WALLET_USDC_DEPOSIT_WORKFLOW = 'walletDeposit'` for Coinbase.
+The CoNET mint step no longer runs, because the Treasury cross-chain bridge is paused.
 
 ## Buy USDC with card (`eoaUsdcStripe`)
 
@@ -206,9 +208,9 @@ The product does **not** mint CONET-USDC on this rail and does **not** send USDC
 
 ### Operator configuration
 
-The operator Stripe account is the **`StripeBeamio`** key on the API host’s local `~/.master.json`. Merchant Kit Checkout and Consumer Onramp use this account. The account must have **Crypto Onramp** enabled (including sandbox approval in the Stripe Dashboard).
+The operator Stripe account key is held in the operator's key store on the API host. Merchant Kit Checkout and Consumer Onramp use this account. The account must have **Crypto Onramp** enabled (including sandbox approval in the Stripe Dashboard).
 
-The only live Dashboard webhook is **`https://beamio.app/api/stripeBeamioHook`**. Verification uses **`STRIPE_WEBHOOK_SECRET_MERCHANT_KIT`** (environment or the same `~/.master.json`). This book does not publish secret values. The Dashboard event set for that endpoint must include `crypto.onramp_session.updated` (Onramp) and the Merchant Kit `checkout.session.*` events. Without that secret, Onramp can still be created, but webhook confirmation will abort.
+The only live Dashboard webhook is **`https://beamio.app/api/stripeBeamioHook`**. Verification uses the Merchant Kit webhook secret, also held in the operator's key store. This book does not publish secret values. The Dashboard event set for that endpoint must include `crypto.onramp_session.updated` (Onramp) and the Merchant Kit `checkout.session.*` events. Without that secret, Onramp can still be created, but webhook confirmation will abort.
 
 The API still **forwards** the retired paths `/api/eoa-usdc-stripe-webhook` and `/api/merchant-kit-stripe-webhook` to the same `stripeBeamioHook` handler. Do **not** add those URLs in the Stripe Dashboard. `https://hooks.conet.network/api/stripeHook` is not a Beamio live hook.
 
@@ -285,8 +287,8 @@ The same offline-sign + sponsored-gas rule applies on Consumer PWA, Merchant OS,
 | Exception | Why it is not a Beamio outbound `USDC.transfer` |
 | --- | --- |
 | **Receive from a wallet / Receive via QR** | A third-party wallet (MetaMask, Coinbase Wallet, …) **sends into** the owner EOA. That peer pays its own gas. Beamio must not reuse this as its own send path. |
-| **Fiat onramp** | Stripe Crypto Onramp and Coinbase `walletDeposit` stay on their documented rails. Success is Stripe `fulfillment_complete` or Treasury LockMint — not operator inventory `USDC.transfer`. |
-| **Treasury LockMint** | Master’s initiator pays gas for TreasuryBridgeV3. The client does not broadcast Base or CoNET USDC. |
+| **Fiat onramp** | Stripe Crypto Onramp and Coinbase stay on their documented rails. Success is Stripe `fulfillment_complete` (the Treasury LockMint path is stopped) — not operator inventory `USDC.transfer`. |
+| **Treasury LockMint** (stopped) | Master’s initiator paid gas for TreasuryBridgeV3. The client does not broadcast Base or CoNET USDC. |
 | **Read-only** | `balanceOf` / Multicall / dashboard `snapshot` — no signature and no sponsor. |
 
 Master / settle admins **are** the gas sponsors. They are not a user hot wallet paying ETH or CNET.
@@ -296,8 +298,10 @@ Master / settle admins **are** the gas sponsors. They are not a user hot wallet 
 - Merchant Fuel Pack checkout (B-Units merchandising).
 - POS Charge / Top-up **program-points** math and B-Unit fees. See [POS terminal](pos.md). Any USDC leg on those flows still uses offline sign + sponsored gas (this chapter).
 - Issued-NFT social exchange: burning `#13` is paid from merchant card
-  `escrowUsdc6` in canonical CoNET-USDC to the user's EOA, not directly to the
-  user's AA. See [Merchant OS](merchant-os.md). Discover Smart Pay remainder
+  `escrowUsdc6` to the user's EOA, not directly to the user's AA. The reward
+  is denominated in the current CoNET-USDC (`0x5209…`, the old contract); the
+  switch-over plan for the new contract will be announced separately. See
+  [Merchant OS](merchant-os.md). Discover Smart Pay remainder
   (one CoNET container with CONET-USDC `cash`; Base treasuryBridge only if
   CONET-USDC is short) is documented above.
 - Cross-chain Treasury mechanics beyond naming the V3 proxy. See [Decentralized cross-chain Treasury](../../l1/cross-chain-treasury.md).

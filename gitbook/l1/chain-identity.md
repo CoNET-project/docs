@@ -32,7 +32,7 @@ CoNET L1 is the canonical layer for:
 
 - proof-of-stake block production and finality;
 - native CNET balances and transaction fees;
-- canonical CoNET assets such as conet-USDC and GBToken;
+- canonical CoNET assets such as conet-USDC and GB (the previous GBToken is no longer recognised; see [Assets](assets.md));
 - protocol registries, identity, routing, node, and treasury contracts; and
 - application contracts that explicitly target `chainId 224422`.
 

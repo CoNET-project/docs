@@ -32,7 +32,7 @@ It also keeps transport concerns separate:
 | HTTPS (optional) | Extra protection of the HTTP headers and armor bytes against a local observer; not required for payload secrecy |
 | HTTP :80 forwarding | Entry-to-mailbox or entry-to-exit relay of the same ciphertext |
 | SSE | Long-lived mailbox and mining delivery where a receive stream is required |
-| GB metering | Forwarding nodes count relayed bytes and are compensated in **GBToken (`GB`)** for successful relay, not for decrypting content |
+| GB metering | Forwarding nodes count relayed bytes for successful relay, not for decrypting content. GB issuance from these counts is paused |
 
 An HTTPS error on one entry says nothing by itself about HTTP forwarding between SI nodes, and it is not evidence that clients must use TLS.
 

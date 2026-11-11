@@ -31,8 +31,8 @@ is deployed; each linked page states what is live.
 | [Beamio](../applications/beamio.md) | Production reference | Yes | Yes | Through CoNET Chat | Through CoNET Chat | Through CoNET Chat | POS authorization and commerce message types |
 | [SilentPass](../applications/silentpass-vpn.md) | Production reference | Wallet signs access commands; control data encrypted to the egress | Yes | Entry distinct from the egress | No | Egress commands | SI egress to ordinary TCP destinations |
 | [UDP frame forwarding](udp-forward.md) | Implemented in CoNET-SI | Yes | Yes | A, C, D, B | UDP client and server pools | `udp_listen`, `udp_relay`, `udp_uplink` | AES frames; subscription as a user-PGP message |
-| [`web3://` applications](../applications/web3-url.md) | Under development | Yes | Yes | Entry and mailbox delivery | Yes | No new SI command | Signed requests and correlated encrypted responses |
-| [Web3 Browser + Wallet](../applications/web3-browser.md) | Under development | Yes | Yes | Through `web3://` | Through `web3://` | Through `web3://` | May also run an SI subset (entry, forward, storage) |
+| [`web3://` applications](../applications/web3-url.md) | Under development; not usable on the current network | Yes | Yes | Entry and mailbox delivery | Yes | No new SI command | Signed requests and correlated encrypted responses |
+| Web3 Browser + Wallet | Under development (Phase 0 scaffold) | Yes | Yes | Through `web3://` | Through `web3://` | Through `web3://` | May also run an SI subset (entry, forward, storage) |
 | [Privacy-first Decentralized AI](../applications/privacy-first-ai.md) | Design study | Proposed | Proposed | Proposed | — | — | Private paths with `web3://` |
 | [DePIN DCDN / BT](../applications/bt-dcdn.md) | Under development | Proposed | Proposed | Entries in front of seeders | — | — | Bulk content; discovery not decided |
 

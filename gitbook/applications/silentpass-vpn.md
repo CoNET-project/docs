@@ -46,7 +46,7 @@ destinations. It is not an L1 consensus transport and it is not a
 | **Wallet identity and OpenPGP** | Signs access commands and encrypts control data to the selected egress |
 | **Layer Minus entry routing** | Accepts HTTP `/post` (HTTPS optional) at an entry that is distinct from the selected egress. The posted object is already encrypted; nodes route by OpenPGP key ID. |
 | **CoNET-SI egress commands** | `SilentPass`, `SaaS_Sock5`, and `SaaS_Sock5_v2` validate admission and open a normal `host:port` connection |
-| **Payment / admission state** | Lets an egress check whether a wallet is authorized to use the service |
+| **Payment / admission state** | Lets an egress check whether a wallet is authorized to use the service. Today admission requires a valid Passport NFT, and traffic is not charged by volume. Egress bytes are metered per wallet but not charged. Charging rules for SaaS egress are not decided; node service fees under the new GB design are described in [GB purchase, metering, fees and settlement](../l1/gb-billing.md) (approved, not yet live) |
 | [UDP forward](../l0/udp-forward.md) | Separate capability for applications that require datagram-shaped frames |
 
 The application must preserve the role separation: a client submits an encrypted command through an entry; it must not publish or treat the egress as a conventional, fixed “VPN server IP.”

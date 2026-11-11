@@ -4,9 +4,9 @@
 
 Whitepaper §5.2.0d requires a CoNET L1 registry of every live archive group, every participating archive **wallet**, and every hosted chain NFT id. That facade is deployed and Explorer-verified.
 
-Public UI: [https://dle.conet.network/](https://dle.conet.network/) and [https://dle.conet.network/archives](https://dle.conet.network/archives). Digest of the lab explorer: [DLE explorer](explorer.md).
+Public UI: paused (it was the DLE explorer and its Archives page). Digest of the lab explorer: [DLE explorer](explorer.md).
 
-Do **not** write `dle.conet.network` into Solidity. The registry stores wallets, uint `groupId` keys, and NFT ids. The user-visible Group ID is this group’s L1 register tx hash.
+Do **not** write the explorer hostname into Solidity. The registry stores wallets, uint `groupId` keys, and NFT ids. The user-visible Group ID is this group’s L1 register tx hash.
 
 ## Network facts
 
@@ -23,12 +23,12 @@ Observed and verified **2026-08-14**. Canonical address is the **UUPS proxy**.
 | Registry read RPC | `https://rpc1.conet.network` |
 | Backup RPC | `https://publicrpc.conet.network` |
 | L1 Explorer | `https://mainnet.conet.network` |
-| DLE explorer | `https://dle.conet.network` |
-| Archives | `https://dle.conet.network/archives` |
+| DLE explorer | Paused |
+| Archives | Paused |
 | Proxy name on Explorer | `DLEERC1967Proxy` (`is_verified` and `is_partially_verified`) |
 | Implementation name | `GlobalArchiveRoutingRegistryV1` (`is_verified` and `is_partially_verified`) |
 | Deploy / bootstrap block | `840617` |
-| Owner | `0x87cAeD4e51C36a2C2ece3Aaf4ddaC9693d2405E1` |
+| Owner | `0x87cA…05E1` |
 | Bootstrap group | `groupId = 1`, `membershipEpoch = 1`, `keyEpoch = 1` |
 | Register tx | [`0x3076a806de71ab75b2d48063cc3f1e7d8f8e3d54cb1d45a7469c75c9276f2ad0`](https://mainnet.conet.network/tx/0x3076a806de71ab75b2d48063cc3f1e7d8f8e3d54cb1d45a7469c75c9276f2ad0) |
 
@@ -65,15 +65,15 @@ Each archive **must** have its own participant wallet. The seven addresses below
 
 | Slot | Lab `domainId` | Role | Participant wallet |
 | --- | --- | --- | --- |
-| 0 | `fd-01-ionos-45` | active | [`0xB7D3541290b6Ca21C94427D738b1C250c1Cb9d14`](https://mainnet.conet.network/address/0xB7D3541290b6Ca21C94427D738b1C250c1Cb9d14) |
-| 1 | `fd-02-ionos-189` | active | [`0x6da445Bd5ffC8a68A09b132e0AD5Eb5416fBe9B9`](https://mainnet.conet.network/address/0x6da445Bd5ffC8a68A09b132e0AD5Eb5416fBe9B9) |
-| 2 | `fd-03-ionos-98` | active | [`0xf264D0EA6A78D3a35EDb1F6A6358088d02D0a626`](https://mainnet.conet.network/address/0xf264D0EA6A78D3a35EDb1F6A6358088d02D0a626) |
-| 3 | `fd-04-hosthatch-tokyo1` | active | [`0x7C162b6A2e6d81f80163666ddAE3Cf368bDCA026`](https://mainnet.conet.network/address/0x7C162b6A2e6d81f80163666ddAE3Cf368bDCA026) |
-| 4 | `fd-05-hosthatch-tokyo2` | active | [`0x02480639F3A87309a1EeC4BcC1A10B7AE13e7f7a`](https://mainnet.conet.network/address/0x02480639F3A87309a1EeC4BcC1A10B7AE13e7f7a) |
-| 5 | `fd-06-ionos-174` | standby | [`0xb25932EBB7460B40741aA9431798b0f18331fE7a`](https://mainnet.conet.network/address/0xb25932EBB7460B40741aA9431798b0f18331fE7a) |
-| 6 | `fd-07-ionos-207` | standby | [`0xc97BBcF81C793e32d385337eccD1f211DF4757a5`](https://mainnet.conet.network/address/0xc97BBcF81C793e32d385337eccD1f211DF4757a5) |
+| 0 | `fd-01` | active | `0xB7D3…9d14` |
+| 1 | `fd-02` | active | `0x6da4…e9B9` |
+| 2 | `fd-03` | active | `0xf264…a626` |
+| 3 | `fd-04` | active | `0x7C16…A026` |
+| 4 | `fd-05` | active | `0x0248…7f7a` |
+| 5 | `fd-06` | standby | `0xb259…fE7a` |
+| 6 | `fd-07` | standby | `0xc97B…57a5` |
 
-The [Archives page](https://dle.conet.network/archives) renders these wallets as address capsules. The UI seeds from a local roster, then overlays a trusted `archivesOf(1)` read from CoNET L1 RPC. A failed RPC must not clear a previously trusted wallet.
+The Archives page renders these wallets as address capsules. The UI seeds from a local roster, then overlays a trusted `archivesOf(1)` read from CoNET L1 RPC. A failed RPC must not clear a previously trusted wallet.
 
 Do not publish lab host IPs, SSH targets, or signing keys from this page.
 
@@ -98,7 +98,7 @@ Selector `archivesOf(uint64)` is `0xd3a448be`. The result is seven left-padded a
 
 ## See also
 
-- [DLE explorer](explorer.md) — [https://dle.conet.network/](https://dle.conet.network/)
+- [DLE explorer](explorer.md) — paused
 - [Archive plane](archive-plane.md) — production versus archive certification
 - [CoNET L1 RPC and Explorer](../l1/rpc-explorer.md)
 - [L2 development](../developers/l2.md)

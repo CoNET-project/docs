@@ -110,8 +110,8 @@ First-frame `{status, epoch, …}` / “Unknown format” heartbeats are livenes
 
 | Mechanism | Meaning |
 | --- | --- |
-| **GB meter on last hop** | On a **signed command** path, the last hop may add verified prior-hop bytes to the user wallet’s gossip **GB** meter. User-PGP mailbox store (no command decrypt) cannot charge that way. |
-| **GBToken (`GB`)** | Canonical DePIN service asset, **9 decimals**, [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8). Do not use deprecated `ConetGB1155` as a wallet balance. |
+| **GB meter on last hop** | On a **signed command** path, the last hop may add verified prior-hop bytes to the user wallet’s gossip **GB** meter. User-PGP mailbox store (no command decrypt) cannot charge that way. GB issuance from the meter is paused. |
+| **GBToken (`GB`)** | **No longer recognised; its services have stopped.** Balances do not carry over to the new GB, which is not yet deployed ([new GB design](../l1/gb-billing.md)). Previous DePIN service asset, **9 decimals**, [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8). Do not use deprecated `ConetGB1155` as a wallet balance. |
 | **Epoch totals** | When a master is configured, verified gossip can be aggregated and written to L1 epoch-mining state. Registration count ≠ that epoch’s miner count. |
 
 Forwarding pays for **carrying ciphertext**, not for reading it.

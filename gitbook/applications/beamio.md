@@ -17,7 +17,7 @@ Chapters in this whitepaper:
 | [Consumer PWA](beamio/consumer.md) | Wallet, Discover (Top Up + Gifting), coupons, Chat, mining tools, USDC rails, and Agent invite referrer bind (`?invite=0x…`) |
 | [Merchant OS](beamio/merchant-os.md) | Onboarding (website, marketplace seller page, business name, or attached PDF/Word/image lookup fills the cover; marketplace platform chrome is excluded from merchant fields), programs, staff, terminals, catalogs, coupons, and merchant treasury. Sign-in always opens the merchant workspace. Agent and temp-account creation stay on Consumer Invite a business (`BeamioAgentReferrerRegistry` on CoNET) |
 | [POS terminal](beamio/pos.md) | In-store charge, physical-card top-up through native Stripe Terminal, membership, claim, and redeem |
-| [Cash and USDC](beamio/cash-and-usdc.md) | Distinct deposit rails (Coinbase / Treasury CONET-USDC vs Stripe Onramp Base USDC to EOA) **and** Beamio-initiated USDC transfers / payments (offline sign + sponsored gas) |
+| [Cash and USDC](beamio/cash-and-usdc.md) | Deposit rails (Coinbase and Stripe Onramp to Base USDC; the `walletDeposit` CONET-USDC minting path is stopped) **and** Beamio-initiated USDC transfers / payments (offline sign + sponsored gas) |
 | [Merchant card custody handoff](beamio/merchant-card-custody-handoff.md) | Live identity/invite registry (`BeamioAgentReferrerRegistry`); normative card-custody handoff (`BeamioAgentRegistry` + sponsored `transferOwnership` not yet deployed) |
 
 Cursor rule: when a Beamio product capability is added or changed, update the matching chapter in the same task (`beamio-gitbook-whitepaper-sync.mdc`).
@@ -176,24 +176,21 @@ The following capabilities are live on the public surfaces. Detail and limits li
 | Identity | `@BeamioTag`, EOA, optional Smart Wallet | Owner EOA, staff, pending terminal authorization | Terminal EOA as lower-level admin |
 | Programs | Hold membership NFT (`tokenId ∈ [100, 1e11)`), program points (`#0`), Discover brands | Create and publish program cards; base membership plus Add-tier higher paid tiers | Issue membership NFT (not leftover `#0`), top-up, charge |
 | Commerce | Claim coupons and catalogs, pay | Issue coupons and catalogs, review transactions | Charge, top-up, claim, redeem, burn |
-| Cash | Stripe Onramp → Base USDC to EOA; Coinbase `walletDeposit` → CONET-USDC (separate Add Cash). Home Fund **Receive via QR** and **Receive from a wallet** are P2P sends to the owner EOA on Base, not deposit rails. | Treasury / USDC views; Fuel packs as B-Units | Uses program points and membership; does not replace consumer deposit rails |
+| Cash | Stripe Onramp → Base USDC to EOA; Coinbase → Base USDC in the current app (the `walletDeposit` CONET-USDC minting path is stopped). Home Fund **Receive via QR** and **Receive from a wallet** are P2P sends to the owner EOA on Base, not deposit rails. | Treasury / USDC views; Fuel packs as B-Units | Uses program points and membership; does not replace consumer deposit rails |
 | Messaging | CoNET Chat | Chat plus POS permission inbox | Sends POS permission envelopes; not a general Messages product |
 
 Two USDC deposit rails must not be merged:
 
 | Rail | User-visible result | Chain | See |
 | --- | --- | --- | --- |
-| **Coinbase / `walletDeposit`** | CONET-USDC via Treasury LockMint | CoNET settlement after Base lock | [Cash and USDC](beamio/cash-and-usdc.md) |
+| **Coinbase** | **Stopped:** CONET-USDC via Treasury LockMint (`walletDeposit`). The Coinbase row in the current app funds Base USDC | Base | [Cash and USDC](beamio/cash-and-usdc.md) |
 | **Buy USDC with card (`eoaUsdcStripe`)** | Stripe Crypto Onramp sends native USDC to the owner **EOA**. Consumer Home CTA is **Fund Wallet** (same rail). | **Base** | [Cash and USDC](beamio/cash-and-usdc.md) |
 
-Merchant Kit Stripe (CAD kits → B-Units / Ket) is a third Stripe product and is **not** a consumer USDC deposit rail. Both Kit Checkout and Consumer Onramp use the same operator account **`StripeBeamio`** and the same live webhook **`https://beamio.app/api/stripeBeamioHook`** (signing secret **`STRIPE_WEBHOOK_SECRET_MERCHANT_KIT`**). Older Dashboard URLs are retired; the API may still forward them to the same handler. Fulfillment remains on separate rails. Consumers who buy USDC with a card receive native Base USDC **directly in the owner EOA**.
+Merchant Kit Stripe (CAD kits → B-Units / Ket) is a third Stripe product and is **not** a consumer USDC deposit rail. Both Kit Checkout and Consumer Onramp use the same operator Stripe account and the same live webhook **`https://beamio.app/api/stripeBeamioHook`**; its signing secret is held in the operator's key store. Older Dashboard URLs are retired; the API may still forward them to the same handler. Fulfillment remains on separate rails. Consumers who buy USDC with a card receive native Base USDC **directly in the owner EOA**.
 
 **Outbound USDC is a different rule.** Pay / Send, **Discover Gifting** (gifter CONET-USDC → open redeem; no merchant owner signature), Charge when USDC is the settlement asset, AA ↔ EOA, NFC / QR, Fuel Pack USDC debit, card `#13` escrow deposit, and institutional-multisig USDC out are **offline signatures**. Cluster prechecks; Master or the Factory Paymaster submits and sponsors gas. Do not describe those writes as “the user pays ETH or CNET.” Third-party **Receive from a wallet / Receive via QR** remains an inbound exception (the peer pays gas). See [Cash and USDC](beamio/cash-and-usdc.md) and [Consumer — Discover Gifting](beamio/consumer.md#discover-gifting).
 
-For Beamio issued-NFT social exchange, canonical CoNET-USDC is
-[`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA)
-(6 decimals). The user's AA burns Reward PT `#13`; the merchant card escrow
-pays the reward to the user's EOA. This is not a direct USDC transfer to the
+In Beamio issued-NFT social exchange, the user's AA burns Reward PT `#13`. The USDC reward is denominated in the current CoNET-USDC ([`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA), the old contract, 6 decimals) and paid from the merchant card escrow to the user's EOA. The switch-over plan for the new conet-USDC contract will be announced separately. This is not a direct USDC transfer to the
 AA. **Discover same-store Top-up** is a different rail: this card’s `#13`
 converts to this card’s `#0` on the user’s AA and does **not** use USDC
 escrow. When Reward PT does not cover the full amount, Consumer Smart Pay

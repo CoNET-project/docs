@@ -8,7 +8,9 @@ An ERC-20 issued on another chain is **not** a CoNET asset. It enters the ecosys
 
 Architecture detail: [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md).
 
-The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a production custody integration guide. Its deployed Shadow is read-only; Obstacles 1–5 Accepted does not open mint, release, or production settle. Paid-GB miner `voteBridgeMint` is paused (Phase D, 2026-10-15). Treasury miner `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed` (2026-10-15). Checked CoNET execution clients run the [patch-geth](https://github.com/CoNET-project/patch-geth) build. The CoNET checkpoint stores Ethereum period 1884. A 0.01 Base USDC receipt in that period is covered and settled. `sourceInitiateOpen` is true on Base and CoNET. AAC is not a Base or CoNET light client.
+> **The Treasury cross-chain bridge is paused.** No route described on this page is open at present. The current cross-chain design is the [two-way AAC bridge](../l1/aac-two-way-bridge.md), approved, not yet live. Under that design, an ERC-20 or ERC-1155 from another chain enters CoNET, and can return to its own chain, only after a DAO admission decision for that asset. Tokens issued on CoNET by third parties are described in [Third-party tokens and subscriptions](../l1/third-party-assets.md).
+
+The earlier [AAC track](../l1/aac-cross-chain.md) must not be used as a production custody integration guide. Its deployed Shadow is read-only; Obstacles 1–5 Accepted does not open mint, release, or production settle. Paid-GB miner `voteBridgeMint` is paused (Phase D, 2026-10-15). Treasury miner `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed` (2026-10-15). Checked CoNET execution clients run the [patch-geth](https://github.com/CoNET-project/patch-geth) build. The CoNET checkpoint stores Ethereum period 1884. A 0.01 Base USDC receipt in that period is covered and settled. `sourceInitiateOpen` is true on Base and CoNET. AAC is not a Base or CoNET light client.
 
 ## The only Treasury
 
@@ -16,9 +18,9 @@ The separate [AAC track](../l1/aac-cross-chain.md) must not be used as a product
 | --- | --- | --- |
 | **TreasuryBridgeV3** | [`0xa208982212978550594A7FEEB70a61665d129003`](https://mainnet.conet.network/address/0xa208982212978550594A7FEEB70a61665d129003) | Sole Treasury: route policy, quorum, mint, burn, lock, release |
 | **ConetTreasuryPeer** | [`0x6093871d8a3EE6EaADc9869451D1693973cFBCC0`](https://mainnet.conet.network/address/0x6093871d8a3EE6EaADc9869451D1693973cFBCC0) | Peer module — **not** a second Treasury |
-| **conet-USDC** | [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA) | Canonical six-decimal settlement asset |
-| **wCNET** | [`0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5`](https://mainnet.conet.network/token/0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5) | Canonical 18-decimal wrap of native CNET. CoNET `deposit` / `withdraw` are 1:1. The Base representation `0x0E01ca7a99B38a4E021C25B7BE01356E71158B66` cannot unwrap |
-| **GBToken (`GB`)** | [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) | Canonical nine-decimal DePIN service asset |
+| **conet-USDC** | [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA) | Six-decimal settlement asset. Status to be verified; it will be replaced by a newly deployed contract (decided, not yet live) |
+| **wCNET** | [`0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5`](https://mainnet.conet.network/token/0x5a2D096968fC85861d8FDC7CE9A747Fe4bcb87D5) | Canonical 18-decimal wrap of native CNET. CoNET `deposit` / `withdraw` are 1:1. The Base representation `0x0E01ca7a99B38a4E021C25B7BE01356E71158B66` cannot unwrap. **Cross-chain service has stopped while the Treasury cross-chain bridge is paused** |
+| **GBToken (`GB`)** | [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) | Nine-decimal DePIN service asset. **No longer recognised; services stopped** |
 | **Base USDC** | [`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`](https://basescan.org/token/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) | Current source-chain USDC for LockMint product paths |
 
 Older `CREATE2` / `BaseTreasury` / `ConetTreasury` addresses (including `0xa311…`) are **deprecated**. Do not document them as a second live Treasury.

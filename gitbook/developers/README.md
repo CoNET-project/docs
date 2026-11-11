@@ -27,7 +27,7 @@ itself proof of production availability or an audit.
 | **L1 node** | A permissionless geth + Prysm full node and optional validator | Production reference | [Run an L1 node](l1-node.md) |
 | **L1 checkpoint confirmation** | An independent operator reproduces slot 155646 from a local beacon | Production reference | [Confirm the period-18 checkpoint](l1-independent-confirmation.md) |
 | **L1 mining** | Guardian / LayerMinus participation and verified mining gossip | Implemented capability | [Participate in mining](l1-mining.md) |
-| **L1 ERC-20 ingress** | Implement the specified admission path for a foreign ERC-20 through TreasuryBridgeV3; deployed Treasury references are documented separately | Normative design | [Bring an ERC-20 into CoNET](l1-erc20-bridge.md) |
+| **L1 ERC-20 ingress** | Implement the specified admission path for a foreign ERC-20 through TreasuryBridgeV3 (its cross-chain bridge is paused); deployed Treasury references are documented separately | Normative design | [Bring an ERC-20 into CoNET](l1-erc20-bridge.md) |
 | **L2 development** | Implement or review the CoNET-DLE specifications; lab evidence is separate from production | Normative design | [L2 development](l2.md) |
 
 ## Choose the right track

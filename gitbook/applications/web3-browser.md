@@ -1,6 +1,6 @@
 # Web3 Browser + Wallet
 
-**Maturity: Under development.** Cross-platform **native shell + local PWA**
+**Maturity: Under development (Phase 0 scaffold).** None of the capabilities on this page is implemented yet; all of them are planned. Cross-platform **native shell + local PWA**
 that browses and publishes `web3://` applications, can run a TypeScript SI
 subset (entry / forward / storage / SaaS), and can attach as a CoNET-DLE
 **L2 on-demand** miner. Capability **④** is not yet product-locked.

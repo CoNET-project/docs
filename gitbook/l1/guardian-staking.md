@@ -11,7 +11,7 @@ An on-chain Guardian registry records admitted node identities and beneficiary r
 A runtime Guardian service can involve:
 
 - DePIN message routing and mailbox delivery;
-- bandwidth or forwarding services, metered and compensated in **GBToken (`GB`)** for relaying ciphertext rather than for reading it;
+- bandwidth or forwarding services, metered for relaying ciphertext rather than for reading it. Compensation in the previous **GBToken (`GB`)** has stopped; under the new GB design, nodes are paid in GB through service fees, node rewards and third-party token payments ([GB billing](gb-billing.md), approved, not yet live);
 - signed mining-gossip participation; and
 - service accounting tied to a registered identity or beneficiary.
 
@@ -51,6 +51,13 @@ Wallet-address routing is intended to reduce dependence on a fixed public servic
 Read Guardian-related chain state through `https://rpc1.conet.network`, with `https://publicrpc.conet.network` as backup. Do not use the deprecated `https://rpc.conet.network`. Inspect contracts and transactions at `https://mainnet.conet.network`.
 
 Registry membership is publicly readable. Admission is not permissionless: `addNode` and `removeNode` require `adminList`. Unique owner addresses, region labels, and the difference between the L0 Guardian count, the VDR stake ledger, and Beacon `validator_index` are recorded in [L1 decentralization](decentralization.md).
+
+## Next registry: NodeRegistryV2
+
+`GuardianNodesInfoV6` is the only node registry in production. It is an
+administrator-maintained node table and has **no staking rules**. Stake,
+suspension, offline charges and slashing belong to NodeRegistryV2, which is
+approved but not yet live: see [Node registry V2](node-registry-v2.md).
 
 ## Source anchors
 

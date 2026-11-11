@@ -37,7 +37,7 @@ The intended content path keeps bulk plaintext outside public ledger state:
 - the delivered package is encrypted for that buyer; and
 - ledger and L1 records retain commitments, status, and settlement references rather than plaintext.
 
-Storage access and retention are metered in **GBToken (`GB`)**, the active CoNET ERC-20 with 9 decimals at [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8). This does not refer to the deprecated `ConetGB1155` accounting track. Short-lived access authorization and storage-payment expiry remain application and node responsibilities constrained by the recorded state.
+Storage access and retention are metered in **GB** (9 decimals). The previous GBToken at [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) is no longer recognised; the [new GB design](../l1/gb-billing.md) is approved, not yet live. This does not refer to the deprecated `ConetGB1155` accounting track. Short-lived access authorization and storage-payment expiry remain application and node responsibilities constrained by the recorded state.
 
 The whitepaper also defines parent lineage, Copyright ZERO version trees, and sales journals that can reference asset tips without giving the storage tip arbitrary cross-tip execution.
 

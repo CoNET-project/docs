@@ -15,14 +15,14 @@ This GitBook section is an **explanatory digest**. It does not create protocol r
 | Lab M6 second Group ID | L1 `registerLiveGroup` tx `0xf781f2c2…876d5153` (laboratory keccak aliases it) |
 | Live archive groups \(G_e\) | **2** on `GET /health` (`liveGroupCount`) after lab M6 fission |
 | L1 uint `groupId` (storage key) | bootstrap **1**; G2 **2** |
-| Explorer | `https://dle.conet.network` |
-| Archives | `https://dle.conet.network/archives` |
-| Lab health | `https://dle.conet.network/health` |
-| Lab RPC | `https://dle.conet.network/rpc` |
+| Explorer | Paused |
+| Archives | Paused |
+| Lab health | Paused |
+| Lab RPC | Paused |
 | Routing registry | `0x8B261eAECdFfeE9e7aC9fFe73386B0d6C9E76AfB` |
 | Registry read RPC | `https://rpc1.conet.network` |
 
-`0x44c45` is the **CoNET-DLE Testnet** EIP-155 chain id. It distinguishes this plane from CoNET L1 `224422` and Base `8453`. It is **not** Group ID. Do not add it to a wallet as if it were CoNET L1. `https://dle.conet.network` is the authorized explorer host; do not invent additional `dle.*` names, and do not write that hostname into Solidity.
+`0x44c45` is the **CoNET-DLE Testnet** EIP-155 chain id. It distinguishes this plane from CoNET L1 `224422` and Base `8453`. It is **not** Group ID. Do not add it to a wallet as if it were CoNET L1. The explorer is paused and has no replacement host yet. Do not invent `dle.*` names, and do not write an explorer hostname into Solidity.
 
 The routing registry lives on CoNET L1. Bootstrap storage key `groupId = 1` holds seven distinct participant wallets. The user-visible **Group ID** is that group’s register tx hash. That is routing identity, not Archive Certificate and not 30-day qualification. See [Global Archive Routing Registry](routing-registry.md) and [DLE explorer](explorer.md).
 
@@ -61,7 +61,7 @@ The target design has six main parts:
 4. [Ledger classes](tip-classes.md) — asset, storage, and trade state machines
 5. [Cross-chain assets in DLE](cross-chain-assets.md) — Treasury hand-off, admission, burn/activation, and conservation
 6. [Economics](economics.md) — the three-ledger funding model
-7. [DLE explorer](explorer.md) — public lab UI at [https://dle.conet.network/](https://dle.conet.network/)
+7. [DLE explorer](explorer.md) — lab UI, paused
 8. [Lab honesty track](lab-honesty-track.md) — 2026-08-18 MVP review through the 2026-09-23 post-window assessment; P12–P24 engine; P23 keep-deploy 6/7 + 409→accept; P25 Explorer overlays; clock elapsed but qualification failed; roster / standby-count boundary drift recorded
 9. [Normative sources](specs-index.md) — controlling documents, evidence, and non-normative material
 

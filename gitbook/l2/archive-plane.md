@@ -48,7 +48,7 @@ Required views:
 
 To locate a tip: `groupId = route(nftId)`, then contact `historyProviders(nftId)`. A wallet not listed for that group at the relevant membership epoch is not the canonical host.
 
-Do **not** write public explorer hostnames into Solidity constants. The registry stores wallets, `groupId`s, and NFT ids only. [https://dle.conet.network/](https://dle.conet.network/) is the lab UI; it may display wallets read from this registry, but the hostname is not routing truth.
+Do **not** write public explorer hostnames into Solidity constants. The registry stores wallets, `groupId`s, and NFT ids only. The lab UI (paused) could display wallets read from this registry, but the hostname is not routing truth.
 
 `OperatorDomainRegistryV1`, `AssetBurnMintGateway`, and Archive Certificate remain **not** production-live. A listed participant wallet is routing identity only. Do not invent a substitute roster from lab `/health` when the L1 `archivesOf` read is available.
 

@@ -101,8 +101,8 @@ select an arbitrary mailbox IP as their direct endpoint.
 
 Rules:
 
-1. Encrypt business data to the recipient **user PGP**. In rollout, always
-   wrap that armor as mailbox work to the recipient's mailbox **B route PGP**,
+1. Encrypt business data to the recipient **user PGP**. Always wrap that
+   armor (the web app does so since PWA 0.52.930) as mailbox work to the recipient's mailbox **B route PGP**,
    so the entry sees B's key ID instead of the recipient's.
 2. Submit it through **one** random healthy entry **A**, where A is neither B
    nor the sender's own mailbox; try another entry only after a clear failure.
@@ -188,7 +188,8 @@ decrypts it with the user PGP key it holds. Every node ignores the old
 fallback fields (`targetWallet`, `offerArmor` in a `voice_listen` to the
 caller's own mailbox) and accepts only voice channel v3: payer-signed
 temporary channels on relays each side chooses (on every node since
-2 November 2026; clients in release candidates). “Both systems use a relay” is not a privacy comparison; compare
+2 November 2026, and in released clients; payment, metering and charging are
+not implemented). “Both systems use a relay” is not a privacy comparison; compare
 which identity, IP, content, timing, and session fields each role actually
 receives.
 

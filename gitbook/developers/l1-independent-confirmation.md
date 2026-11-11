@@ -20,13 +20,13 @@ Your beacon HTTP API on `127.0.0.1:4100` must return:
 | `peer_id` | The identity of **this** beacon |
 
 A `peer_id` already used by the publishing operator does not add an
-independent confirmation. Those consensus identities are:
+independent confirmation. Those consensus identities are below. Host addresses are shown as placeholders (`<peer-host-1>` to `<peer-host-6>`); the same placeholder means the same host on every page. Ask the CoNET operators for the current addresses.
 
 | Host | Consensus `peer_id` |
 |---|---|
-| `216.225.202.22` | `16Uiu2HAmCtPRBmiYPNcfwscvKzhDqsFwVtm2DmsMZCvtR2rHgDtA` |
-| `216.225.197.3` | `16Uiu2HAmQgiLAC8bfpYKVt8WakbkC3wvdG8VwGUc4KQKXfM53t7g` |
-| `216.225.202.82` | `16Uiu2HAmDJCHuVkXtkPrrL8YykQ9gFZnQkR9Q6WjZZUrmueohPfd` |
+| `<peer-host-4>` | `16Uiu2HAmCtPRBmiYPNcfwscvKzhDqsFwVtm2DmsMZCvtR2rHgDtA` |
+| `<peer-host-5>` | `16Uiu2HAmQgiLAC8bfpYKVt8WakbkC3wvdG8VwGUc4KQKXfM53t7g` |
+| `<peer-host-6>` | `16Uiu2HAmDJCHuVkXtkPrrL8YykQ9gFZnQkR9Q6WjZZUrmueohPfd` |
 
 DHT identities on port `4110` are a different set. Do not mix them with the
 beacon `peer_id` from port `4100`.
@@ -94,7 +94,7 @@ geth \
   --port 8400 \
   --discovery.port 8400 \
   --nat extip:<YOUR_PUBLIC_IP> \
-  --bootnodes "enode://e5fe89d9ad924db6e4699480242a12fccba2c00e35772db706e46190c0ded9bb2b7e0d996826f5e46d369e01336213ef263c5038f94552e5f5e6e8ec76573a3f@38.102.126.30:8400,enode://d9243095bca94720f88d38c93ae4ccefc8b67651c66b4c93c915f845f6abfd39a091465db02db32b1a5b8061566c1558d2e6842f75620bf533480bab8a180168@38.102.126.50:8400,enode://8e09d44bb4c29543a172e53dd8a74677a2a63d3d98a3d530f9d8b6f6bd6802a542f5b79d509ff737a9a764a66ab44a81403597cb50e350178ddd91f487e28f2d@216.225.202.22:8400,enode://f1e249c97ce861441b3bd4832213cc634dd5c23d1a8722cd9c1aea28492779f6b64e012e8d97d56006d69be5224903ea5a787d8af68e9542db82ac1f76491dd5@216.225.202.82:8400" \
+  --bootnodes "enode://e5fe89d9ad924db6e4699480242a12fccba2c00e35772db706e46190c0ded9bb2b7e0d996826f5e46d369e01336213ef263c5038f94552e5f5e6e8ec76573a3f@<peer-host-1>:8400,enode://d9243095bca94720f88d38c93ae4ccefc8b67651c66b4c93c915f845f6abfd39a091465db02db32b1a5b8061566c1558d2e6842f75620bf533480bab8a180168@<peer-host-2>:8400,enode://8e09d44bb4c29543a172e53dd8a74677a2a63d3d98a3d530f9d8b6f6bd6802a542f5b79d509ff737a9a764a66ab44a81403597cb50e350178ddd91f487e28f2d@<peer-host-4>:8400,enode://f1e249c97ce861441b3bd4832213cc634dd5c23d1a8722cd9c1aea28492779f6b64e012e8d97d56006d69be5224903ea5a787d8af68e9542db82ac1f76491dd5@<peer-host-6>:8400" \
   --http --http.addr 127.0.0.1 --http.port 8545 --http.api eth,net,web3 \
   --authrpc.addr 127.0.0.1 --authrpc.port 8551 \
   --authrpc.jwtsecret ./jwtsecret \
@@ -119,7 +119,7 @@ before the confirmation commands succeed.
 
 ```bash
 cd "$HOME/conet-l1"
-ENR=$(curl -fsS http://216.225.202.22:4100/eth/v1/node/identity \
+ENR=$(curl -fsS http://<peer-host-4>:4100/eth/v1/node/identity \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['enr'])")
 PRYSM_TAG=$(curl -fsSL https://api.github.com/repos/OffchainLabs/prysm/releases/latest \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
@@ -128,8 +128,8 @@ USE_PRYSM_VERSION="$PRYSM_TAG" ./prysm.sh beacon-chain \
   --chain-id=224422 \
   --genesis-state=./genesis.ssz \
   --chain-config-file=./config.yml \
-  --checkpoint-sync-url=http://216.225.202.22:4100 \
-  --genesis-beacon-api-url=http://216.225.202.22:4100 \
+  --checkpoint-sync-url=http://<peer-host-4>:4100 \
+  --genesis-beacon-api-url=http://<peer-host-4>:4100 \
   --execution-endpoint=http://127.0.0.1:8551 \
   --jwt-secret=./jwtsecret \
   --deposit-contract=0x4242424242424242424242424242424242424242 \
@@ -262,7 +262,7 @@ Leave `MinimalEthSpec` unchanged. Build `lighthouse`, then run it with
 `--testnet-dir` containing `genesis.ssz` and `config.yml`,
 `--execution-endpoint http://127.0.0.1:8552`,
 `--execution-jwt ./jwtsecret-lighthouse`,
-`--checkpoint-sync-url http://216.225.202.22:4100`, `--genesis-backfill`,
+`--checkpoint-sync-url http://<peer-host-4>:4100`, `--genesis-backfill`,
 and a live `--boot-nodes` ENR. Read the same local REST paths on port 5052
 if you keep Lighthouse's default HTTP port.
 

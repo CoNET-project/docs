@@ -3,3 +3,6 @@ package.json
 package-lock.json
 node_modules/
 _book/
+copyConetFavicon.cjs
+applications/conet-l0d.md
+applications/web3-browser.md

@@ -23,7 +23,7 @@ The `voice_listen` carries no wallet of either party; it carries a
 temporary-wallet signature bound to this node's route key ID plus a payer
 authorization. SI refuses v2 listens and no longer forwards v1
 `voice_uplink` / `voice_downlink` frames. Details:
-[CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v3-payer-signed-temporary-channels-in-rollout).
+[CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v3-payer-signed-temporary-channels-live-no-payment-yet).
 `/post` remains `{ "data": "<armor>" }` only; no media metadata is added as a
 cleartext field.
 
@@ -250,7 +250,7 @@ Optional outer wrap: encrypt a user-PGP business message to an **entry** route k
 | Read RPC | `https://rpc1.conet.network` (primary), `https://publicrpc.conet.network` (backup). Do not use deprecated `rpc.conet.network` |
 | AddressPGP | [`0x684b0ac760cEE9c9b85de36d69746420648Cf9e2`](https://mainnet.conet.network/address/0x684b0ac760cEE9c9b85de36d69746420648Cf9e2) |
 | GuardianNodesInfoV6 | [`0xBC6b53065b5647261396d002bDBA0d3396E0722f`](https://mainnet.conet.network/address/0xBC6b53065b5647261396d002bDBA0d3396E0722f) |
-| Register API | `POST https://beamio.app/api/regiestChatRoute` (spelling is live). The request must be signed by the wallet (EIP-191); see [Sample: register a mailbox route](#sample-register-a-mailbox-route) |
+| Register API | `POST https://beamio.app/api/regiestChatRoute` (spelling is live). Signed requests (EIP-191) take effect when the updated API is deployed (pending release); see [Sample: register a mailbox route](#sample-register-a-mailbox-route) |
 
 ## Sample: discover Guardian nodes
 
@@ -337,25 +337,7 @@ Encrypt **business** armor to `userPublicKeyArmored` of the recipient **EOA**. A
 
 ## Sample: register a mailbox route
 
-Current clients generate an ECC OpenPGP key, take the **encryption subkey** ID (`getKeyIDs()[1]`, uppercase hex), choose a Guardian **domain** as mailbox, and call the register API. The live field name is `routeKeyID`; clients pass that **domain**, not the hex key ID.
-
-The API writes the record with an operator wallet, so the request itself must prove that the owner of `wallet` asked for it. The wallet signs (EIP-191 `personal_sign`) these lines joined with `\n`:
-
-```text
-Beamio regiestChatRoute
-wallet:<lowercase address>
-keyID:<keyID>
-publicKeyArmoredHash:<keccak256(utf8(publicKeyArmored))>
-encrypKeyArmoredHash:<keccak256(utf8(encrypKeyArmored))>
-routeKeyID:<routeKeyID>
-timestamp:<unix milliseconds>
-nonce:<0x + 32 hex characters>
-```
-
-- The hashes cover the field values **exactly as sent** (`publicKeyArmored` is the base64 string). Trim every string field before hashing; the server trims before it verifies and before it writes.
-- `timestamp` is an integer in **milliseconds** and must be within 10 minutes of server time.
-- `nonce` is 16 random bytes, fresh for every request, including retries. The server accepts each `wallet` + `nonce` once.
-- The body carries `wallet, keyID, publicKeyArmored, encrypKeyArmored, routeKeyID, timestamp, nonce, signature`. A request without a signature is refused.
+Current clients generate an ECC OpenPGP key, take the **encryption subkey** ID (`getKeyIDs()[1]`, uppercase hex), choose a Guardian **domain** as mailbox, and call the compatibility API. The live field name is `routeKeyID`; clients pass that **domain**, not the hex key ID.
 
 ```ts
 import { generateKey } from 'openpgp'
@@ -373,27 +355,6 @@ export async function generateUserPgp() {
   return { privateKey, publicKey, keyID }
 }
 
-function regiestChatRouteMessage(f: {
-  wallet: string
-  keyID: string
-  publicKeyArmored: string
-  encrypKeyArmored: string
-  routeKeyID: string
-  timestamp: number
-  nonce: string
-}): string {
-  return [
-    'Beamio regiestChatRoute',
-    `wallet:${f.wallet.toLowerCase()}`,
-    `keyID:${f.keyID}`,
-    `publicKeyArmoredHash:${ethers.keccak256(ethers.toUtf8Bytes(f.publicKeyArmored))}`,
-    `encrypKeyArmoredHash:${ethers.keccak256(ethers.toUtf8Bytes(f.encrypKeyArmored))}`,
-    `routeKeyID:${f.routeKeyID}`,
-    `timestamp:${f.timestamp}`,
-    `nonce:${f.nonce.toLowerCase()}`,
-  ].join('\n')
-}
-
 export async function registerChatRoute(opts: {
   eoaPrivateKey: string
   publicKeyArmored: string
@@ -402,45 +363,25 @@ export async function registerChatRoute(opts: {
   mailboxDomain: string
 }): Promise<boolean> {
   const wallet = new ethers.Wallet(opts.eoaPrivateKey)
-  // Sign a fresh request on every attempt: new timestamp, new nonce.
-  const fields = {
-    wallet: wallet.address,
-    keyID: opts.keyID.trim(),
-    publicKeyArmored: Buffer.from(opts.publicKeyArmored, 'utf8').toString('base64').trim(),
-    encrypKeyArmored: opts.encrypKeyArmored.trim(),
-    routeKeyID: opts.mailboxDomain.trim(),
-    timestamp: Date.now(), // milliseconds
-    nonce: ethers.hexlify(ethers.randomBytes(16)),
-  }
-  const signature = await wallet.signMessage(regiestChatRouteMessage(fields))
   const res = await fetch('https://beamio.app/api/regiestChatRoute', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...fields, signature }),
+    body: JSON.stringify({
+      wallet: wallet.address,
+      keyID: opts.keyID,
+      publicKeyArmored: Buffer.from(opts.publicKeyArmored, 'utf8').toString('base64'),
+      encrypKeyArmored: opts.encrypKeyArmored,
+      routeKeyID: opts.mailboxDomain,
+    }),
   })
   const json = await res.json().catch(() => ({}))
   return res.ok && !!json?.ok
 }
 ```
 
-Refusals:
-
-| Status | Meaning |
-| --- | --- |
-| 400 | Malformed field: wallet, keyID, armor, routeKeyID, nonce, or a timestamp that is not milliseconds |
-| 401 | `Missing signature`, `Invalid signature`, or `Expired timestamp` (more than 10 minutes from server time) |
-| 403 | `Signature does not match wallet` |
-| 409 | The same `wallet` + `nonce` was already accepted (replay) |
-
 `encrypKeyArmored` is an application backup of the user PGP private key (current clients AES-GCM encrypt it with material derived from the EOA). **Do not log** the EOA key, mnemonic, PGP private armor, `Securitykey`, or full hop signatures.
 
 After register, wait and re-read `searchKey(eoa)` until `userPgpKeyID` matches the local subkey ID.
-
-When to register:
-
-- Register only after a **successful** read of your own record shows one of: no record, a recorded user key that differs from the local key, or no mailbox route. A failed or timed-out read is never a reason to register. Retry the read with backoff; if you already know your mailbox, keep listening there meanwhile.
-- Keep the existing mailbox: use the route on chain, else the mailbox this device already uses. Pick a random Guardian domain only for a new wallet that has no mailbox anywhere.
-- A device without its user key generates a new one only after a successful read shows that no usable key exists. Generating a key because a read failed would overwrite the wallet's real key, and earlier messages could no longer be decrypted.
 
 ## Sample: encrypt a signed SI command
 

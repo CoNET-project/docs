@@ -92,14 +92,14 @@ Two independent deposit rails. Do not merge them in UI copy or implementation:
 
 | Rail | User-visible result | Chapter |
 | --- | --- | --- |
-| Coinbase / `walletDeposit` | CONET-USDC via Treasury LockMint | [Cash and USDC](cash-and-usdc.md) |
+| Coinbase | **Stopped:** CONET-USDC via Treasury LockMint (`walletDeposit`). In the current app the Coinbase row funds Base USDC | [Cash and USDC](cash-and-usdc.md) |
 | **Buy USDC with card** | Stripe Crypto Onramp sends native **USDC on Base** to the owner **EOA** | [Cash and USDC](cash-and-usdc.md) |
 
 The Consumer Home hub shows **Universal Cash** (USDC) plus **Store Credits** and **My Points** (`#13`). The Home card rail button is **Fund Wallet**. That sheet is **not** a third deposit rail. It offers:
 
 | Fund Wallet row | What it does | Not |
 | --- | --- | --- |
-| **Coinbase** | One tap fetches the Onramp session and opens Coinbase in the system browser (or native `openURL`). No second confirmation sheet. Fulfillment stays Coinbase `walletDeposit` — CONET-USDC via Treasury LockMint. | Stripe `eoaUsdcStripe` |
+| **Coinbase** | One tap fetches the Onramp session and opens Coinbase in the system browser (or native `openURL`). No second confirmation sheet. In the current app it funds Base USDC; the CONET-USDC minting path behind `walletDeposit` (Treasury LockMint) is stopped. | Stripe `eoaUsdcStripe` |
 | **Debit card** | Stripe Crypto Onramp (`eoaUsdcStripe`) — native **USDC on Base** to the owner **EOA** | Coinbase `walletDeposit` |
 | **Receive from a wallet** | Native CashTrees / CaehTrees: four catalog rows (Phantom, MetaMask, OKX Wallet, Trust Wallet) then `openURL` with the **PWA-built** deep link (Base USDC to the owner EOA). Native must not invent the URL. **Ordinary browser (not the native shell):** only already-installed EIP-6963 / injected extensions; if none are present, show the on-panel empty alert (install MetaMask or Coinbase Wallet). Tapping an injected row connects and switches/adds Base (`0x2105`); there is no USDC amount field and no “Receive Funds” row. Not a Beamio deposit API. | Coinbase Onramp / `walletDeposit` |
 

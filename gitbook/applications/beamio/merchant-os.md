@@ -199,17 +199,19 @@ Merchant configuration is written to **card0 / `metadata_json`** (HTTP `GET http
 
 Trash on Top-up Promotion clears **bonus** only. It must not clear `unifiedRewardPoints.topup`.
 
-### Social exchange and canonical CoNET-USDC
+### Social exchange and CoNET-USDC
 
 An issued-NFT social exchange with `kind = "usdc"` is separate from fixed
 Social Promotion mint rules. After the user signs the claim, the merchant card
 burns `#13` from the user's AA, debits the card's `escrowUsdc6`, and pays the
-reward in canonical CoNET-USDC to the user's **EOA**. It does not pay USDC
+reward to the user's **EOA**. The reward is denominated in the current
+CoNET-USDC (the old contract below); the switch-over plan for the new
+conet-USDC contract will be announced separately. It does not pay USDC
 directly to the AA.
 
-- Canonical CoNET-USDC (6 decimals):
+- Current CoNET-USDC, old contract (6 decimals):
   [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA)
-- Sole active Treasury: TreasuryBridgeV3
+- Treasury (cross-chain bridge paused): TreasuryBridgeV3
   [`0xa208982212978550594A7FEEB70a61665d129003`](https://mainnet.conet.network/address/0xa208982212978550594A7FEEB70a61665d129003)
 
 The legacy USDC address `0xfD0D7B0706AaB5E4351bcED37bC3C77ed6813907` is

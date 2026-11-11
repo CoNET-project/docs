@@ -1,5 +1,7 @@
 # GB AMM Whitepaper: Automatic Market Making, Treasury Operations and Market Risk
 
+> **Superseded.** This whitepaper builds on the GB token whitepaper v0.3, which is superseded by the new GB design, summarised in [GB purchase, metering, fees and settlement](gb-billing.md). It is kept for reference. Under the new design one DAO-designated market-operations contract may issue GB without burning conet-USDC, within a DAO-set net-issuance limit in GB that starts at zero; it burns only GB it holds, and it is not enabled at launch. Its price band, observed price source and values are not decided. Sections of this paper that base market operations on the risk reserve, or let anyone trigger them, do not apply. The previous GBToken is no longer recognised and its services have stopped.
+
 **Version:** v0.2 (review revision) | **Date:** 25 October 2026 | **Basis:** the [GB Whitepaper v0.3](gb-whitepaper.md) (the "GB Whitepaper") and operator decisions of 22 to 25 October 2026 | **Status:** DAO discussion draft. Not approved by the DAO. The contracts described here are not deployed.
 
 A companion paper on GB market structure within the CoNET economy.

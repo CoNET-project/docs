@@ -83,7 +83,7 @@ Confirm the consensus genesis against a live beacon before treating a local
 copy as authoritative:
 
 ```bash
-curl -s http://38.102.126.50:4100/eth/v1/beacon/genesis
+curl -s http://<peer-host-2>:4100/eth/v1/beacon/genesis
 ```
 
 | Field | Value |
@@ -116,16 +116,16 @@ The Beacon deposit contract is `0x4242…4242`. It is not
 
 ## 4. Public L1 hosts and ports
 
-Current public execution, consensus, and DHT hosts:
+Current public execution, consensus, and DHT hosts. Host addresses are shown as placeholders (`<peer-host-1>` to `<peer-host-6>`); the same placeholder means the same host on every page. Ask the CoNET operators for the current addresses.
 
-| Public IP | Role |
+| Host | Role |
 |---|---|
-| `38.102.126.30` | Archive RPC, DHT hub, production beacon |
-| `38.102.126.50` | Public RPC, DHT hub, production beacon |
-| `216.225.202.23` | Full node, validators, DHT hub |
-| `216.225.202.22` | Full node, validators, DHT hub |
-| `216.225.197.3` | Full node, validators, DHT hub |
-| `216.225.202.82` | Full node, validators, DHT hub |
+| `<peer-host-1>` | Archive RPC, DHT hub, production beacon |
+| `<peer-host-2>` | Public RPC, DHT hub, production beacon |
+| `<peer-host-3>` | Full node, validators, DHT hub |
+| `<peer-host-4>` | Full node, validators, DHT hub |
+| `<peer-host-5>` | Full node, validators, DHT hub |
+| `<peer-host-6>` | Full node, validators, DHT hub |
 
 Do not bootstrap from retired hosts.
 
@@ -147,12 +147,12 @@ Peer IDs can change if a DHT process is rebuilt, so prefer live ENRs:
 
 ```bash
 for ep in \
-  38.102.126.30:4110 \
-  38.102.126.50:4110 \
-  216.225.202.23:4110 \
-  216.225.202.22:4110 \
-  216.225.197.3:4110 \
-  216.225.202.82:4110
+  <peer-host-1>:4110 \
+  <peer-host-2>:4110 \
+  <peer-host-3>:4110 \
+  <peer-host-4>:4110 \
+  <peer-host-5>:4110 \
+  <peer-host-6>:4110
 do
   echo "== $ep"
   curl -s --connect-timeout 5 "http://${ep}/eth/v1/node/identity" \
@@ -166,12 +166,12 @@ Snapshot DHT peer IDs from 2026-08-17:
 
 | Host | DHT peer ID on `:4110` |
 |---|---|
-| `38.102.126.30` | `16Uiu2HAmQoVe9DeBo4gW1WEmXohZLk3ACUkEeRGmBM7B5NAjU4YD` |
-| `38.102.126.50` | `16Uiu2HAm3a8Ak19rig7uwDKbWivRnjiwpfZNqZv6SsUeaTcBUPw8` |
-| `216.225.202.23` | `16Uiu2HAmN51gXoyK9kyr5HkSWuRYizeA2m1ipW4fn3V3tGo1fCKs` |
-| `216.225.202.22` | `16Uiu2HAmBcwKE21Y2WV2guKpwBDkDXvxqQ9hRn1agC1S2Aneg3Nq` |
-| `216.225.197.3` | `16Uiu2HAkxR4cZAKjehmczq3teuYCAWqrkDmhsZLabJBa7QPyDj6q` |
-| `216.225.202.82` | `16Uiu2HAmGnXxJijMnNHQfrngvNNMvTdESCuJyuzbEQfxPdKMFx3T` |
+| `<peer-host-1>` | `16Uiu2HAmQoVe9DeBo4gW1WEmXohZLk3ACUkEeRGmBM7B5NAjU4YD` |
+| `<peer-host-2>` | `16Uiu2HAm3a8Ak19rig7uwDKbWivRnjiwpfZNqZv6SsUeaTcBUPw8` |
+| `<peer-host-3>` | `16Uiu2HAmN51gXoyK9kyr5HkSWuRYizeA2m1ipW4fn3V3tGo1fCKs` |
+| `<peer-host-4>` | `16Uiu2HAmBcwKE21Y2WV2guKpwBDkDXvxqQ9hRn1agC1S2Aneg3Nq` |
+| `<peer-host-5>` | `16Uiu2HAkxR4cZAKjehmczq3teuYCAWqrkDmhsZLabJBa7QPyDj6q` |
+| `<peer-host-6>` | `16Uiu2HAmGnXxJijMnNHQfrngvNNMvTdESCuJyuzbEQfxPdKMFx3T` |
 
 These are DHT sidecar IDs, not production beacon IDs. Do not combine a DHT
 peer ID with beacon port `4200`.
@@ -181,12 +181,12 @@ peer ID with beacon port `4200`.
 Public geth bootnodes on port `8400`:
 
 ```text
-enode://e5fe89d9ad924db6e4699480242a12fccba2c00e35772db706e46190c0ded9bb2b7e0d996826f5e46d369e01336213ef263c5038f94552e5f5e6e8ec76573a3f@38.102.126.30:8400
-enode://d9243095bca94720f88d38c93ae4ccefc8b67651c66b4c93c915f845f6abfd39a091465db02db32b1a5b8061566c1558d2e6842f75620bf533480bab8a180168@38.102.126.50:8400
-enode://5cf9a159e641318cda27e6bc1b4185667c0cdb1b54c3df5b8626eacbacea93af64c243dbdd09b40c62ba24792d0afc571cf17cbc47a5ed5a6207f27054c01d65@216.225.202.23:8400
-enode://8e09d44bb4c29543a172e53dd8a74677a2a63d3d98a3d530f9d8b6f6bd6802a542f5b79d509ff737a9a764a66ab44a81403597cb50e350178ddd91f487e28f2d@216.225.202.22:8400
-enode://dc0624c81896cdec036af7096886b1629a288b4824a467038df645c5c6b0f7fe75e13758ea80c0c37ba6245b221680db1fb553d564e54b55410eb6063bb64ca0@216.225.197.3:8400
-enode://f1e249c97ce861441b3bd4832213cc634dd5c23d1a8722cd9c1aea28492779f6b64e012e8d97d56006d69be5224903ea5a787d8af68e9542db82ac1f76491dd5@216.225.202.82:8400
+enode://e5fe89d9ad924db6e4699480242a12fccba2c00e35772db706e46190c0ded9bb2b7e0d996826f5e46d369e01336213ef263c5038f94552e5f5e6e8ec76573a3f@<peer-host-1>:8400
+enode://d9243095bca94720f88d38c93ae4ccefc8b67651c66b4c93c915f845f6abfd39a091465db02db32b1a5b8061566c1558d2e6842f75620bf533480bab8a180168@<peer-host-2>:8400
+enode://5cf9a159e641318cda27e6bc1b4185667c0cdb1b54c3df5b8626eacbacea93af64c243dbdd09b40c62ba24792d0afc571cf17cbc47a5ed5a6207f27054c01d65@<peer-host-3>:8400
+enode://8e09d44bb4c29543a172e53dd8a74677a2a63d3d98a3d530f9d8b6f6bd6802a542f5b79d509ff737a9a764a66ab44a81403597cb50e350178ddd91f487e28f2d@<peer-host-4>:8400
+enode://dc0624c81896cdec036af7096886b1629a288b4824a467038df645c5c6b0f7fe75e13758ea80c0c37ba6245b221680db1fb553d564e54b55410eb6063bb64ca0@<peer-host-5>:8400
+enode://f1e249c97ce861441b3bd4832213cc634dd5c23d1a8722cd9c1aea28492779f6b64e012e8d97d56006d69be5224903ea5a787d8af68e9542db82ac1f76491dd5@<peer-host-6>:8400
 ```
 
 Use several as comma-separated `--bootnodes`. Your `--nat=extip` value must

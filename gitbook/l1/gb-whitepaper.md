@@ -1,5 +1,7 @@
 # GB Whitepaper: CoNET DePIN Payment Token
 
+> **Superseded.** This whitepaper is superseded by the new GB design, summarised in [GB purchase, metering, fees and settlement](gb-billing.md). It is kept for reference. Where the two differ, the new design applies: for example, version 1 now has withdrawals from CoNET to Base, service fees are collected by the execution node from an approval, free GB can be claimed only by ordinary wallets and pays for the same services as paid GB, a market-operations contract may issue GB without burning conet-USDC within a DAO limit, exchange fees are set by the DAO, and subscriptions and third-party tokens are covered in [Third-party tokens and subscriptions](third-party-assets.md). The previous GBToken is no longer recognised and its services have stopped.
+
 **Version:** v0.3 (merged draft) | **Date:** 25 October 2026 | **Basis:** the v0.1.2 treasury-operations revision, the v0.2 working draft, and operator decisions of 22, 24 and 25 October 2026 | **Status:** DAO discussion draft. Not approved by the DAO; not on-chain.
 
 Let real cloud services create payment demand, and let real protocol revenue build resilience against shocks.
@@ -22,7 +24,7 @@ GB is the payment token of CoNET DePIN. It is used for network forwarding, cloud
 
 Exiting paid GB means burning GB and minting conet-USDC. The only reserve asset of GB is Base USDC. The USDC locked on Base behind the conet-USDC burned when a user issues GB becomes GB base backing; when the user exits, that USDC returns to the reserve behind conet-USDC.
 
-The protocol collects three fees: a 0.1% issuance fee and a 0.1% exit fee, both credited in full to the treasury risk reserve; and a miner settlement fee of 0.5% of the service price, borne by the miner and split according to a DAO-published ratio between DePIN network maintenance and redevelopment and the GB treasury.
+(**Updated 10 November 2026:** the 0.1% issuance and exit fees are replaced by a DAO-set exchange fee of n% in both directions; its value is pending. See Chapter 20.) The protocol collects three fees: a 0.1% issuance fee and a 0.1% exit fee, both credited in full to the treasury risk reserve; and a miner settlement fee of 0.5% of the service price, borne by the miner and split according to a DAO-published ratio between DePIN network maintenance and redevelopment and the GB treasury.
 
 Treasury open-market operations (AMO) may sell newly issued paid GB, but accept only conet-USDC, at a price not below the official rate, and burn the conet-USDC received in the same transaction. AMO may also buy back and cancel GB. Rebalancing, trades within AMO limits and circuit breakers are executed automatically by the contracts within parameters set by DAO vote. There is no privileged execution address.
 
@@ -198,6 +200,8 @@ Outbound burns and external minting only change location. They may not be counte
 
 Apart from the four sources in the table above, no address holds a minting right for paid GB.
 
+**Updated 10 November 2026:** a fifth source is decided: one DAO-designated market-operations contract may issue paid GB without burning conet-USDC, within a DAO-set net-issuance limit. See Section 13.1 and Chapter 20.
+
 ### 5.2 Exception backed by the risk reserve: miner mint
 
 **[Decided]** (24 October 2026): after a miner serves a user and burns that user's free GB, the contract mints paid GB to the miner at the ratio k set by DAO vote. For each mint, an equivalent amount of Base USDC is moved from the risk reserve into GB base backing. Minting is paused if the risk reserve is insufficient.
@@ -226,6 +230,8 @@ In the early stage the risk reserve is small, so this path will be paused for mo
 
 ---
 ## 6. User issuance of GB and the 0.1% issuance fee
+
+> **Updated 10 November 2026:** exchanges between GB and conet-USDC pay a DAO-set fee of n% in both directions, paid by the person exchanging, with no default value. The fixed 0.1% issuance fee in this chapter no longer applies. The value of n is pending.
 
 ### 6.1 Charging basis
 
@@ -299,7 +305,7 @@ Only the necessary settlement commitments or summaries of evidence are published
 
 **[Decided]** (24 October 2026)
 
-1. Free GB may be used only to pay for DePIN services.
+1. ~~Free GB may be used only to pay for DePIN services.~~ **Updated 10 November 2026:** free GB may be used for every service that accepts paid GB, including mailbox fees (decided 10 November 2026). How it is collected for hop-by-hop settlement is pending.
 2. Free GB has no right of exit, cannot be transferred, cannot be traded, and cannot be bridged across chains.
 3. Free GB is burned by the miner providing the service, when the service settlement is completed.
 
@@ -317,6 +323,8 @@ Paid GB that a miner receives after burning free GB is backed by the risk reserv
 
 ---
 ## 9. Paid GB exit and the 0.1% exit fee
+
+> **Updated 10 November 2026:** the fixed 0.1% exit fee in this chapter is replaced by the DAO-set n% exchange fee (Chapter 6 note). The value of n is pending.
 
 ### 9.1 Gross and net
 
@@ -456,6 +464,8 @@ The [GB AMM Whitepaper (draft)](gb-amm-whitepaper.md) expands this chapter: the 
 
 ### 13.1 Two channels
 
+> **Updated 10 November 2026:** market operations follow the decisions of 9–10 November 2026: the market-operations contract may issue GB without burning conet-USDC; its net issuance (GB issued minus GB it burned) is limited by a DAO-set amount of GB, counted cumulatively and not reset by period; it burns only GB it holds; a buyback leg is started by the holder selling to it; conet-USDC received is converted through the outflow route; buffers are held by the contract; it is not enabled at launch. The last three points are engineering choices the operator may change. The price band, the observed price source and the values are pending. Where this section lets anyone trigger operations, the new rules apply.
+
 GB supply is adjusted through two channels: users issuing and exiting at the official rate, and AMO. AMO is executed automatically by the contracts within the ranges and quotas set by DAO vote. Anyone may trigger it when the conditions are met, and there is no privileged execution address. **[Decided]** (confirmed 25 October 2026) When triggered, the contract itself checks the price deviation, quotas and coverage; if the conditions are not met, the transaction reverts. The trigger pays its own gas.
 
 | Situation | Operation AMO may perform | Preconditions |
@@ -530,6 +540,8 @@ Therefore the room for AMO sales and buybacks is narrow, and the treasury cannot
 Persistent deep discounts should first be investigated for restricted reserves, blocked exits, data manipulation and service demand. They may not be used to create low-price buyback opportunities for the treasury by restricting ordinary holders' exits.
 
 ### 13.5 Price signals and execution constraints
+
+> **Updated 10 November 2026:** the limit on market operations is the DAO-set net issuance in GB (Section 13.1 note), not a share of the risk reserve. The risk-reserve quotas below no longer apply to issuance by the market-operations contract.
 
 Operating signals use multi-source, time-weighted observation, and check data freshness and effective depth. Execution uses explicit price limits, slippage tolerances, quantities and expiry conditions. An instantaneous price from a single thin pool may not trigger a large operation. Uniswap v3's historical price mechanism can support time-weighted observation, but data availability and manipulation costs must be verified independently. [15]
 
@@ -698,7 +710,7 @@ v0.2 labelled the decisions "no multisig" and "cross-chain entry rules" as dated
 6. **AMO parameters**: the price source (multi-source, time-weighted observation), the trigger band (market price deviating 1% from the official rate) and the trading quotas (1% per transaction, 10% per day and 20% per 90 days, of the risk reserve) are decided (25 October 2026; Section 13.5). The buyback buffer size is decided at 100,000 conet-USDC. When it falls below 50,000 conet-USDC, the contract replenishes it to 100,000 conet-USDC through path one, with no separate cap (Section 13.3). The custody arrangement for the Base USDC used in automatic deposits, and the contract design, are pending discussion.
 7. **Rate adjustment**: the minimum interval between the proposal and the effective block, and the quota during lock-up until the effective date. Whether decreases are allowed, and the single and cumulative limits, are decided in Section 2.3 (25 October 2026).
 8. **Exit rules when coverage is insufficient**: decided as queuing, with payment at the official rate once assets recover (25 October 2026). Queuing follows order of arrival. The details of the queue (whether partial payment is allowed, and disclosure during the queue) are pending.
-9. **Developer application settlement**: after the developer FX minting entry is removed, how pay-per-use and subscription models will settle in paid GB.
+9. **Developer application settlement**: after the developer FX minting entry is removed, how pay-per-use and subscription models will settle in paid GB. **Updated 10 November 2026:** the requirement is decided (third-party tokens with ERC-1155 subscriptions, payments to the issuer); the details are still pending. See Chapter 20.
 10. **Same-address deployment of tokens**: deployer, initialisation code and salt.
 11. **Form of the AAC secure construction**: whether the verification contract directly holds the minting right, or a dedicated representation token grants the minting right only to the AAC secure construction; and, where the token has no admin, how the minter is replaced.
 12. **Outbound release of conet-USDC (decided, 25 October 2026)**: burning on the CoNET side and release of the locked Base USDC by the external treasury (Section 3.2); the path must pass the forged-message gate in Chapter 17 before it opens (decided 25 October 2026).
@@ -708,6 +720,20 @@ v0.2 labelled the decisions "no multisig" and "cross-chain entry rules" as dated
 16. **Legal assessment**: applicability of the exit mechanism and of the three fee types in the target jurisdictions.
 
 ---
+## 20. Updates after this version (10 November 2026)
+
+This chapter lists decisions made after v0.3 that change this paper. The current rules are on [GB purchase, metering, fees and settlement](gb-billing.md) and [Third-party tokens and subscriptions](third-party-assets.md). Nothing here is deployed.
+
+| Topic | Decision | Status |
+| --- | --- | --- |
+| Exchange fee | GB ↔ conet-USDC pays a DAO-set n% in both directions, paid by the person exchanging; no default value. Replaces the fixed 0.1% issuance and exit fees | Mechanism implemented, pending acceptance; value of n pending |
+| Market operations | May issue without burning conet-USDC within a DAO-set net-issuance limit in GB; burns only its own GB; not enabled at launch | Partly implemented, pending acceptance; price band, observed price and values pending |
+| Free GB | Pays for every service that accepts paid GB, including mailbox fees | Decided; not implemented. Hop-by-hop settlement of free GB pending |
+| GB price | Rolling 90-day cap: the sum of all price moves is at most 20% of the price at the start of the window; at most 50% per step | Implemented for conet-USDC, pending acceptance |
+| Third-party stablecoins | Issued on CoNET against an official stablecoin at a fixed ratio; redemption fee p of 0–5% fixed at creation; profit rate m of 0–500% for paying nodes; issuer paid at burn; free balances without redemption | Implemented, pending acceptance |
+| Subscriptions | ERC-1155 receipts with day, week, month, quarter or year terms; payments go to the issuer | Requirement decided; local implementation pending acceptance; details pending |
+| Contract-wallet signatures | GB `permit` and EIP-3009 accept ordinary wallet signatures only; third-party tokens accept contract wallets through ERC-1271 | Decided |
+
 ## Appendix A: Parameter summary
 
 | Item | Rule | Status |

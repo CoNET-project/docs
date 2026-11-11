@@ -38,13 +38,18 @@ Network-layer privacy and censorship resistance are transport objectives. Wallet
 3. [Validators](validators.md)
 4. [Decentralization and verifiability](decentralization.md)
 5. [Guardian Nodes](guardian-staking.md)
+   - [Node registry V2](node-registry-v2.md) (approved, not yet live)
 6. [RPC and Explorer](rpc-explorer.md)
 7. [Assets](assets.md)
 8. [Decentralized cross-chain Treasury](cross-chain-treasury.md)
-9. [AAC proof-driven cross-chain settlement](aac-cross-chain.md)
-10. [GB token whitepaper (draft)](gb-whitepaper.md)
-11. [CoNET privacy and asset fragmentation whitepaper (draft)](privacy-fragmentation-whitepaper.md)
-11. [GB AMM whitepaper (draft)](gb-amm-whitepaper.md)
+9. [Two-way AAC bridge (CoNET ↔ Base)](aac-two-way-bridge.md) (approved, not yet live)
+10. [AAC proof-driven cross-chain settlement](aac-cross-chain.md) (earlier design)
+11. [DAO and the next-generation treasury](dao-treasury.md) (approved, not yet live)
+12. [GB purchase, metering, fees and settlement](gb-billing.md) (approved, not yet live)
+13. [Third-party tokens and subscriptions](third-party-assets.md) (approved, not yet live)
+14. [GB token whitepaper v0.3](gb-whitepaper.md) (superseded)
+15. [GB AMM whitepaper v0.2](gb-amm-whitepaper.md) (superseded)
+16. [CoNET privacy and asset fragmentation whitepaper (draft)](privacy-fragmentation-whitepaper.md)
 
 Developer how-tos for this layer: [Run an L1 node](../developers/l1-node.md), [Confirm the period-18 checkpoint](../developers/l1-independent-confirmation.md), [Participate in mining](../developers/l1-mining.md), and [Bring an ERC-20 into CoNET](../developers/l1-erc20-bridge.md).
 
@@ -54,7 +59,8 @@ Developer how-tos for this layer: [Run an L1 node](../developers/l1-node.md), [C
 - [Decentralization and verifiability](decentralization.md) — reproducible validator, Guardian, stake, client, and governance views
 - [RPC and Explorer](rpc-explorer.md) — connection and verification examples
 - [Decentralized cross-chain Treasury](cross-chain-treasury.md) — current Treasury proxy, route modes, miner quorum, and the conditional hand-off to DLE
-- [AAC proof-driven cross-chain settlement](aac-cross-chain.md) — Obstacles 1–5 Accepted; Phases B–E recorded 2026-10-15; custody closed; EIP-2537 native on CoNET since Prague
+- [Two-way AAC bridge](aac-two-way-bridge.md) — current design, approved, not yet live; the legacy Treasury cross-chain bridge is paused
+- [AAC proof-driven cross-chain settlement](aac-cross-chain.md) — earlier design; Obstacles 1–5 Accepted; Phases B–E recorded 2026-10-15; custody closed; EIP-2537 native on CoNET since Prague
 - [Resources](../resources.md) — public git map and live-service index
 
 ## Next

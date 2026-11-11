@@ -44,7 +44,7 @@ The proposed sources are chain rent or creation reserves, with an explicit cappe
 
 ## Storage metering
 
-Storage content, access, and retention use **GBToken (`GB`)** metering: the active 9-decimal CoNET ERC-20 at [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8), not the deprecated `ConetGB1155` accounting track. Those charges do not become part of the conet-USDC protocol-value-fee ledger merely because the storage tip also uses archive capacity.
+Storage content, access, and retention use **GB** metering, not the deprecated `ConetGB1155` accounting track. The previous GBToken at [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) is no longer recognised; the [new GB design](../l1/gb-billing.md) is approved, not yet live. Those charges do not become part of the conet-USDC protocol-value-fee ledger merely because the storage tip also uses archive capacity.
 
 ## Principal is not fee revenue
 

@@ -1,5 +1,7 @@
 # `web3://` wallet-addressed applications
 
+> **Not usable on the current network.** The official `web3://` gateway still receives through the legacy listen pool, which CoNET-SI nodes stopped serving on 2 November 2026, so `web3://` browsing through it does not work today. A fix is not scheduled. Persistent application streams also depend on L0 primitives that were removed from CoNET-SI on 31 October 2026.
+
 **Maturity: Under development.** `web3://` is a wallet-addressed application
 protocol using Layer Minus over CoNET L0 resources. The Linux runtime, signed GET/HEAD
 gateway, locator parser, persistent application streams, and early
@@ -139,7 +141,7 @@ entry policy remain under development.
 An end-to-end smoke test on 2026-08-20 requested:
 
 ```text
-web3://0xA8386335F1a8C6Fab3798F36cd4F663Ce7bF5A53/
+web3://0xA838…5A53/
 ```
 
 through a real entry and AddressPGP registration. The encrypted response was

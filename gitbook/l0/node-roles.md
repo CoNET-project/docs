@@ -24,7 +24,7 @@ Its Layer Minus duties include:
 - read the OpenPGP encryption key ID from inbound armor;
 - if the key is not local, look up its mailbox and forward the same armor over HTTP :80;
 - if the key is local, decrypt; if the plaintext is still PGP and the inner key ID is not local, forward the inner armor;
-- meter forwarded bytes for **GB** compensation;
+- meter forwarded bytes for **GB** compensation (GB issuance from metering is paused);
 - act as mailbox only when `isMyRoute` confirms the wallet-to-node binding;
 - persist offline armor before best-effort SSE delivery;
 - maintain labeled chat and mining sessions in the liveness pool;
@@ -53,7 +53,7 @@ Chat clients use the dedicated `mailbox_listen` command with a per-listen `strea
 
 ## Registration, liveness, and accounting
 
-Public Guardian nodes may also be registered in `GuardianNodesInfoV6` on CoNET L1. That record is an eligibility and discovery input, not proof that the runtime is reachable.
+Public Guardian nodes may also be registered in `GuardianNodesInfoV6` on CoNET L1. That record is an eligibility and discovery input, not proof that the runtime is reachable. It is the only node registry in production and has no staking rules; NodeRegistryV2, with stake and slashing, is approved but not yet live (see [Node registry V2](../l1/node-registry-v2.md)).
 
 These states are distinct:
 

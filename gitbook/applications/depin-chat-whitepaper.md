@@ -1,19 +1,19 @@
 # CoNET Chat Whitepaper: Relationship-Private Messaging and Calls on Layer Minus
 
-**Version:** v0.2.1 (discussion draft) | **Date:** 2 November 2026 | **Basis:** operator decisions of 31 October to 2 November 2026; CoNET-SI `main` (74c6cfd) as deployed on every Guardian node on 2 November 2026; chat-sdk-ios 0.1.7, chat-sdk-android 0.2.5 and the Consumer PWA 0.52.925 as released, plus the release-candidate builds under device test; the [CoNET Chat](depin-chat.md) product page and the [CoNET Chat developer guide](../l0/chat-developer-guide.md) | **Status:** discussion draft. Parts are live, parts run on every node but only in test builds of the clients, and parts are designed only. Each section is labelled.
+**Version:** v0.3 (review draft) | **Date:** 11 November 2026 | **Basis:** operator decisions of 31 October to 7 November 2026; CoNET-SI `main` (74c6cfd) as deployed on every Guardian node on 2 November 2026; chat-sdk-ios v0.1.8, chat-sdk-android v0.2.6 and the Consumer PWA 0.52.930 as released; the [CoNET Chat](depin-chat.md) product page and the [CoNET Chat developer guide](../l0/chat-developer-guide.md) | **Status:** discussion draft. Parts are live, parts are written and tested but not yet confirmed in released clients, and parts are designed only. Each section is labelled.
 
 Wallet-addressed messages and calls in which no single node learns who talks to whom.
 
 **How to read the labels**
 
-- **[Live]**: deployed on every Guardian node and in released clients.
-- **[Live, being replaced]**: the behaviour of the released clients, removed by the in-rollout work. Where it needs a node, the nodes stopped supporting it on 2 November 2026, so it no longer works (Section 15).
-- **[In rollout]**: code is written and tested. The node side runs on every Guardian node since 2 November 2026 (CoNET-SI 74c6cfd); the client side is in release-candidate builds and is not released. Not backward compatible unless stated.
-- **[Planned]**: the design is decided by the operator; no code is written or deployed.
+- **[Live]**: deployed on every Guardian node and in released clients. Text marked **[Live] (being replaced)** describes behaviour of the released clients that the work marked [Implemented, pending acceptance] removes; where it needs a node, the nodes stopped supporting it on 2 November 2026, so it no longer works (Section 15).
+- **[Implemented, pending acceptance]**: code is written and tested but is not yet confirmed in released clients, and acceptance is still needed. Where it needs a node, the node side runs on every Guardian node since 2 November 2026 (CoNET-SI 74c6cfd) unless the text says otherwise. Some items exist only in a client SDK candidate that the apps have not integrated; the text says so. Not backward compatible unless stated.
+- **[Approved, not yet live]**: the design is decided by the operator; it is not deployed.
 - **[Open]**: not decided; listed in Appendix B.
-- **[Known limitation]**: a gap that stays after the rollout and is stated so that no page claims more.
 
-An operator decision is not a DAO vote. Wire formats marked [In rollout] may still change before release.
+These are the same four labels as the L1 pages. A paragraph headed **Known limitation** states a gap that stays after the rollout, so that no page claims more.
+
+An operator decision is not a DAO vote. Wire formats marked [Implemented, pending acceptance] may still change before release.
 
 ---
 
@@ -40,20 +40,22 @@ The design rests on a few rules:
 - Every delivery goes through a **random entry node** that is neither the
   sender's nor the recipient's mailbox. A client never connects to a mailbox
   directly. Listening to one's own mailbox also goes through an entry.
-- **[In rollout]** Every delivery is wrapped once more to the recipient's
-  mailbox node, and goes to one entry at a time. The mailbox seals every frame
-  of its listen stream with a per-listen key, so the listening entry sees only
-  padded opaque frames. Contact lookups no longer name the asking wallet.
+- **[Live]** Every delivery is wrapped once more to the recipient's mailbox
+  node (web app since Consumer PWA 0.52.930). The mailbox seals every frame of its listen stream with a
+  per-listen key, so the listening entry sees only padded opaque frames.
+- **[Implemented, pending acceptance]** Deliveries go to one entry at a time, and contact lookups
+  no longer name the asking wallet.
 - Call offers go only to the callee's own mailbox, which rings its own user.
   Call control (wake receipt, cancel, decline, busy, timeout, hang-up) travels
   as ordinary signed messages through the mailboxes.
 - Voice and video travel in padded `CVC2` chunks: after a channel is opened, a
   relay sees only a channel locator and ciphertext, with no wallet, sequence
   number, timestamp or media type.
-- **[In rollout]** Voice channel v3: the callee pays for all four channels of
-  a call through payer-signed temporary wallets, one per channel, and each
-  side places its own channels on a relay it chooses. Relays verify the payer
-  signature only; settlement arrives with the GB settlement module.
+- **[Live]** Voice channel v3: the callee authorizes all four channels of a
+  call through payer-signed temporary wallets, one per channel, and each side
+  places its own channels on a relay it chooses. Relays verify the format and
+  the payer signature only. No voice usage is charged; the charging rules are
+  **[Approved, not yet live]** (Section 16).
 
 Section 14 lists what the protocol does **not** protect today.
 
@@ -152,32 +154,14 @@ Section 14, not defended against.
 | Wallet (EOA) | User | Identity; signs messages, listen commands, ACKs, offers |
 | User PGP | User | Encryption target for every message and offer |
 | Route PGP | Mailbox or relay node | Encryption target for commands that the node executes and for the mailbox layer of deliveries |
-| `streamKey` | One listen session | **[In rollout]** Seals frames of one mailbox listen stream |
+| `streamKey` | One listen session | **[Live]** Seals frames of one mailbox listen stream |
 | Channel key and write key | One voice channel | AES-GCM media key; the write key authorizes chunks on a relay |
-| Temporary wallet | One voice channel | **[In rollout]** Signs that channel's `voice_listen`; the payer signs over its address |
-| Payer wallet | The callee | **[In rollout]** Signs that it funds a temporary wallet's channel |
+| Temporary wallet | One voice channel | **[Live]** Signs that channel's `voice_listen`; the payer signs over its address |
+| Payer wallet | The callee | **[Live]** Signs that it funds a temporary wallet's channel |
 
 A wallet registers its user PGP key and its mailbox binding in the AddressPGP
 contract on CoNET L1. `@BeamioTag` is a display label looked up by address,
 never an identity.
-
-- **[In rollout]** The registration request must be signed by the wallet
-  itself (EIP-191 over the request fields, a timestamp and a single-use
-  nonce). The registration API rejects unsigned requests, requests signed by another
-  wallet, stale timestamps and replays. Format: [SI developer
-  guide](../l0/si-developer-guide.md#sample-register-a-mailbox-route).
-- **[In rollout]** A client registers only after a **successful** chain read
-  shows that the wallet has no record, that the recorded key differs from
-  the local key, or that the record has no mailbox. A failed or timed-out
-  read is retried and never triggers registration; a client that already
-  knows its mailbox keeps listening there meanwhile.
-- **[In rollout]** A registration keeps the existing mailbox (the one on
-  chain, else the one the device uses). Only a new wallet with no mailbox
-  anywhere gets a random one. A device without its key generates a new key
-  only when a successful read shows that no usable key exists.
-- **[Live, being replaced]** Released clients send the registration unsigned,
-  so the registration API refuses it; they also re-register on a random
-  mailbox, or with a new key, when the chain read fails.
 
 ### 3.2 Looking up a contact
 
@@ -185,11 +169,11 @@ A client reads `AddressPGP.searchKey(contact)` over CoNET RPC to get the
 contact's user PGP key and mailbox route key. The call does not depend on who
 asks.
 
-- **[Live, being replaced]** The Consumer PWA sends this `eth_call` with its
+- **[Live] (being replaced)** The Consumer PWA sends this `eth_call` with its
   own wallet as `from`, so the RPC endpoint sees both wallets and the IP. Each
   contact record also kept a copy of the asker's own encrypted private key
   that nothing read.
-- **[In rollout]** The lookup carries no `from`. Only reading one's own
+- **[Implemented, pending acceptance]** The lookup carries no `from`. Only reading one's own
   encrypted private key identifies the caller, as it must. Stored contact
   records drop the stray private-key copy on the next load. A browser test
   counted one `eth_call` with `from` out of about 3,000, and it was that own-key
@@ -231,7 +215,7 @@ Beamio clients currently use one wallet for both.
 ② pending row  { sendId, from: "me", text: ①, createdAt }
 ③ envelope     { timestamp, text: JSON(②), from: senderEOA, signMessage: sign(text) }
 ④ user layer   OpenPGP( base64(JSON(③)) ) → recipient user PGP
-⑤ mailbox layer  OpenPGP( JSON({ data: ④, NoPush? }) ) → recipient mailbox route PGP   [In rollout: always]
+⑤ mailbox layer  OpenPGP( JSON({ data: ④, NoPush? }) ) → recipient mailbox route PGP   [Live: always, web app]
 ⑥ HTTP         POST /post  { "data": "<armor>" }  to one random entry
 ```
 
@@ -239,11 +223,11 @@ The HTTP body is only `{ "data": "<armor>" }`. Flags such as `NoPush` live
 inside layer ⑤, which only the mailbox can read. Each OpenPGP armor exposes the
 key ID of its recipient; that side channel is how nodes route.
 
-**[Live, being replaced]** Ordinary messages are posted as layer ④ directly,
+**[Live] (being replaced)** Older clients post ordinary messages as layer ④ directly,
 so entry A reads the recipient's user key ID, which is public on chain. Only
 receipts carry layer ⑤.
 
-**[In rollout]** Every delivery carries layer ⑤: messages, group copies,
+**[Live]** (web app since Consumer PWA 0.52.930) Every delivery carries layer ⑤: messages, group copies,
 receipts and call control. Entry A sees only the mailbox node's route key ID,
 shared by all users of that node. If the client cannot find the recipient's
 mailbox route key, the send fails with `recipient_mailbox_unknown`; it never
@@ -255,18 +239,18 @@ mailbox unwraps layer ⑤ for messages and receipts.
 - The entry is random for every delivery, and is neither the recipient's
   mailbox nor the sender's own mailbox. A mailbox that saw a direct
   connection would learn the sender's IP.
-- **[In rollout]** The entry comes from a background-warmed pool
+- **[Implemented, pending acceptance]** The entry comes from a background-warmed pool
   (Section 7.4), so a send does not wait for probes.
-- **[In rollout]** One entry at a time. The client switches to another
+- **[Implemented, pending acceptance]** One entry at a time. The client switches to another
   entry only after a clear failure, and tries at most four. A clear failure
   is a connection error, a reset before any response, a non-2xx status, a 2xx
   body `{"ok": false}`, or no response within about 8 seconds. An entry that
   has no route for the armor's key ID answers `{"ok": false, "error": "no_route"}`
   (every node since 2 November 2026).
-  **[Live, being replaced]** Browser clients post one message to up to four
+  **[Live] (being replaced)** Browser clients post one message to up to four
   entries in parallel; native SDKs were already sequential.
 - A timeout may hide a delivery that did arrive, so a retry can create a second
-  copy of the same ciphertext. **[In rollout]** The mailbox stores, and pushes,
+  copy of the same ciphertext. **[Implemented, pending acceptance]** The mailbox stores, and pushes,
   one copy per armor hash; recipients deduplicate by `sendId`.
 
 ### 4.3 At the mailbox
@@ -291,11 +275,11 @@ After the recipient has verified and **stored** a message:
    message to the sender, with `NoPush: true`. The sender marks the bubble
    delivered and does not show a new row.
 
-**[In rollout]** Device tests confirmed that receipts reach the sender's
+**[Implemented, pending acceptance]** Device tests confirmed that receipts reach the sender's
 mailbox with `NoPush` and do not push, including when the sender's app has
 been killed.
 
-### 4.5 Sending from inside the native apps **[In rollout]**
+### 4.5 Sending from inside the native apps **[Implemented, pending acceptance]**
 
 Inside the iOS and Android apps, the page sends only through the native
 daemon's `send`. The page waits up to about 10 seconds for the daemon to be
@@ -333,12 +317,12 @@ message out to all of them. Entry C must not be B. Keepalives are sent on a
 
 ### 5.2 Sealed listen stream
 
-**[Live, being replaced]** Released clients listen without a key and expect
+**[Live] (being replaced)** Released clients listen without a key and expect
 plaintext frames `data: {"data": "<armor>"}`, in which entry C would see the
 recipient key ID of every delivered message. No node accepts such a listen
 since 2 November 2026.
 
-**[In rollout]** The listen command carries a fresh 32-byte `streamKey`,
+**[Live]** The listen command carries a fresh 32-byte `streamKey`,
 created for each listen and kept only in memory. B refuses a listen without
 it. Every frame B writes (handshake, offline flush, live message, keepalive)
 is:
@@ -354,7 +338,7 @@ hashes the inner user-layer armor. A node test checked that the sealed stream
 shows no armor, recipient key ID, wallet, `instanceId`, node wallet or frame
 type.
 
-### 5.3 Listen health **[In rollout]**
+### 5.3 Listen health **[Implemented, pending acceptance]**
 
 A listen that looks open but delivers nothing is worse than one that fails.
 The daemons now follow these rules (all three unless marked native):
@@ -387,7 +371,7 @@ listens was drafted and not adopted (Appendix B).
 
 ### 5.4 Legacy listen pool
 
-**[Live, being replaced]** Released Merchant OS and Alliance builds listen
+**[Live] (being replaced)** Released Merchant OS and Alliance builds listen
 with `mining` + `listenKind: "chat"`. Since 2 November 2026 that pool receives
 no Chat messages on any node, because its frames cannot be sealed; it keeps
 presence and mining only.
@@ -448,7 +432,7 @@ others still arrive mid-call. A call push opens the listen with the stored
 keys without waiting for the page. Messages that arrive with no page loaded
 are kept as ciphertext and ACKed once the page has taken them.
 
-### 7.4 Warm node pools and the node table **[In rollout]**
+### 7.4 Warm node pools and the node table **[Implemented, pending acceptance]**
 
 Operator rule: random node selection is warmed in the background and returns
 at once when needed. Probing at the moment of use cost up to about a second
@@ -482,16 +466,39 @@ on every dial.
 | Phase | Content | Status |
 |---|---|---|
 | P0 | Native key custody, local signing, daemon-owned listen lifecycle, native recognition of caller cancel | **[Live]** |
-| P1 | Versioned protocol spec (`src/protocol.ts` plus generated JSON Schema), `hello` capability handshake, shared test vectors run by all three daemons | **[In rollout]** |
-| P2 | Inbound verification, parsing, storage and ACK inside the daemon; the daemon's store is the single source of truth and the page's chat list a display cache | **[Planned]** |
-| P3 | Sending, presence, offers, nodes and route registration inside the daemon; no OpenPGP on the UI thread | **[Planned]** (native send, warm pools and node table already in rollout) |
-| P4 | Remove old paths: the page sign broker, legacy history, the separate posPwa SDK copy | **[Planned]** |
+| P1 | Versioned protocol spec (`src/protocol.ts` plus generated JSON Schema), `hello` capability handshake, shared test vectors run by all three daemons | **[Implemented, pending acceptance]** |
+| P2 | Inbound verification, parsing, storage and ACK inside the daemon; the daemon's store is the single source of truth and the page's chat list a display cache | **[Approved, not yet live]** |
+| P3 | Sending, presence, offers, nodes and route registration inside the daemon; no OpenPGP on the UI thread | **[Approved, not yet live]** (native send, warm pools and node table already **[Implemented, pending acceptance]**) |
+| P4 | Remove old paths: the page sign broker, legacy history, the separate posPwa SDK copy | **[Approved, not yet live]** |
 
 `hello` is the first command. Its answer lists `protocolVersion`,
 `sdkVersion` and capabilities (for example `send.mailboxWrap`); the page
 decides by capability, never by checking whether a method exists. Each command
 in the spec is annotated with whether it carries a wallet signature, whether
 it goes through an entry, and what nodes see.
+
+### 7.6 Native entry-node service and verified-domain fallback **[Implemented, pending acceptance]**
+
+> **Status: implemented, pending acceptance.** Unit tests and an independent review have passed. Verified on real devices: ordinary network switches (Wi-Fi ⇄ cellular), two-way messaging on cellular, and recovery after airplane mode. The domain path under a real carrier block has not been verified on a device yet; a controlled fault test is in progress. The iOS and Android apps have not integrated this candidate yet, and no app release contains it.
+
+**What it does**
+
+The native chat SDK on iOS and Android reaches CoNET nodes through one **entry-node service** per app process. Every chat request (send, mailbox listen, receipts) asks this service for an entry instead of picking a node on its own.
+
+- **Direct IP first.** The service connects to a node's registered IP directly and checks it with a side-effect-free probe: a signed presence query from a throwaway identity that exists only in memory for the current network. The node answers with a normal HTTP reply, and nothing is stored or delivered.
+- **Fallback only on a real transport failure.** The service switches to HTTPS only when direct connections fail at the transport level (no connection, reset, or timeout before any HTTP status) on **3 different nodes within 30 seconds**, with no IP success in between. Fallback attempts stay within a bounded time budget.
+- **Verified domains only.** In fallback, the service reaches the same nodes at `https://<key ID>.conet.network`. The domain label must equal a subkey key ID of the node's on-chain public key, and the domain must resolve to the node's on-chain IP. A node whose DNS answer does not match its on-chain IP is never used as a fallback target. Certificate and server-name (SNI) checks are strict, and a TLS failure is never retried over plain HTTP.
+- **Hot entry pool.** An entry counts as ready for 60 seconds after a successful probe, and only on the same network and over the same transport (direct IP or HTTPS).
+- **Network changes.** A network change (Wi-Fi ⇄ cellular, a new path) clears the pool and the fallback verdict. The service then probes again at once: direct IP first, HTTPS only if IPs do not answer. Repeated reports of the same network do not start a new round.
+- **No false verdicts.** Failures are not counted while the app is inactive or while the system restricts its network. Without a usable network, the service sends no probes at all.
+- **Fixed target nodes.** Requests that must reach one exact node (for example a mailbox) keep that node and change only the transport, from direct IP to its verified domain.
+- **Recovery.** While in fallback, one direct-IP recovery probe is allowed at intervals. As soon as an IP answers, the service goes back to direct IP first.
+- **No duplicate delivery.** A message is posted to one entry at a time. The next entry is tried only after a clear failure, and the recipient discards duplicates by message ID, so retries do not deliver a message twice.
+
+**Limits**
+
+- If the network blocks the nodes' IP addresses outright (not only direct connections to them), the verified domains resolve to the same addresses and the fallback cannot help.
+- A carrier block page that answers with an HTTP status counts as an answer, not a transport failure, so it does not trigger the fallback.
 
 ---
 
@@ -513,7 +520,7 @@ tag. The command carries no wallet and no signature; `sessionId` is the ring
 identifier for this offer. The mailbox never decrypts the offer. A failed
 offer store fails the dial.
 
-**[Live, being replaced]** The v2 offer carries a caller-generated
+**[Live] (being replaced)** The v2 offer carries a caller-generated
 `sessionKey`, an unused `tempWalletAddress`, entry domains, and, from native
 callers, the caller's relay. If the callee mailbox does not confirm
 `pushed: true` within about three seconds, released clients send a legacy
@@ -521,7 +528,7 @@ callers, the caller's relay. If the callee mailbox does not confirm
 `offerArmor`, which would let that mailbox learn the callee's wallet. Every
 node ignores those fields since 2 November 2026.
 
-**[In rollout]**
+**[Implemented, pending acceptance]**
 
 - The legacy fallback is deleted from every client; the nodes already ignore
   it. The callee-mailbox ring is the only wake path.
@@ -548,7 +555,7 @@ callerPgp:<base64>
 callerRoute:<base64>
 ```
 
-### 8.2 Before dialing: aligning the caller's own mailbox **[In rollout]**
+### 8.2 Before dialing: aligning the caller's own mailbox **[Implemented, pending acceptance]**
 
 Before a dial or an answer, the page checks its own mailbox binding on chain.
 A single failed RPC read used to fail the dial ("Voice call could not use
@@ -573,7 +580,7 @@ the system call UI with a neutral label, fetches the offer with
 it with its stored user PGP key, recovers the caller from `callerSignature`,
 and updates the call UI with the verified identity (Section 8.4).
 
-**[In rollout]** A push can arrive long after it was sent. The Android app
+**[Implemented, pending acceptance]** A push can arrive long after it was sent. The Android app
 now classifies each call push before it rings:
 
 | Verdict | When | Action |
@@ -586,7 +593,7 @@ now classifies each call push before it rings:
 A call that ended before it rang never rings later, whichever path reports
 it. The iOS app has not changed here.
 
-### 8.4 Incoming identity and caller display **[In rollout]**
+### 8.4 Incoming identity and caller display **[Implemented, pending acceptance]**
 
 - The only trusted identity is the wallet recovered from the offer's
   signatures (Section 3.3). The offer's `callerTag` is outside
@@ -608,7 +615,7 @@ it. The iOS app has not changed here.
   full address. A claimed identity that differs from the recovered one
   appears on a second line with a red warning.
 
-### 8.5 Wake receipt **[In rollout]**
+### 8.5 Wake receipt **[Implemented, pending acceptance]**
 
 As soon as the callee's device rings, it sends a wake receipt to the caller's
 mailbox as an ordinary signed message with `NoPush`:
@@ -625,7 +632,7 @@ tests, push to receipt at the caller's mailbox took a median of about 2.3
 seconds (95th percentile about 3.1 seconds, 16 calls), so 8 seconds leaves a
 margin of about 5 seconds.
 
-### 8.6 Ring window and timeout **[In rollout]**
+### 8.6 Ring window and timeout **[Implemented, pending acceptance]**
 
 - Every platform rings for **60 seconds**, counted from the offer's
   `createdAt`. iOS ends an unanswered CallKit call after about 60 seconds on
@@ -650,7 +657,7 @@ delivered through a random entry, exactly like text. A connected call also
 sends hang-up as an AES control chunk on the peer's voice channel; the
 receiver acts on the first copy by `callId`.
 
-**[In rollout]**
+**[Implemented, pending acceptance]**
 
 - **Prepared cancel.** The native caller prepares its cancel when the dial
   starts: signed with the stored wallet key, encrypted to the callee, wrapped
@@ -682,11 +689,11 @@ receiver acts on the first copy by `callId`.
 
 ### 8.8 Accept
 
-**[Live, being replaced]** The callee answers with an accept message and an
+**[Live] (being replaced)** The callee answers with an accept message and an
 AES control chunk on the caller's voice channel, keyed by the caller's
 session key.
 
-**[In rollout]** The callee answers with an ordinary signed message to the
+**[Implemented, pending acceptance]** The callee answers with an ordinary signed message to the
 caller's mailbox (`voice_call_accept_v1` with `proto: 3`, `NoPush`) that
 carries all four channels' parameters (Section 10.3). The chat envelope's
 signature already authenticates the callee; the caller requires the recovered
@@ -700,7 +707,7 @@ the user taps Answer and starts audio only when CallKit activates the session.
 The chunk format in 9.2 to 9.4 is shared by v2 and v3. Only how a channel is
 opened differs.
 
-### 9.1 Opening a v2 channel **[Live, being replaced]**
+### 9.1 Opening a v2 channel **[Live] (being replaced)**
 
 Each listening side opens a temporary voice session that never shares the
 mailbox listen:
@@ -753,7 +760,7 @@ The receiver decrypts first, then reorders by `(kind, seq)`, drops frames whose
 capture time is too old, and reassembles video by `frameId` / `fragIdx` /
 `fragCnt`. Buffers are bounded. The service is real-time best effort.
 
-### 9.5 Voice channel v1 **[Live, being replaced]**
+### 9.5 Voice channel v1 **[Live] (being replaced)**
 
 Voice channel v1 (`voice_uplink` / `voice_downlink` JSON with outer `seq`,
 `callId` and session IDs, reordered before decryption) was kept for peers that
@@ -762,11 +769,11 @@ clients have no v1 path.
 
 ---
 
-## 10. Voice channel v3: payer-signed temporary channels **[In rollout]**
+## 10. Voice channel v3: payer-signed temporary channels **[Live]**
 
-The node side of v3 runs on every Guardian node since 2 November 2026
-(CoNET-SI 74c6cfd). The clients are release-candidate builds of all three
-apps and ship together with the privacy rollout.
+v3 runs on every Guardian node since 2 November 2026 (CoNET-SI 74c6cfd) and
+in the released clients. The format and the payer-signature check are live.
+Voice usage is not metered or charged today; the charging rules are **[Approved, not yet live]** (Section 16).
 
 ### 10.1 Why
 
@@ -949,11 +956,11 @@ No charge exists yet, so nothing can be drained today.
   high-priority FCM.
 - A push carries no sender wallet, tag, key, audio or plaintext. A push is a
   ringing hint, not proof of delivery.
-- **[In rollout]** FCM messages carry fixed analytics labels (`chat`,
+- **[Implemented, pending acceptance]** FCM messages carry fixed analytics labels (`chat`,
   `chat_clear`, `call`, `call_end`) with no identity, so delivery statistics
   can be read per type. The push API change is not deployed.
 
-### 11.1 Android delivery limits **[Known limitation]**
+### 11.1 Android delivery limits (known limitation)
 
 On Android the operating system can drop a push on the phone before the app
 runs any code. Device tests on a current Samsung phone:
@@ -970,7 +977,7 @@ the app. A notification displayed by Google Play services on the app's behalf
 does show in deep sleep, but not after a force stop, and it cannot ring a
 call. The operator decided not to move Chat push to that form.
 
-What the clients do instead **[In rollout]**:
+What the clients do instead **[Implemented, pending acceptance]**:
 
 - The Android app checks on every return to the foreground whether it is
   restricted in the background or was force stopped. A restricted app shows a
@@ -1017,7 +1024,7 @@ IP. Failed answers never overwrite a trusted value. The green dot follows
 online state only; the call button is available when the contact is online or
 wakeable.
 
-**[Known limitation]** Both queries carry the querier's wallet and are signed
+**Known limitation:** Both queries carry the querier's wallet and are signed
 with it, so the contact's mailbox learns who asks about whom. This will be
 solved with the [`web3://`](web3-url.md) protocol. Until then clients must
 not patch it ad hoc or add other commands that hand a sender's wallet to a
@@ -1046,7 +1053,7 @@ peer's mailbox.
 | Replay | A valid old armor can be posted again | Application dedupe by `sendId`; mailbox dedupe by armor hash (every node) |
 | Endpoints | A compromised device exposes what it can decrypt | Out of scope |
 
-Fixed since v0.1, all **[In rollout]**:
+Fixed since v0.1, all **[Implemented, pending acceptance]**:
 
 - A dial failed when one chain read of the caller's own mailbox failed
   (Section 8.2).
@@ -1065,7 +1072,8 @@ Fixed since v0.1, all **[In rollout]**:
 The other fixes listed as in rollout in v0.1 (mailbox layer, one entry,
 sealed listen, `NoPush`, lookup without `from`, removal of the legacy call
 wake) passed device tests on canary nodes. Their node side runs on every node
-since 2 November 2026; the clients are still release candidates.
+since 2 November 2026. The mailbox layer (web app) and the sealed listen are
+live in the released clients; the others are not yet confirmed there.
 
 ---
 
@@ -1089,11 +1097,121 @@ Remaining steps; each needs operator approval:
 3. Build the iOS and Android apps, submit them, and push the PWA over the air.
 4. Deploy the signed route registration API after the new clients are out
    (released clients' unsigned registrations are refused from then on).
-5. GitBook pages move labels from [In rollout] to [Live].
+5. GitBook pages move labels from [Implemented, pending acceptance] to [Live].
 
 Other clients that share the browser SDK (merchant and POS apps) need the same
 update; until they have it, their real-time receive is stopped. The POS copy
 of the SDK has not yet received the listen-health fixes.
+
+## 16. Metering, charging and settlement
+
+This section separates what nodes measure today from the charging rules the
+operator has decided but that are not deployed. Amounts are in GB with 9
+decimals. An operator decision is not a DAO vote; prices marked as DAO prices
+are set by DAO vote.
+
+This section uses the status labels of the L1 pages, not the client release
+labels above: **[Live]** runs on the network today; **[Implemented, pending
+acceptance]** is implemented and tested locally or on a testnet but not
+deployed; **[Approved, not yet live]** is a decided rule that is not deployed;
+**[Open]** is not decided. See [GB purchase, metering, fees and
+settlement](../l1/gb-billing.md).
+
+### 16.1 Metering on nodes today **[Live]**
+
+- On a signed command path, the last hop verifies the prior-hop signature rows
+  and adds their byte counts to a per-wallet counter. Every epoch the node
+  reports the per-wallet totals with its gossip status and resets them.
+- The counter belongs to the wallet named as the billing wallet of the
+  command, or to the routing wallet when none is named. A mailbox store of
+  user-PGP armor, which the node cannot decrypt as a command, is not counted
+  this way. Bytes carried through the node's SOCKS proxy are added to the
+  same per-wallet counter.
+- Nodes check no balance and charge nothing. GB issuance from these counts is paused.
+- Voice channel v3 (Section 10) verifies the payer's signature only. No voice
+  usage is charged, and voice usage is not added to the byte counter.
+
+### 16.2 Service fees in GB **[Approved, not yet live]**
+
+Decided by the operator on 6 November 2026, for services that involve CoNET
+nodes:
+
+- A user approves the execution node's wallet for at least 0.5 GB of paid GB.
+- The execution node keeps an off-chain tally and collects with
+  `transferFrom` each time the tally reaches 0.1 GB. The user receives a
+  breakdown of each charge.
+- Every 12 hours the execution node pays the previous hop against a
+  hash-based statement, and each hop writes off what it received. There is no
+  service-fee contract: hop payments are plain transfers of paid GB.
+- Available credit is the smaller of the allowance and the user's paid GB
+  balance, minus charges not yet collected. Free GB cannot be approved or
+  transferred, but it pays for the same services as paid GB, with the user's
+  authorisation (decided 10 November 2026); how it is collected is open.
+- A request declares at most 2 relays between the entry and the execution
+  node.
+- The new GB token adds EIP-2612 `permit` and EIP-3009
+  `transferWithAuthorization`, so a user without CNET can approve, and both
+  accept ordinary wallet (ECDSA) signatures only.
+
+Visible on chain: the user's approval of and payments to the execution node
+are public, and payments between nodes reveal route edges over time. No single
+transfer shows both the user and the entry.
+
+### 16.3 Offline mailbox storage **[Approved, not yet live]**
+
+Decided by the operator on 7 November 2026:
+
+- DAO price: forwarding 1 GB is priced the same as storing 1 GB of PGP
+  ciphertext on a node for 30 days. This is a DAO rate, not a claim about any
+  cloud provider's cost.
+- Before using a mailbox, the user registers with the chosen mailbox node and
+  prepays at least 0.5 GB of service credit as a storage deposit. The unit is
+  GB of credit, not CNET and not a fixed storage size.
+- Charging starts when the node has received and saved the offline
+  ciphertext and stops when the user's client acknowledges receipt (ACK). It
+  is measured in stored bytes multiplied by storage time.
+- While the prepaid balance covers further storage, the node must keep
+  uncollected ciphertext. When the balance cannot cover another period, the
+  node notifies the user, allows one period of grace, then deletes the oldest
+  messages first. The deposit is paid to the mailbox node's wallet. A user
+  with two mailboxes registers, prepays and is charged separately with each.
+
+CoNET-SI has no code for mailbox registration, prepayment or storage charging
+yet.
+
+### 16.4 Paying nodes in third-party stablecoins **[Approved, not yet live]**
+
+Decided by the operator and the user on 10 November 2026:
+
+- A user can pay mailbox and other node services in a third-party stablecoin
+  issued on CoNET, if its issuer allows it. The node submits the user's
+  signed authorisation to the token contract.
+- The price is the DAO benchmark price of GB times (1 + m), where m is the
+  issuer's profit rate (0–500%). The node is paid in GB from GB the issuer
+  has deposited; if the deposit is short, the order is rejected and nothing
+  is burned.
+- GB a node earns this way first tops up its stake shortfall. A node under
+  an open violation report is still paid.
+- These payments run separately from the GB service fees in Section 16.2.
+
+The token side (third-party stablecoins, the profit rate m and payment from
+the issuer's GB deposit) is **[Implemented, pending acceptance]** in local
+tests. Node-side submission is a local prototype only and is not enabled on
+production nodes.
+
+Details: [Third-party tokens and subscriptions](../l1/third-party-assets.md).
+
+### 16.5 Open items **[Open]**
+
+- How free GB is collected for service fees and mailbox storage.
+- Service-fee details: rounding of small requests, the share count for a
+  direct connection to the execution node, whether a browser execution node's
+  anchor counts as a hop, a per-request usage voucher, allowance limits in
+  clients, a starting limit for new wallets, how bad debt is shared between
+  hops, statement contents and encryption, overdue payers, reconciliation
+  tolerance and minimum amounts.
+- Mailbox storage: the DAO parameter that sets the storage rate.
+- Unit prices per service type, set by DAO vote.
 
 ---
 
@@ -1101,22 +1219,22 @@ of the SDK has not yet received the listen-health fixes.
 
 | Command / object | Encrypted to | Sent through | Signed by wallet | Status |
 |---|---|---|---|---|
-| Message (layers ①–⑤) | Recipient user PGP, then recipient mailbox route PGP | One random entry ≠ both mailboxes | Yes, inside the user layer | Live; layer ⑤ always and one entry at a time in rollout |
+| Message (layers ①–⑤) | Recipient user PGP, then recipient mailbox route PGP | One random entry ≠ both mailboxes | Yes, inside the user layer | Live; layer ⑤ always and one entry at a time implemented, pending acceptance |
 | `mailbox_listen` | Own mailbox route PGP | Entry C ≠ B | Yes | Live; `streamKey` required by every node since 2 November 2026 |
 | `gossip_delivery_ack` | Own mailbox route PGP | Entry ≠ B | Yes | Live |
 | `beamio_chat_delivery_receipt_v1` | Sender user PGP + sender mailbox layer, `NoPush` | Random entry | Yes, inside the user layer | Live |
 | `wallet_online_query` / `wallet_native_wake_query` | Contact mailbox route PGP | Entry ≠ B | Yes (known limitation) | Live |
 | `push_device_register` | Own mailbox route PGP | Entry ≠ B | Yes | Live |
-| `voice_offer_store` (`push: 1`) | Callee mailbox route PGP | Random entry ≠ both mailboxes | No | Live; also written to the live listen in rollout |
-| `voice_call_offer_v1`, `proto: 3` | Callee user PGP, inside `voice_offer_store` | As above | Yes, plus `callerSignature` | In rollout |
+| `voice_offer_store` (`push: 1`) | Callee mailbox route PGP | Random entry ≠ both mailboxes | No | Live; also written to the live listen implemented, pending acceptance |
+| `voice_call_offer_v1`, `proto: 3` | Callee user PGP, inside `voice_offer_store` | As above | Yes, plus `callerSignature` | Live |
 | `voice_offer_fetch` | Own mailbox route PGP | Entry ≠ B | No | Live |
-| `voice_call_ringing_v1` | Caller user PGP + caller mailbox layer, `NoPush` | Random entry | Yes, inside the user layer | In rollout |
-| `voice_call_accept_v1`, `proto: 3` | Caller user PGP + caller mailbox layer, `NoPush` | Random entry | Yes, inside the user layer | In rollout |
-| `voice_call_reject_v1` (`reason`: declined, busy) | Peer user PGP + mailbox layer | Random entry | Yes, inside the user layer | Live; busy in rollout |
-| `voice_call_timeout_v1` | Peer user PGP + mailbox layer | Random entry | Yes, inside the user layer | Live; 60-second window and native caller timer in rollout |
-| Caller cancel, `voice_end_v1` | Peer user PGP + mailbox layer, and an AES control chunk once connected | Random entry | Yes, inside the user layer | Live; prepared copies in rollout |
-| `voice_listen` v3 | Relay route PGP | Entry ≠ relay, ≠ own mailbox | No; temporary wallet and payer signatures | In rollout |
-| `voice_channel_ready_v3` | AES control chunk on the callee's voice channel | Random entry | No (AES-authenticated) | In rollout |
+| `voice_call_ringing_v1` | Caller user PGP + caller mailbox layer, `NoPush` | Random entry | Yes, inside the user layer | Implemented, pending acceptance |
+| `voice_call_accept_v1`, `proto: 3` | Caller user PGP + caller mailbox layer, `NoPush` | Random entry | Yes, inside the user layer | Live |
+| `voice_call_reject_v1` (`reason`: declined, busy) | Peer user PGP + mailbox layer | Random entry | Yes, inside the user layer | Live; busy implemented, pending acceptance |
+| `voice_call_timeout_v1` | Peer user PGP + mailbox layer | Random entry | Yes, inside the user layer | Live; 60-second window and native caller timer implemented, pending acceptance |
+| Caller cancel, `voice_end_v1` | Peer user PGP + mailbox layer, and an AES control chunk once connected | Random entry | Yes, inside the user layer | Live; prepared copies implemented, pending acceptance |
+| `voice_listen` v3 | Relay route PGP | Entry ≠ relay, ≠ own mailbox | No; temporary wallet and payer signatures | Live (no payment yet) |
+| `voice_channel_ready_v3` | AES control chunk on the callee's voice channel | Random entry | No (AES-authenticated) | Live |
 | `voice_listen` v2 | Session node route PGP | Entry ≠ that node | No | Refused by every node since 2 November 2026 (`voice_listen_v3_required`) |
 | `CVC2` chunk | Relay route PGP | Random entry per chunk | No | Live; shared by v2 and v3 |
 | `voice_uplink` / `voice_downlink` v1 | Session node route PGP | Random entry | No | Not forwarded by any node since 2 November 2026 |
@@ -1143,3 +1261,5 @@ backward compatibility).
 | v0.1 | 1 November 2026 | First draft, from the operator decisions of 31 October and 1 November 2026 and the deployed and in-rollout code |
 | v0.2 | 2 November 2026 | Voice channel v3 moves from Planned to In rollout, with its wire format, refusal codes and canary results. New: listen health (5.3), warm node pools (7.4), native-only sending in the apps (4.5), `no_route`, mailbox alignment before dialing (8.2), late-push handling (8.3), incoming identity and local avatars (8.4), the `voice_call_ringing_v1` wake receipt (8.5), the 60-second ring window and native caller timeout (8.6), prepared cancel and hang-up, busy and Missed call (8.7), Android push limits (11.1). Known limitations and open items updated; rollout order as decided on 2 November. Chat described as an application of Layer Minus, with node roles in Layer Minus terms |
 | v0.2.1 | 2 November 2026 | Every Guardian node runs the new CoNET-SI (74c6cfd): label definitions, Section 15 and Appendix A state what nodes now refuse; released clients lose real-time receive and calls. Route registration must be signed by the wallet; a client registers only after a successful chain read shows no record, a different key or no mailbox, and keeps its mailbox (Section 3.1) |
+| v0.3 (review draft) | 7 November 2026 | New Section 16: metering on nodes today, the decided service-fee and offline mailbox storage rules (not deployed), and their open items. Client release labels not yet revised |
+| v0.3 (review draft, revised) | 11 November 2026 | Status labels aligned with the L1 pages ([Live], [Implemented, pending acceptance], [Approved, not yet live], [Open]); new Section 7.6 on the native entry-node service and verified-domain fallback |

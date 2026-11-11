@@ -152,7 +152,7 @@ own. What it takes from Layer Minus:
 |---|---|
 | Wallet, user key and route key in AddressPGP | A contact is a wallet. The sender reads the recipient's user PGP key (the encryption target) and mailbox route key from AddressPGP. Clients register their own binding there with a wallet-signed request |
 | `POST /post` with only `{ "data": "<armor>" }` | Every send, ACK, receipt, presence query and call command. Browsers use HTTPS to entries; the native apps use plain HTTP on port 80 |
-| OpenPGP key-ID routing, peel and forward | Entry A forwards a message by its key ID to the recipient's mailbox. In rollout, every message is wrapped once more to the mailbox route key, so the entry sees only that node key |
+| OpenPGP key-ID routing, peel and forward | Entry A forwards a message by its key ID to the recipient's mailbox. The web app (PWA 0.52.930) wraps every message once more to the mailbox route key, so the entry sees only that node key |
 | Entry A / entry C, mailbox B, `A ≠ B`, `C ≠ B` | A is a random entry for each send, excluding both mailboxes. C carries the listen stream and route-key commands. B is the recipient's mailbox |
 | Mailbox store and listen pools | B stores ciphertext before delivery, fans it out to every `mailbox_listen` session of the wallet, keeps it until `gossip_delivery_ack`, and answers `wallet_online_query`. B seals every listen frame with a per-listen `streamKey` |
 | Route-key commands executed by B | Mailbox work with `NoPush`, `push_device_register`, `voice_offer_store` (B stores the offer and asks the push API to ring its own user), `voice_offer_fetch` |

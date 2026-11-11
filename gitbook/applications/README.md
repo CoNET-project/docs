@@ -29,8 +29,8 @@ Maturity is not an audit, uptime, or anonymity guarantee.
 
 | Application | Product role | Maturity | Start here |
 |---|---|---|---|
-| **`web3://` wallet-addressed applications** | Cross-platform application protocol using Layer Minus on L0 | Under development | [`web3://`](web3-url.md) |
-| **Web3 Browser + Wallet** | Native shell + local PWA: browse/publish `web3://`, SI subset, L2 on-demand | Under development | [Web3 Browser](web3-browser.md) |
+| **`web3://` wallet-addressed applications** | Cross-platform application protocol using Layer Minus on L0 | Under development; not usable on the current network | [`web3://`](web3-url.md) |
+| **Web3 Browser + Wallet** | Native shell + local PWA: browse/publish `web3://`, SI subset, L2 on-demand | Under development (Phase 0 scaffold); all capabilities planned | Page not yet published |
 | **SilentPass** | Wallet-authorized privacy access to ordinary Internet services | Production reference | [SilentPass](silentpass-vpn.md) |
 | **Beamio** | Consumer wallet, Merchant OS (including website lookup onboarding), POS, Cash and USDC, merchant-card custody handoff (normative) | Production reference | [Beamio](beamio.md) |
 | **CoNET Chat** | Relationship-private messaging and real-time voice built on [Layer Minus](../l0/layer-minus.md#conet-chat): sender wallet inside recipient-only ciphertext, entry/mailbox IP and route separation, encrypted history, and opaque voice relay sessions | Implemented capability | [CoNET Chat](depin-chat.md) · [Whitepaper](depin-chat-whitepaper.md) |

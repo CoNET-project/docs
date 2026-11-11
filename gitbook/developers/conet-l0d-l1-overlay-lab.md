@@ -8,6 +8,8 @@ geth and Prysm behind [`conet-l0d`](conet-l0d.md). It is **not** the public
 L1 join path, **not** a claim that production validators have moved off
 public `IP:port` peering, and **not** a new SI command family.
 
+The lab hosts are named `H` (the hub) and `S1` and `S2` (the two spokes); their addresses are not published.
+
 The design under test is:
 
 ```text
@@ -30,20 +32,20 @@ Public operators continue to use [Run an L1 node](l1-node.md).
 
 | Host | Role in this lab | Wallet-addressed overlay | Unmodified clients on loopback | Notes |
 |---|---|---|---|---|
-| Spoke `.98` | Client toward `.82` and toward `.45` | **Meets the lab design** | **Yes** | Dials two wallets; geth/beacon have **no** public P2P sockets |
-| Spoke `.45` | **Client + published wallet host** | **Meets the lab design** | **Yes** | Outbound only to `.82`; inbound `proxy_duplex` accepts **any** client that targets `.45` billing |
-| Hub `.82` | Production L1 + L0d proxy | **Dual-stack** | No — still public `:8400` / `:4200` | Expected for a live validator host; not an L0d-only spoke |
+| Spoke `S2` | Client toward `H` and toward `S1` | **Meets the lab design** | **Yes** | Dials two wallets; geth/beacon have **no** public P2P sockets |
+| Spoke `S1` | **Client + published wallet host** | **Meets the lab design** | **Yes** | Outbound only to `H`; inbound `proxy_duplex` accepts **any** client that targets `S1` billing |
+| Hub `H` | Production L1 + L0d proxy | **Dual-stack** | No — still public `:8400` / `:4200` | Expected for a live validator host; not an L0d-only spoke |
 
-**`.45` dual role is the design, not a compromise.** The host is:
+**`S1` dual role is the design, not a compromise.** The host is:
 
-1. a **client** that joins `.82`'s wallet-addressed network
+1. a **client** that joins `H`'s wallet-addressed network
    (`web3://0x66dCB48f…:8400` / `:4200`); and
 2. a **published wallet** (`0xEF107528…`) that any conforming client may
    dial. The host does **not** pre-list those clients and does **not**
    dial them back.
 
-`.98` is one such client. A future third client would use the same
-`web3://0xEF107528…:port` locator. Requiring `.45` to add a
+`S2` is one such client. A future third client would use the same
+`web3://0xEF107528…:port` locator. Requiring `S1` to add a
 `client_duplex` row for every inbound peer would invert that model.
 
 **Overall:** both spokes peer by wallet locator; remaining operational
@@ -54,9 +56,9 @@ L1 P2P — not a return to IP-first identity on the spokes.
 
 | Host | Billing EOA (duplex signer / `client_duplex` target) | Channel `:8400` routing EOA | Channel `:4200` routing EOA |
 |---|---|---|---|
-| `.82` hub | `0x66dCB48ff905f5f5f3692f302da0A84e0265A792` | `0x66dCB48ff905f5f5f3692f302da0A84e0265A792` | `0x3048925d768694D4b95524DFB71b38e812D705Dd` |
-| `.45` spoke | `0xEF10752843cAC32C73DAb86658B8ab6E5667199B` | `0xEF10752843cAC32C73DAb86658B8ab6E5667199B` | `0x3F84B8f11BF7886DCf0c902A3148cc2926E185dA` |
-| `.98` spoke | `0x72c240E4e35caF9822E6B71BBB816db83E1534a5` | `0x8a2b04C82B43447b69946b31BCCEa14ed29471f4` | `0x2Ae19d1f39445fFa218F540cdD6BDCAfBD68ca7b` |
+| `H` hub | `0x66dC…A792` | `0x66dC…A792` | `0x3048…05Dd` |
+| `S1` spoke | `0xEF10…199B` | `0xEF10…199B` | `0x3F84…85dA` |
+| `S2` spoke | `0x72c2…34a5` | `0x8a2b…71f4` | `0x2Ae1…ca7b` |
 
 This matches the documented wallet split in
 [`conet-l0d` — Wallet and key roles](conet-l0d.md#wallet-and-key-roles) and
@@ -67,23 +69,23 @@ This matches the documented wallet split in
 - **per-port routing EOA** owns AddressPGP listen for that logical port
   (`[[l0.channels]]`);
 - **temporary line wallets** are process-memory identities for one occupied
-  pipe (examples on `.98`: `0xc8b1ae25…`, `0x60c12814…`).
+  pipe (examples on `S2`: `0xc8b1ae25…`, `0x60c12814…`).
 
-`.98` is the fuller split (billing ≠ geth routing ≠ beacon routing). `.45`
+`S2` is the fuller split (billing ≠ geth routing ≠ beacon routing). `S1`
 reuses the billing wallet on `:8400` and still isolates beacon on
 `0x3F84B8f1…`.
 
 ## How the spokes actually connect
 
-### `.98` — full wallet mesh (outbound)
+### `S2` — full wallet mesh (outbound)
 
 `l0.client_duplex` at the snapshot:
 
 ```text
-web3://0x66dCB48ff905f5f5f3692f302da0A84e0265A792:8400@18400
-web3://0x66dCB48ff905f5f5f3692f302da0A84e0265A792:4200@14200
-web3://0xEF10752843cAC32C73DAb86658B8ab6E5667199B:8400@18401
-web3://0xEF10752843cAC32C73DAb86658B8ab6E5667199B:4200@14201
+web3://0x66dC…A792:8400@18400
+web3://0x66dC…A792:4200@14200
+web3://0xEF10…199B:8400@18401
+web3://0xEF10…199B:4200@14201
 ```
 
 The `@LOCAL` suffix is a Linux bind pin only. It is not part of the public
@@ -92,10 +94,10 @@ ports:
 
 | Client | Remote | Loopback target |
 |---|---|---|
-| geth | hub `.82` | `127.0.0.1:18400` |
-| geth | spoke `.45` | `127.0.0.1:18401` |
-| Prysm | hub `.82` | `/ip4/127.0.0.1/tcp/14200/p2p/16Uiu2HAmDJCHuVkXtkPrrL8YykQ9gFZnQkR9Q6WjZZUrmueohPfd` |
-| Prysm | spoke `.45` | `/ip4/127.0.0.1/tcp/14201/p2p/16Uiu2HAkxjzYKtKJZc9E7pMTa3LzB9XHdHoDBaRHymQgtofmbKUA` |
+| geth | hub `H` | `127.0.0.1:18400` |
+| geth | spoke `S1` | `127.0.0.1:18401` |
+| Prysm | hub `H` | `/ip4/127.0.0.1/tcp/14200/p2p/16Uiu2HAmDJCHuVkXtkPrrL8YykQ9gFZnQkR9Q6WjZZUrmueohPfd` |
+| Prysm | spoke `S1` | `/ip4/127.0.0.1/tcp/14201/p2p/16Uiu2HAkxjzYKtKJZc9E7pMTa3LzB9XHdHoDBaRHymQgtofmbKUA` |
 
 Observed **2026-08-24T12:25Z–12:30Z UTC**:
 
@@ -105,48 +107,48 @@ Observed **2026-08-24T12:25Z–12:30Z UTC**:
 - L0d log: `l0_connect HTTP 200; pipe_tx installed` and
   `duplex_offer complete` for ports `8400` and `4200`;
 - hub log allocated proxy lines with **`billing_wallet=0x72c240e4…`** (the
-  `.98` billing EOA), not a public IP.
+  `S2` billing EOA), not a public IP.
 
 geth flags that enforce the overlay: `--nat none --netrestrict 127.0.0.0/8`.
 Prysm flags: `--no-discovery --p2p-local-ip=127.0.0.1`.
 
-### `.45` — client of `.82`, server for any wallet client
+### `S1` — client of `H`, server for any wallet client
 
 Intended roles on one process:
 
 | Direction | Config | Remote identity |
 |---|---|---|
-| Outbound client | `l0.client_duplex` | Only `.82` billing `0x66dCB48f…` on `:8400` / `:4200` |
-| Inbound host | `[[l0.proxy_duplex]]` on loopback `:8400` / `:4200` | Callers target `.45` billing `0xEF107528…`; callers are **not** pre-listed |
+| Outbound client | `l0.client_duplex` | Only `H` billing `0x66dCB48f…` on `:8400` / `:4200` |
+| Inbound host | `[[l0.proxy_duplex]]` on loopback `:8400` / `:4200` | Callers target `S1` billing `0xEF107528…`; callers are **not** pre-listed |
 
 `l0.client_duplex` at the snapshot:
 
 ```text
-web3://0x66dCB48ff905f5f5f3692f302da0A84e0265A792:8400@18400
-web3://0x66dCB48ff905f5f5f3692f302da0A84e0265A792:4200@14200
+web3://0x66dC…A792:8400@18400
+web3://0x66dC…A792:4200@14200
 ```
 
-There is **no** `.45` → `.98` `client_duplex` or `[[peers]]` row. That is
-correct. `.98` (or any later client) reaches `.45` by dialing
-`web3://0xEF10752843cAC32C73DAb86658B8ab6E5667199B:8400` /
+There is **no** `S1` → `S2` `client_duplex` or `[[peers]]` row. That is
+correct. `S2` (or any later client) reaches `S1` by dialing
+`web3://0xEF10…199B:8400` /
 `:4200`. The offer is authorized as a signed `mainWallet:port` event, not
 by a static peer roster.
 
 Observed **2026-08-24** (rechecked after the dual-role clarification):
 
-- geth peers: outbound `127.0.0.1:18400` (client → `.82`) **and** inbound
-  `127.0.0.1:44776` (accepted wallet line; `.98` in this lab);
-- beacon `connected` = **2** (client → `.82` on `14200`, plus inbound on
+- geth peers: outbound `127.0.0.1:18400` (client → `H`) **and** inbound
+  `127.0.0.1:44776` (accepted wallet line; `S2` in this lab);
+- beacon `connected` = **2** (client → `H` on `14200`, plus inbound on
   local `:4200`);
 - no geth/beacon sockets to a public hub `:8400` / `:4200`;
 - L0d: `pipe_tx installed` / `duplex_offer complete` on `:8400` and `:4200`.
 
 ## Checklist against the written design
 
-| Design rule | Source | `.45` | `.98` |
+| Design rule | Source | `S1` | `S2` |
 |---|---|---|---|
-| Remote is `web3://0x…:port`, not `IP:port` | [Locator](conet-l0d.md#locator), [duplex lifecycle](../l0/duplex-forward.md) | Pass (client → `.82`; host accepts by own billing) | Pass (client → `.82` and `.45`) |
-| Client of a published wallet | `client_duplex` | Pass (only `.82`) | Pass (`.82` + `.45`) |
+| Remote is `web3://0x…:port`, not `IP:port` | [Locator](conet-l0d.md#locator), [duplex lifecycle](../l0/duplex-forward.md) | Pass (client → `H`; host accepts by own billing) | Pass (client → `H` and `S1`) |
+| Client of a published wallet | `client_duplex` | Pass (only `H`) | Pass (`H` + `S1`) |
 | Published wallet any client may dial | `[[l0.proxy_duplex]]` | **Pass** (does not roster inbound peers) | Pass (also publishes loopback origins) |
 | One communication identity per logical port | `[[l0.channels]]` | Pass | Pass |
 | Temporary identity per accepted line | Persistent-stream bootstrap | Pass (`listen-ready` temp wallets) | Pass |
@@ -161,8 +163,8 @@ separate catch-up problem.
 
 | Host | EL `eth_blockNumber` | CL `head_slot` / `sync_distance` | Hub tip (same window) |
 |---|---|---|---|
-| `.98` | `0x0` (importing potential segments; `eth_syncing` still reports start `0x0`) | `1215` / `1031840`, `is_syncing=true` | EL `0xef37e`, CL slot `1033055`, `is_syncing=false` |
-| `.45` | `0x0` | `23519` / `1009536`, `is_syncing=true`, `is_optimistic=true` | same |
+| `S2` | `0x0` (importing potential segments; `eth_syncing` still reports start `0x0`) | `1215` / `1031840`, `is_syncing=true` | EL `0xef37e`, CL slot `1033055`, `is_syncing=false` |
+| `S1` | `0x0` | `23519` / `1009536`, `is_syncing=true`, `is_optimistic=true` | same |
 
 Both spokes were **behind** the canonical tip. That does **not** undo the
 wallet-addressed transport. It does mean they are not yet production-quality
@@ -177,27 +179,27 @@ full nodes.
    L0d cools a failing SI host and random-picks another from the
    GuardianNodesInfoV6 contract pool (`si_pool_from_contract`); see
    [SI entry discovery](conet-l0d.md#si-entry-discovery-guardiannodesinfov6).
-2. **Hub dual-stack.** `.82` still listens on public `:8400` / `:4200` for
+2. **Hub dual-stack.** `H` still listens on public `:8400` / `:4200` for
    the production L1 set. Its `proxy_duplex` for `:4200` was bound to the
    public address. Spokes must keep `--netrestrict 127.0.0.0/8` and must not
    add those public ports as geth bootnodes or Prysm `--peer`.
-3. **Host firewall is not the identity model.** `.98` additionally rejects
+3. **Host firewall is not the identity model.** `S2` additionally rejects
    egress TCP to hub/spoke `:8400` / `:4200`. That is a safety net. The
    contract remains the wallet locator.
-4. **AES decrypt refusals** appeared on `.98` during early offers (stale
+4. **AES decrypt refusals** appeared on `S2` during early offers (stale
    armor / wrong key set). Later sessions completed with `pipe_tx`
    installed. Treat decrypt failure as fail-closed, not as a reason to open
    public P2P.
 
-Do **not** treat “`.45` has no `client_duplex` toward `.98`” as a defect.
-Inbound authorization is the signed offer to `.45` billing
+Do **not** treat “`S1` has no `client_duplex` toward `S2`” as a defect.
+Inbound authorization is the signed offer to `S1` billing
 `0xEF107528…`, not a reverse dial.
 
 ## What this is not
 
 - Not a replacement for the six-host public L1 roster in
   [Run an L1 node](l1-node.md).
-- Not evidence that Beacon validators on `.45` / `.98` are in service.
+- Not evidence that Beacon validators on `S1` / `S2` are in service.
   Those hosts are **not** on the current production L1 voting set.
 - Not a claim that Layer Minus hides the spoke IP from the selected Guardian
   entry. L0d still posts to existing entry hosts over HTTP.

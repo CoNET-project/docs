@@ -26,7 +26,7 @@ CoNET-DLE has two user-visible identifiers. **EIP-155 Chain ID** is unique for t
 | Tip / chain NFT id | L1 ERC-1155 `tokenId` of one atomic ledger | Group roster or “which archives vote” |
 | Archive NFT id | One archive node’s registration NFT | EIP-155, Group ID, or tip identity |
 
-Bootstrap starts with **one** live group. Fission when \(U_e \ge 7\) allocates a new unused L1 uint **and** a new register tx hash; dissolved hashes and uints are never reused. The public [DLE explorer](explorer.md) at [https://dle.conet.network/](https://dle.conet.network/) reports testnet `0x44c45` plus the bootstrap Group ID hash. The deployed L1 [routing registry](routing-registry.md) still stores bootstrap uint `1`.
+Bootstrap starts with **one** live group. Fission when \(U_e \ge 7\) allocates a new unused L1 uint **and** a new register tx hash; dissolved hashes and uints are never reused. The [DLE explorer](explorer.md) (paused) reported testnet `0x44c45` plus the bootstrap Group ID hash. The deployed L1 [routing registry](routing-registry.md) still stores bootstrap uint `1`.
 
 ## What remains global
 

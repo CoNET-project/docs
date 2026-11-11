@@ -26,17 +26,20 @@ active resource unit. L0 uses ordinary TCP/IP as its underlay and does not
 claim that every resource provider is trusted, independently operated, or
 able to reconstruct an application.
 
-**GB today and the proposed GB design.** The live GBToken and conet-USDC
-contracts are described in [Core L1 assets](l1/assets.md). A replacement
-design is proposed in the [GB token whitepaper (draft v0.3)](l1/gb-whitepaper.md):
-paid GB is issued only by burning conet-USDC and can exit back to it; free GB
-is consume-only, non-transferable and burned by the serving miner; Base USDC
-is the only reserve asset; rules are executed by contracts within DAO-voted
-parameters, with no admin and no execution multisig. The
-[GB AMM whitepaper (draft v0.2)](l1/gb-amm-whitepaper.md) describes markets,
-treasury open-market operations and risk management for that design. Neither
-design is deployed or approved by the DAO; deployment waits for design
-discussion and an independent audit.
+**GB today and the new GB design.** The previous GBToken described in
+[Core L1 assets](l1/assets.md) is no longer recognised, and its services have
+stopped. The new GB design is summarised in
+[GB purchase, metering, fees and settlement](l1/gb-billing.md): paid GB is
+issued only through node rewards, one DAO-designated market-operations
+contract (not enabled at launch), or purchase with conet-USDC; free GB is
+non-transferable and pays for the same services as paid GB; Base USDC is the
+only reserve asset. Third-party tokens and subscriptions are described in
+[Third-party tokens and subscriptions](l1/third-party-assets.md), and DAO
+voting and the non-upgradeable treasury in
+[DAO and the next-generation treasury](l1/dao-treasury.md). Those rules are approved but not yet live, and deployment needs an
+independent audit and a separate approval. The current conet-USDC contract will be replaced by a newly deployed contract (decided, not yet live); the switch-over plan will be announced. The current contract will not be upgraded. The status of the current contract is to be verified. The earlier [GB token whitepaper (v0.3)](l1/gb-whitepaper.md) and
+[GB AMM whitepaper (v0.2)](l1/gb-amm-whitepaper.md) are superseded and kept for
+reference.
 
 **Any node may be malicious.** Applications must add recipient encryption,
 fragmentation, redundancy, verification, and recovery rules appropriate to
@@ -83,9 +86,9 @@ contract. `conet-l0d` is a Linux runtime, not a separate application family.
 
 The [CoNET Blockchain](l1/README.md) is the production EVM network with `chainId` **224422**. It anchors network identity, validator and Guardian state, canonical assets, the [cross-chain Treasury](l1/cross-chain-treasury.md), and application settlement. CoNET has run Osaka / Fulu since 2026-10-18; Prague, which includes the EIP-2537 precompiles, is active, so the official Geth release runs current blocks. The [patch-geth](https://github.com/CoNET-project/patch-geth) build is needed only to re-execute blocks from before Prague. See [Run an L1 node](developers/l1-node.md).
 
-**Cross-chain settlement.** [AAC proof-driven settlement](l1/aac-cross-chain.md) is the proposed replacement for per-deposit miner votes. Its read-only Shadow observer `0.33.13` has run as the production unit since 2026-10-16 and controls no custody. Obstacles **1–5 are Accepted** (2026-10-14), and cutover Phases A–E were recorded or executed on 2026-10-15. Since then the miner-vote path is closed (`VoteBridgeClosed`), the paid-GB bridge is paused on both chains, and AAC custody stays closed. A 0.01 Base USDC canary in period 1884 was covered and settled as 0.01 canonical conet-USDC. `sourceInitiateOpen` is true on Base and CoNET.
+**Cross-chain settlement.** The Treasury cross-chain bridge is paused. The current AAC design is a two-way USDC bridge between CoNET and Base, approved but not yet live: nothing is deployed, and deployment needs an independent audit and a separate approval ([Two-way AAC bridge](l1/aac-two-way-bridge.md)). The earlier record follows. [AAC proof-driven settlement](l1/aac-cross-chain.md) is the proposed replacement for per-deposit miner votes. Its read-only Shadow observer `0.33.13` has run as the production unit since 2026-10-16 and controls no custody. Obstacles **1–5 are Accepted** (2026-10-14), and cutover Phases A–E were recorded or executed on 2026-10-15. Since then the miner-vote path is closed (`VoteBridgeClosed`), the paid-GB bridge is paused on both chains, and AAC custody stays closed. A 0.01 Base USDC canary in period 1884 was covered and settled as 0.01 canonical conet-USDC. `sourceInitiateOpen` is true on Base and CoNET.
 
-The proposed GB design adds two cross-chain rules: a CoNET-issued token is minted on another chain only against a burn on CoNET, by the AAC secure construction; and before any path that mints paid GB or conet-USDC, or releases Base USDC, opens, cross-chain verification must be proven to reject forged source-chain messages ([GB whitepaper, Chapter 17](l1/gb-whitepaper.md)).
+The earlier GB whitepaper (v0.3) added two cross-chain rules: a CoNET-issued token is minted on another chain only against a burn on CoNET, by the AAC secure construction; and before any path that mints paid GB or conet-USDC, or releases Base USDC, opens, cross-chain verification must be proven to reject forged source-chain messages ([GB whitepaper, Chapter 17](l1/gb-whitepaper.md)).
 
 Validator consensus, Guardian participation, and application state are related but distinct concerns. In particular, “stealth” describes the objective of reducing publicly exposed network topology; it is not the name of a separate consensus algorithm. Do not label `ValidatorDepositRedeem.totalStakedValidatorCount()` (~475) as the L1 Beacon set, and do not treat the Guardian registry (~472) as that census either. Those two figures are the L0 / VDR-managed scale. Beacon `validator_index` values already pass **2000**. See [L1 decentralization](l1/decentralization.md).
 
@@ -93,7 +96,7 @@ Validator consensus, Guardian participation, and application state are related b
 
 [CoNET-DLE](l2/README.md) specifies Decentralization Clusters and parallel atomic ledger classes for asset, storage, and trade activity. The design moves high-frequency application events away from one globally serial execution lane while retaining explicit archive, finality, and settlement rules. **EIP-155 Chain ID** is unique for the DLE plane (**CoNET-DLE Testnet** `0x44c45` / `281669`). User-visible **Group ID** for the first archive group is that group’s L1 register transaction hash. Lab M6 added a second live group; its user-visible Group ID is that group’s L1 `registerLiveGroup` transaction. Neither identifier is CoNET L1 `224422`.
 
-The L2 section is a digest of the English whitepaper (revision **2026-09-23**) and normative specifications. It states design maturity separately from L0/L1 production status. The 30-day lab window elapsed on 2026-09-17, and the final assessment is **partial success, not qualified**: formal seating was qualified 7/7, but `pilotQualified` stayed false 7/7 and heartbeat quorum reached only 3/7 (see [Lab honesty track](l2/lab-honesty-track.md)). Production archive signing is not enabled. A public [lab explorer](l2/explorer.md) at [https://dle.conet.network/](https://dle.conet.network/) inspects isolated Archive health, testnet `0x44c45`, the bootstrap Group ID hash and lab M6 **Clusters = 2**. The L1 [Global Archive Routing Registry](l2/routing-registry.md) is deployed, and the second lab group's Group ID is its L1 `registerLiveGroup` transaction; neither launches Archive Certificate or asset ingress.
+The L2 section is a digest of the English whitepaper (revision **2026-09-23**) and normative specifications. It states design maturity separately from L0/L1 production status. The 30-day lab window elapsed on 2026-09-17, and the final assessment is **partial success, not qualified**: formal seating was qualified 7/7, but `pilotQualified` stayed false 7/7 and heartbeat quorum reached only 3/7 (see [Lab honesty track](l2/lab-honesty-track.md)). Production archive signing is not enabled. The public [lab explorer](l2/explorer.md) is paused; it showed isolated Archive health, testnet `0x44c45`, the bootstrap Group ID hash and lab M6 **Clusters = 2**. The L1 [Global Archive Routing Registry](l2/routing-registry.md) is deployed, and the second lab group's Group ID is its L1 `registerLiveGroup` transaction; neither launches Archive Certificate or asset ingress.
 
 For an ERC-20 issued elsewhere, entering CoNET L1 and activating DLE are different transitions. Treasury route execution can establish a canonical CoNET representation; [DLE asset admission](l2/cross-chain-assets.md) additionally requires its own pool, oracle, registry, gateway, conservation, and release gates.
 
@@ -162,11 +165,13 @@ The comparison below is architectural, not a throughput or anonymity benchmark.
 | What L1 decentralization facts can an outsider reproduce? | [Decentralization and verifiability](l1/decentralization.md) |
 | How can an external ERC-20 enter CoNET and later use DLE? | [Bring an ERC-20 into CoNET](developers/l1-erc20-bridge.md), [Cross-chain Treasury](l1/cross-chain-treasury.md), [cross-chain assets in DLE](l2/cross-chain-assets.md) |
 | What is the AAC proof-driven bridge work? | [AAC proof-driven cross-chain settlement](l1/aac-cross-chain.md) — Obstacles 1–5 Accepted; Phases A–E recorded or executed 2026-10-15; miner-vote path closed, paid-GB bridge paused, AAC custody closed; a 0.01 Base USDC canary in period 1884 is covered and settled |
-| What is the proposed GB token design? | [GB token whitepaper (draft v0.3)](l1/gb-whitepaper.md) — paid and free GB, conet-USDC issuance and exit, reserves, DAO execution, cross-chain forged-message gate |
-| How would GB markets and treasury operations work? | [GB AMM whitepaper (draft v0.2)](l1/gb-amm-whitepaper.md) |
+| What is the new GB design? | [GB purchase, metering, fees and settlement](l1/gb-billing.md) — paid and free GB, issuance paths, the GB price rule, reserve, metering, service fees and settlement (approved, not yet live). The [GB token whitepaper v0.3](l1/gb-whitepaper.md) is superseded |
+| How can a third party issue a token or sell subscriptions? | [Third-party tokens and subscriptions](l1/third-party-assets.md) (approved, not yet live) |
+| How does the DAO decide, and what can it not change? | [DAO and the next-generation treasury](l1/dao-treasury.md) (approved, not yet live) |
+| How would GB markets and treasury operations work? | [GB AMM whitepaper v0.2](l1/gb-amm-whitepaper.md) — superseded by the new GB design and kept for reference |
 | How could miner matching support a non-custodial order book? | [Order-book exchange whitepaper (draft v0.2)](applications/miner-orderbook-dex-whitepaper.md) — funds stay in DLE, one order chain per order, batch auctions, liquidity pools, fees; earlier [design study](applications/miner-orderbook-dex.md) |
 | What does DLE actually specify? | [L2 development](developers/l2.md), [Design thesis](l2/design-thesis.md), [normative specifications](l2/specs-index.md) |
-| What does the DLE explorer show? | [DLE explorer](l2/explorer.md) — [https://dle.conet.network/](https://dle.conet.network/); lab Archive inspection, not a tip chain |
+| What did the DLE explorer show? | [DLE explorer](l2/explorer.md) — paused; lab Archive inspection, not a tip chain |
 | Where are archive participant wallets recorded? | [Global Archive Routing Registry](l2/routing-registry.md) — CoNET L1 facade + `/archives` |
 | What is usable versus under development? | [Applications](applications/README.md) |
 | What does Beamio ship today (Consumer / Merchant / POS / USDC)? | [Beamio whitepaper](applications/beamio.md) · [Cash and USDC](applications/beamio/cash-and-usdc.md) |

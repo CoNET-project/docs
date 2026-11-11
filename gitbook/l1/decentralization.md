@@ -43,7 +43,7 @@ The following values were read from `https://rpc1.conet.network` at **2026-08-14
 | Guardian regions | **7** | `getAllRegions()` |
 | Treasury miner set | **1** address (owner only; three node miners removed 2026-10-15) | `TreasuryBridgeV3.miners()` |
 | Treasury execution quorum | **1** | `requiredVotes()` = `(N * 2 + 2) / 3` for N = 1 |
-| Treasury owner | `0x87cAeD4e51C36a2C2ece3Aaf4ddaC9693d2405E1` | `owner()`; this address is the only miner |
+| Treasury owner | `0x87cA…05E1` | `owner()`; this address is the only miner |
 
 **Do not label `totalStakedValidatorCount() = 475` as “Staked L1 validators.”** That was the earlier error on this page.
 
@@ -150,11 +150,11 @@ L1 has several control planes. They are not one committee.
 
 Re-read on 2026-10-15, on both Base and CoNET:
 
-- one miner address, the owner `0x87cAeD4e51C36a2C2ece3Aaf4ddaC9693d2405E1`;
+- one miner address, the owner `0x87cA…05E1`;
 - quorum **1**;
-- the three node miners `0xcbBB1371973D57e6bD45aC0dfeFD493b59F9D76B`, `0x6bF3Aa7261e21Be5Fc781Ac09F9475c8A34AfEea`, and `0xe2E7A68E3D1e50F0Af15d713F90f4992CD19Dfc8` were removed with `removeMiner`.
+- the three node miners `0xcbBB…D76B`, `0x6bF3…fEea`, and `0xe2E7…Dfc8` were removed with `removeMiner`.
 
-That quorum governs Treasury policy and bridge operations. It does **not** vote L1 blocks. Do not present the 472 Guardian owners as the live Treasury voter set. The historical `ConetTreasury.requiredVotes` comment on `getUniqueOwnerCount` describes a deprecated treasury path.
+That quorum governs Treasury policy and bridge operations. The Treasury cross-chain bridge is now paused. The quorum does **not** vote L1 blocks. Do not present the 472 Guardian owners as the live Treasury voter set. The historical `ConetTreasury.requiredVotes` comment on `getUniqueOwnerCount` describes a deprecated treasury path.
 
 ### What is not published as L1 governance
 

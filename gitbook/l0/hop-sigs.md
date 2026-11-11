@@ -174,7 +174,7 @@ Documentary names. HTTP/socket behavior is what clients observe.
 Chat, so entry C sees every frame, including the recipient key ID of each
 delivered armor.
 
-**In rollout:** `mailbox_listen` carries a fresh 32-byte `streamKey` inside the
+**Live** (CoNET-SI 74c6cfd; chat-sdk-ios v0.1.8, chat-sdk-android v0.2.6): `mailbox_listen` carries a fresh 32-byte `streamKey` inside the
 route-PGP command, which only mailbox B can read. B seals every frame on that
 SSE with AES-256-GCM (random 12-byte IV per frame, plaintext padded to a
 multiple of 256 bytes) and refuses a listen without the key. Intermediate

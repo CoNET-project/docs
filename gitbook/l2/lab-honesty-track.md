@@ -19,7 +19,7 @@ The 30-day wall clock elapsed, but the qualification gate did not pass. The post
 | P6–P11 seating | Live seating facade, full-open hosted set, extra joiner `fd-08` unofficial | Production \(C_G\) / 30-day gate |
 | M6–M7 plane | `liveGroupCount: 2`; typed `tipStateRoot` / `membershipRoot` | G2 BFT and on-demand stay off |
 
-Official Home **Archives** stays **7** (5 active + 2 standby). Extra standby `fd-08` / `fd-08-hosthatch-hk1` may join the lab but **does not** count as an official seat.
+Official Home **Archives** stays **7** (5 active + 2 standby). Extra standby `fd-08` may join the lab but **does not** count as an official seat.
 
 ## What is engine-only (P12–P22)
 
@@ -83,7 +83,7 @@ Explorer Home + Certificates show a **non-green** `pilotClockPill` (`30-day cloc
 
 Tests: `npm run explorer:test` **10/10**. Runtime tests: `npm run runtime:test` **159/159**. Pilot tests: **19/19**.
 
-**Public SPA publish (not P26):** parent-repo `scripts/deployDleExplorer.sh` rsynced the clock-overlay bundle to the explorer host (`/var/www/dle.conet.network/`) and reloaded the explorer nginx vhost only. [dle.conet.network](https://dle.conet.network/) now serves `index-C8IdTq4H.js` (2026-08-18T10:15:00Z). It did **not** restart EL/CL/validator and did **not** change archive seating.
+**Public SPA publish (not P26):** parent-repo `scripts/deployDleExplorer.sh` rsynced the clock-overlay bundle to the explorer host and reloaded the explorer nginx vhost only. The explorer then served `index-C8IdTq4H.js` (2026-08-18T10:15:00Z); it is now paused. It did **not** restart EL/CL/validator and did **not** change archive seating.
 
 Starting the clock and painting the clock are **not** 30-day qualification. Do **not** invent P26.
 
@@ -159,7 +159,7 @@ IdentityEligible / OperatorDomain / \(U_e\); flipping tree `committedInAc`; prod
 
 ## Explorer rule that does not change
 
-A green seating pill is allowed **only** when `seatingQualified === true`. Heartbeat `lastQuorumOk` is reachability. Do not invent additional `dle.*` hostnames. The authorized explorer is [https://dle.conet.network/](https://dle.conet.network/).
+A green seating pill is allowed **only** when `seatingQualified === true`. Heartbeat `lastQuorumOk` is reachability. Do not invent additional `dle.*` hostnames. The explorer is paused.
 
 ## Related
 

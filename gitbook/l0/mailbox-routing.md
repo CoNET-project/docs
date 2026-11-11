@@ -51,7 +51,7 @@ For the intended route, `A ≠ B` and `C ≠ B`. A and C may be different entrie
    field. That EOA does not have to be R, and R does not have to be the
    recipient's display wallet.
 3. S encrypts the complete envelope to **R's user OpenPGP key**.
-4. **In rollout (required):** S wraps that armor as mailbox work `{ data: armor, NoPush? }` encrypted to **B's route PGP**, so A and any path observer see B's route key ID (one node key shared by many users) instead of R's user key ID. Without B's route key S fails with `recipient_mailbox_unknown`; it does not post the bare armor. Live clients still post the bare armor for ordinary messages.
+4. **Required** (live in the web app since Consumer PWA 0.52.930): S wraps that armor as mailbox work `{ data: armor, NoPush? }` encrypted to **B's route PGP**, so A and any path observer see B's route key ID (one node key shared by many users) instead of R's user key ID. Without B's route key S fails with `recipient_mailbox_unknown`; it does not post the bare armor. Live clients still post the bare armor for ordinary messages.
 5. Optionally, S wraps the result in one or more **outer OpenPGP layers** addressed to A or to a hop chain. The first `/post` then shows the **outer** key ID to a path observer.
 6. S posts the armored ciphertext to **one** random healthy entry A over **HTTP or HTTPS**. A must be neither R's mailbox nor S's own mailbox. S tries another entry only after a clear failure (connection error, non-2xx, a `{ok:false}` body such as `no_route`, or no response within about 8 seconds), never the same ciphertext to several entries at once (in rollout; live browser clients still post to up to four entries in parallel). The HTTP JSON is **only** `{ "data": "<OpenPGP armor>" }`. Do **not** add sibling fields (`NoPush`, `beamioNoPush`, flags). Extra plaintext fields raise inspection risk. Because the body is already ciphertext, **HTTP is sufficient** and is the intended client path where TLS SNI or JA3/JA4 would be classified or blocked.
 7. A reads `getEncryptionKeyIDs()`. If the key is not local, A forwards the **same armor** and signs the SI hop header. If the key **is** local, A decrypts **once**. When the plaintext is still OpenPGP and the inner side-channel key ID is not this node, A forwards the **inner** armor if hop signatures stay at or below **3**. Same-node inner PGP is an attack (`end`). A does **not** read user-PGP business plaintext.
@@ -62,7 +62,7 @@ For the intended route, `A ≠ B` and `C ≠ B`. A and C may be different entrie
    sender. A wallet or `@BeamioTag` inside the plaintext is a claim, not that
    proof. When B ends the socket, A frees that
    connection. SI hop signatures are the credential the last decrypting hop
-   uses to meter prior-hop bytes against the **user** wallet for **GB**.
+   uses to meter prior-hop bytes against the **user** wallet for **GB**. GB issuance from these counts is paused.
 
 ### Mailbox work envelope (B decrypts a delivery instruction)
 
@@ -97,7 +97,7 @@ The key ID is an **intentional OpenPGP side channel**. It exists so that a node 
 S ── user-PGP ciphertext, optional wrap to A ──▶ A
 A ── not local: forward same armor
 A ── local decrypt + inner key ≠ A: forward inner armor ──▶ B
-A earns GB for forwarding, not for reading content
+A is metered for forwarding, not for reading content
 ```
 
 ### Listen: R → C → B → R
@@ -244,7 +244,16 @@ wallet. The relay checks both signatures, an expiry at most 48 hours ahead and
 one temporary wallet per session, and refuses anything else with a specific
 error (`voice_listen_v3_required`, `voice_temp_auth`, `voice_pay_auth`,
 `voice_pay_expired`, `voice_temp_reused`). It does not forward v1 frames. Wire
-details: [CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v3-payer-signed-temporary-channels-in-rollout).
+details: [CoNET Chat developer guide](chat-developer-guide.md#voice-channel-v3-payer-signed-temporary-channels-live-no-payment-yet).
+
+## Offline storage charges (approved, not yet live)
+
+Today a mailbox stores offline copies until the recipient's ACK without
+charging. The operator decided on 7 November 2026 that users register with
+their mailbox node and prepay at least **0.5 GB** of credit, and that storage
+is charged by stored bytes and time until the ACK, at the DAO price of 1 GB
+forwarded = 1 GB stored for 30 days. None of it is implemented yet. Full rule
+and open items: [Mailbox storage billing](mailbox-storage-billing.md).
 
 ## Guarantees and non-guarantees
 
@@ -257,7 +266,7 @@ When routing and encryption rules are followed:
 - B can decrypt mailbox control and mailbox-work JSON (`NoPush`) but not user-PGP business content;
 - B sees an entry connection instead of a direct client connection;
 - client `/post` confidentiality does not require HTTPS; and
-- a forwarding node is paid in **GB** for relaying ciphertext, which aligns the incentive with delivery rather than inspection.
+- a forwarding node is metered, and is meant to be paid in **GB**, for relaying ciphertext, which aligns the incentive with delivery rather than inspection. GB issuance from metering is paused.
 
 The design does not hide the client IP from A or C. It separates that IP
 observation from the sender wallet and mailbox state: A/C see the connection,

@@ -60,7 +60,7 @@ The Canvas index is:
 
 `src/canvas/README.md`
 
-The public [DLE explorer](explorer.md) at [https://dle.conet.network/](https://dle.conet.network/) is a **non-normative lab UI**. Its `/health`, `/rpc`, and `/api/v2/dle` payloads describe the isolated 30-day Archive lab. They do not amend the whitepaper or the three `DLE-*Spec.md` files.
+The [DLE explorer](explorer.md), now paused, was a **non-normative lab UI**. Its `/health`, `/rpc`, and `/api/v2/dle` payloads describe the isolated 30-day Archive lab. They do not amend the whitepaper or the three `DLE-*Spec.md` files.
 
 The deployed [Global Archive Routing Registry](routing-registry.md) on CoNET L1 is **production bytecode** for the §5.2.0d routing facade. It does not close Archive Certificate, asset-ingress, or 30-day qualification gates.
 
@@ -86,7 +86,7 @@ When asserting protocol behavior:
 
 - [L2 development](../developers/l2.md) — implementer how-to
 - [Global Archive Routing Registry](routing-registry.md) — deployed L1 facade
-- [DLE explorer](explorer.md) — [https://dle.conet.network/](https://dle.conet.network/)
+- [DLE explorer](explorer.md) — paused
 - [Lab honesty track](lab-honesty-track.md) — 2026-08-18 laboratory review (non-normative; clock ≠ qualification)
 - [Cross-chain assets in DLE](cross-chain-assets.md) — Treasury-to-DLE admission and conservation digest
 - [Decentralized cross-chain Treasury](../l1/cross-chain-treasury.md) — production L1 route and quorum boundary

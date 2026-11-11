@@ -1,6 +1,8 @@
 # DLE explorer
 
-This page is the **production reference for the public DLE explorer UI**. It is **not** a production reference for DLE consensus, Archive Certificate, or tip execution. CoNET L1 routing wallets are documented on [Global Archive Routing Registry](routing-registry.md).
+> **The DLE explorer is paused.** Its former address no longer serves it, and no replacement address has been published. This page is kept as a description of what the explorer showed.
+
+This page was the **production reference for the public DLE explorer UI**. It is **not** a production reference for DLE consensus, Archive Certificate, or tip execution. CoNET L1 routing wallets are documented on [Global Archive Routing Registry](routing-registry.md).
 
 The explorer is a read-only inspection surface for the isolated 30-day DLE Archive lab. It does not produce blocks, does not execute `eth_call`, and does not mint or burn assets.
 
@@ -8,10 +10,10 @@ The explorer is a read-only inspection surface for the isolated 30-day DLE Archi
 
 | Field | Canonical value |
 | --- | --- |
-| Explorer | `https://dle.conet.network` |
-| Archives | `https://dle.conet.network/archives` |
-| Lab health | `https://dle.conet.network/health` |
-| Lab RPC | `https://dle.conet.network/rpc` |
+| Explorer | Paused |
+| Archives | Paused |
+| Lab health | Paused |
+| Lab RPC | Paused |
 | EIP-155 Chain ID (CoNET-DLE Testnet) | **281669** (`0x44c45`) |
 | User-visible Group ID (first group) | L1 bootstrap register tx `0x3076a806…6f2ad0` |
 | Lab M6 second Group ID | L1 `registerLiveGroup` tx `0xf781f2c2…876d5153`. Laboratory keccak `0x7b3b8eb9…7f9b1a07` aliases it. |
@@ -56,11 +58,11 @@ These public HTML routes returned `200` on 2026-08-14:
 
 | Path | Role |
 | --- | --- |
-| [`/`](https://dle.conet.network/) | Home: health, CoNET-DLE Testnet chain id `0x44c45` plus **Group ID** capsule (first-group bootstrap register tx; opens Blockscout `/tx/…`; no “Decimal 281,669. Not CoNET L1 224422.” hint), **Clusters** (\(G_e\); lab M6 = 2; second Group ID capsule is the G2 L1 register tx and **does** open `/tx/`), certificate status. No Tip height panel |
-| [`/events`](https://dle.conet.network/events) | Heartbeat and health events from `/api/v2/dle/events` |
-| [`/archives`](https://dle.conet.network/archives) | 5+2 lab roster; each row has a distinct participant wallet (AddressCapsule). L1 `archivesOf(1)` is the trusted overlay |
-| [`/certificates`](https://dle.conet.network/certificates) | NFT 42 lab AC (may be available) **and** P6 new-chain counts from `/health` (`newchainCount` / `newchainArchivePending` / `newchainArchiveCertified` / `newchainValidatorQuorum: 5`). Per-chain AC never writes NFT 42. Not an L1 birth certificate. |
-| [`/hash/:hash`](https://dle.conet.network/) | Hash lookup. Lab M7: `tipStateRoot` / `membershipRoot` hits show **Tip state root** / **Membership root** pills and a typed object, not the Archive Certificate. |
+| `/` | Home: health, CoNET-DLE Testnet chain id `0x44c45` plus **Group ID** capsule (first-group bootstrap register tx; opens Blockscout `/tx/…`; no “Decimal 281,669. Not CoNET L1 224422.” hint), **Clusters** (\(G_e\); lab M6 = 2; second Group ID capsule is the G2 L1 register tx and **does** open `/tx/`), certificate status. No Tip height panel |
+| `/events` | Heartbeat and health events from `/api/v2/dle/events` |
+| `/archives` | 5+2 lab roster; each row has a distinct participant wallet (AddressCapsule). L1 `archivesOf(1)` is the trusted overlay |
+| `/certificates` | NFT 42 lab AC (may be available) **and** P6 new-chain counts from `/health` (`newchainCount` / `newchainArchivePending` / `newchainArchiveCertified` / `newchainValidatorQuorum: 5`). Per-chain AC never writes NFT 42. Not an L1 birth certificate. |
+| `/hash/:hash` | Hash lookup. Lab M7: `tipStateRoot` / `membershipRoot` hits show **Tip state root** / **Membership root** pills and a typed object, not the Archive Certificate. |
 
 The explorer SPA source also defines `/events/:eventId`, `/archives/:domainId`, and a JSON-RPC probe page at `/rpc`. On the public host, **`POST /rpc` is the Archive JSON-RPC facade**. Do not treat a browser `GET /rpc` as a documented HTML page.
 
@@ -163,10 +165,10 @@ The public UI being live does **not** close these whitepaper / spec gates:
 
 ## What not to do
 
-- Do not treat [https://dle.conet.network/](https://dle.conet.network/) as Blockscout or as `mainnet.conet.network`.
+- Do not treat the DLE explorer as Blockscout or as `mainnet.conet.network`.
 - Do not send asset, swap, or UserOp traffic to `POST /rpc`.
 - Do not publish lab host IPs, `billingRef` values, or SSH targets from explorer fixtures.
-- Do not write `dle.conet.network` into contract constants.
+- Do not write an explorer hostname into contract constants.
 - Do not treat `0x44c45` as CoNET L1 or as Group ID. Do not display L1 uint `1` as Group ID.
 
 ## See also

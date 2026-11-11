@@ -43,7 +43,7 @@ The canonical Explorer is:
 
 Use it for blocks, transactions, addresses, tokens, contract source verification, and proxy metadata. Explorer indexing can lag the chain, so direct RPC remains the authority for current contract state.
 
-[https://dle.conet.network/](https://dle.conet.network/) is the **DLE lab explorer**, not this L1 Explorer. Its `eth_chainId` `0x44c45` is **CoNET-DLE Testnet**, not CoNET L1. The Home page shows that testnet chain id plus the bootstrap **Group ID** (L1 register tx hash). The Archives page may overlay participant wallets read from the L1 [Global Archive Routing Registry](../l2/routing-registry.md) on `224422`. See [DLE explorer](../l2/explorer.md).
+The **DLE lab explorer** (paused) is not this L1 Explorer. Its `eth_chainId` `0x44c45` is **CoNET-DLE Testnet**, not CoNET L1. The Home page shows that testnet chain id plus the bootstrap **Group ID** (L1 register tx hash). The Archives page may overlay participant wallets read from the L1 [Global Archive Routing Registry](../l2/routing-registry.md) on `224422`. See [DLE explorer](../l2/explorer.md).
 
 Peering a self-hosted geth / Prysm stack is a different interface. Genesis files, DHT hubs, and execution bootnodes are on [Run an L1 node](../developers/l1-node.md).
 

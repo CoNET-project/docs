@@ -2,6 +2,8 @@
 
 **Status: Draft with implemented v1 components.**
 
+> **Not usable on the current network.** The official `web3://` gateway still receives through the legacy listen pool, which CoNET-SI nodes stopped serving on 2 November 2026, so `web3://` browsing through it does not work today. A fix is not scheduled. Persistent application streams also depend on L0 primitives that were removed from CoNET-SI on 31 October 2026.
+
 This page defines `web3://` as an **application protocol over CoNET Layer
 Minus (L0)**. It defines application naming, identity, caller-signed
 requests, encrypted response correlation, and persistent stream behavior. It

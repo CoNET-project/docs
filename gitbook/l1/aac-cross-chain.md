@@ -1,8 +1,14 @@
 # AAC proof-driven cross-chain settlement
 
-**Status as of 2026-10-26.** This page follows the [GB token whitepaper](gb-whitepaper.md) (v0.3, 25 October 2026) and the [CoNET privacy and asset fragmentation whitepaper](privacy-fragmentation-whitepaper.md) (v0.3, 26 October 2026). Both are DAO discussion drafts, not approved by the DAO and not on-chain. Labels marked **[Decided]** are operator decisions with the stated date; they are not DAO approvals. No mint or release path is open. Under the deployment gate in GB §17, no new contract is deployed before independent audit.
+**Status as of 7 November 2026.** This page keeps the earlier proof-driven AAC design. The current design is the [two-way AAC bridge](aac-two-way-bridge.md), approved and not yet live. Labels marked **[Decided]** are operator decisions with the stated date; they are not DAO approvals. **[Pending]** marks items not yet decided.
 
-**Evidence level: mixed.** The [bridgeAAC](https://github.com/CoNET-project/bridgeAAC) repository holds the AAC reference state machine and a production **read-only Shadow observer** (release `0.33.13`). Shadow is not a Base or CoNET light client. It controls no custody, emits no settlement transaction, and does not replace the legacy miner-vote bridge.
+Sections 1 to 9 keep the 26 October 2026 version, which followed the [GB token whitepaper](gb-whitepaper.md) (v0.3) and the [CoNET privacy and asset fragmentation whitepaper](privacy-fragmentation-whitepaper.md) (v0.3). Where they differ from the current design, the current design applies.
+
+The legacy Treasury cross-chain bridge is paused.
+
+## Current design
+
+The current design is the [two-way AAC bridge between CoNET and Base](aac-two-way-bridge.md): approved, not yet live. Sections 1 to 9 below keep the 26 October 2026 version for reference.
 
 ## What this page corrects
 
@@ -35,6 +41,8 @@ A relayer may submit a proof. It cannot choose the amount, choose the unit, or r
 - **Source-state proofs** (privacy whitepaper §3.7). A proof names the chain, the token address, the implementation version, the block height or hash, the state root, the storage layout and the finality rule. A single observer's signature over an RPC read is not a trustless verification.
 
 ## 3. Routes
+
+Routes as proposed on 26 October 2026. For Base USDC and conet-USDC, the current design above applies.
 
 | Route | Source action | Destination action | Basis |
 | --- | --- | --- | --- |
@@ -100,7 +108,9 @@ Rules that apply across the routes:
 | Base checkpoint | A Base-side Ethereum sync-committee checkpoint root is installed and was rotated to period 1884 on 2026-10-15. It is observer evidence and does not open custody |
 | Deposit-unit prototype | On 2026-10-26 a deposit-unit treasury prototype ran on Base Sepolia with test proofs and a test token. It tests the privacy whitepaper design. It is not AAC verification and not a production record |
 
-## 9. Open items
+## 9. Open items (26 October 2026)
+
+See the current [open items](aac-two-way-bridge.md#open-items-11-november-2026). The list below is kept from the earlier version.
 
 1. The form of the AAC secure construction, including how the minter is replaced when the token has no admin (GB §19.11).
 2. Same-address deployment of cross-chain tokens: deployer, initialisation code and salt (GB §19.10).

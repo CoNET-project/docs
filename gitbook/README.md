@@ -39,27 +39,42 @@ focuses on privacy-oriented Internet access, [CoNET Chat](applications/depin-cha
 on relationship-private wallet communication, and [Beamio](applications/beamio.md)
 on consumer, merchant, and POS workflows.
 
-## Where things stand (October 2026)
+## Where things stand (November 2026)
 
 | Area | Status | Read |
 |---|---|---|
 | **CoNET L1** | Production, `chainId` 224422. Osaka / Fulu active since 2026-10-18; the official Geth release runs current blocks | [L1 overview](l1/README.md) · [Run an L1 node](developers/l1-node.md) |
-| **Cross-chain settlement** | AAC read-only Shadow in production since 2026-10-16; Obstacles 1–5 Accepted; miner-vote path closed and paid-GB bridge paused since 2026-10-15; AAC custody closed | [AAC](l1/aac-cross-chain.md) · [Treasury](l1/cross-chain-treasury.md) |
-| **GB** | The live GBToken is unchanged. A replacement GB and conet-USDC design is a discussion draft, not deployed | [GB whitepaper](l1/gb-whitepaper.md) · [GB AMM whitepaper](l1/gb-amm-whitepaper.md) |
-| **CoNET-DLE** | Normative design with a public lab. The 30-day lab assessment was partial success, not qualified; production archive signing and asset ingress are not enabled | [L2 overview](l2/README.md) · [Lab honesty track](l2/lab-honesty-track.md) |
+| **Cross-chain settlement** | The Treasury cross-chain bridge is paused. The two-way AAC bridge between CoNET and Base is approved, not yet live: nothing is deployed, and deployment needs an independent audit and a separate approval | [Two-way AAC](l1/aac-two-way-bridge.md) · [Treasury](l1/cross-chain-treasury.md) |
+| **GB** | The previous GBToken is no longer recognised and its services have stopped; GB issuance from node metering is paused. The [new GB design](l1/gb-billing.md) is not deployed; its rules are decided and parts are implemented locally. Cross-chain service for the current wCNET has stopped while the bridge is paused. The current conet-USDC contract will be replaced by a newly deployed contract (decided, not yet live); the switch-over plan will be announced. The current contract will not be upgraded. The status of the current contract is to be verified. | [New GB design](l1/gb-billing.md) · [Assets](l1/assets.md) |
+| **DAO and treasury** | The DAO, the next-generation treasury and NodeRegistryV2 are implemented and tested locally, pending acceptance; nothing is deployed. Key bridge addresses are frozen at initialisation and the contracts cannot be upgraded | [DAO and treasury](l1/dao-treasury.md) · [Node registry V2](l1/node-registry-v2.md) |
+| **CoNET-DLE** | Normative design; the lab explorer is paused. The 30-day lab assessment was partial success, not qualified; production archive signing and asset ingress are not enabled | [L2 overview](l2/README.md) · [Lab honesty track](l2/lab-honesty-track.md) |
 | **Order-book exchange** | Whitepaper draft for an exchange that runs inside DLE; not implemented | [Exchange whitepaper](applications/miner-orderbook-dex-whitepaper.md) |
 
 ## Design drafts and whitepapers
 
-These documents propose designs. Rules they mark as decided are operator
-decisions, not DAO approval, and none of the designs below is deployed.
+These documents describe designs. Rules marked as decided or approved are
+operator decisions, not DAO approval, and none of the designs below is
+deployed. Deployment needs an independent audit and a separate approval.
 
-- [GB token whitepaper (draft v0.3)](l1/gb-whitepaper.md) — paid GB issued
-  only by burning conet-USDC, consume-only free GB, Base USDC as the only
-  reserve, DAO-voted parameters executed by contracts, and a cross-chain
-  forged-message gate before any mint or release path opens.
-- [GB AMM whitepaper (draft v0.2)](l1/gb-amm-whitepaper.md) — GB markets,
-  treasury open-market operations and risk management for that design.
+- [GB purchase, metering, fees and settlement](l1/gb-billing.md) — the new
+  GB design: issuance paths, free GB, reserve, metering, service fees and
+  settlement. Approved, not yet live.
+- [Two-way AAC bridge](l1/aac-two-way-bridge.md) — USDC, GB, wCNET and
+  third-party tokens between CoNET and other chains: assets, confirmations,
+  per-asset limits, circuit breaker and DAO reopening. Approved, not yet live.
+- [DAO and the next-generation treasury](l1/dao-treasury.md) — voting rules,
+  frozen key addresses and the non-upgradeable treasury. Approved, not yet
+  live.
+- [Third-party tokens and subscriptions](l1/third-party-assets.md) —
+  third-party stablecoins, cross-chain tokens, paying nodes and ERC-1155
+  subscriptions. Approved, not yet live.
+- [Mailbox storage billing](l0/mailbox-storage-billing.md) — prepaid credit and
+  charges for offline ciphertext. Approved, not yet live.
+- [Node registry V2](l1/node-registry-v2.md) — stake, terms, admission and
+  recovery votes, and node reports. Approved, not yet live.
+- [GB token whitepaper (v0.3)](l1/gb-whitepaper.md) and
+  [GB AMM whitepaper (v0.2)](l1/gb-amm-whitepaper.md) — superseded by the new
+  GB design and kept for reference.
 - [Order-book exchange whitepaper (draft v0.2)](applications/miner-orderbook-dex-whitepaper.md)
   — a non-custodial order book on CoNET-DLE: users freeze their own DLE
   balances, miners split and match orders in batch auctions, and anyone can

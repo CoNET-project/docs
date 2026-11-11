@@ -29,10 +29,10 @@ belongs to; a design that is not yet deployed is never described as live.
 
 | Stage | What it covers |
 |---|---|
-| **Live** | Recipient-PGP envelopes with the sender wallet inside; A/B/C mailbox routing; opaque voice chunks with no per-frame metadata; the callee's own mailbox rings the callee (`voice_offer_store` with `push: 1`); in the iOS and Android apps the native Chat SDK holds the wallet and PGP keys, signs for itself, and keeps the mailbox SSE (chat-sdk-ios 0.1.7, chat-sdk-android 0.2.5) |
-| **Live, being replaced** (behaviour of the released clients) | User-PGP armor posted without a mailbox layer; browser clients posting one message to several entries at once; the public-key lookup `eth_call` carrying the caller's own wallet as `from`; unsigned route registration, and re-registering on a random mailbox or with a new key when a chain read fails. The nodes stopped serving the rest on 2 November 2026, so released clients have no real-time receive and no calls: unsealed mailbox listens, the `mining` + `listenKind: "chat"` pool, voice channel v2 listens, v1 voice frames and the call-wake fallback through the caller's own mailbox |
-| **In rollout** (code written and tested; the node side runs on every Guardian node since 2 November 2026, the clients are release-candidate builds, not released) | Every delivery wrapped to the recipient mailbox route key; a per-listen `streamKey` that seals every mailbox SSE frame; the legacy call-wake fallback removed; one entry at a time, with `no_route` as a clear failure; app pages sending only through the native SDK; the public-key lookup without `from`; listen health (listening only after the mailbox's sealed handshake, crypto-host recovery, a fresh listen on reconnect and on resume); background-warmed node pools for entries and relays; the node table from the storage root; voice channel v3 with payer-signed temporary channels; the `voice_call_ringing_v1` wake receipt; a 60-second ring window with a native caller timeout; prepared cancel and hang-up; busy signalling (still in development); Missed call for calls that never rang; late-push handling on Android; local caller avatars; ChatDaemon protocol v1 (`hello`); route registration signed by the wallet, and registering only after a successful chain read shows no record, a different key or no mailbox, keeping the existing mailbox |
-| **Planned** | ChatDaemon phases P2–P4 |
+| **Live** | Recipient-PGP envelopes with the sender wallet inside; A/B/C mailbox routing; opaque voice chunks with no per-frame metadata; the callee's own mailbox rings the callee (`voice_offer_store` with `push: 1`); in the iOS and Android apps the native Chat SDK holds the wallet and PGP keys, signs for itself, and keeps the mailbox SSE (since chat-sdk-ios 0.1.7 and chat-sdk-android 0.2.5). Since the current releases (CoNET-SI 74c6cfd on every node; chat-sdk-ios v0.1.8, chat-sdk-android v0.2.6, Consumer PWA 0.52.930): a per-listen `streamKey` that seals every mailbox SSE frame; every delivery from the web app wrapped to the recipient mailbox route key; voice channel v3 with payer-signed temporary channels, whose format and payer signatures relays verify (no payment yet). Since 2 November 2026 nodes no longer serve unsealed mailbox listens, the `mining` + `listenKind: "chat"` pool, voice channel v2 listens, v1 voice frames or the call-wake fallback through the caller's own mailbox |
+| **Live, being replaced** | Behaviour of older clients (for example Consumer PWA 0.52.925 and earlier): user-PGP armor posted without a mailbox layer; browser clients posting one message to several entries at once; the public-key lookup `eth_call` carrying the caller's own wallet as `from`; re-registering on a random mailbox or with a new key when a chain read fails. Those clients have no real-time receive and no calls. Route registration is still unsigned until the updated registration API is deployed |
+| **In rollout** (code written and tested; not yet confirmed in released clients) | One entry at a time, with `no_route` as a clear failure; app pages sending only through the native SDK; the public-key lookup without `from`; listen health (listening only after the mailbox's sealed handshake, crypto-host recovery, a fresh listen on reconnect and on resume); background-warmed node pools for entries and relays; the node table from the storage root; the `voice_call_ringing_v1` wake receipt; a 60-second ring window with a native caller timeout; prepared cancel and hang-up; busy signalling (still in development); Missed call for calls that never rang; late-push handling on Android; local caller avatars; ChatDaemon protocol v1 (`hello`); route registration signed by the wallet (takes effect when the updated registration API is deployed), and registering only after a successful chain read shows no record, a different key or no mailbox, keeping the existing mailbox |
+| **Planned** | ChatDaemon phases P2–P4; payment, metering and charging for voice channel v3; [mailbox storage billing](../l0/mailbox-storage-billing.md); presence lookups over `web3://` |
 
 These privacy changes are not backward compatible. Every node has required
 the new listen and voice formats since 2 November 2026 (operator decision: no
@@ -56,6 +56,13 @@ mailbox SSE open only while the app is in the foreground, while a call push is
 ringing, and during a call (including with the screen locked). While it runs,
 the mailbox SSE stays open the whole time, including during dialing, ringing
 and calls, so other senders' messages still arrive mid-call.
+
+**Implemented, pending acceptance: entry-node service and domain fallback.**
+A candidate of the native SDK connects to nodes by direct IP first and falls
+back to each node's verified HTTPS domain only when direct connections fail on
+several nodes. It is not integrated into the apps and is not in any release;
+the domain path under a real carrier block is not yet verified on a device.
+Details: [CoNET Chat whitepaper, Section 7.6](../applications/depin-chat-whitepaper.md#76-native-entry-node-service-and-verified-domain-fallback-implemented-pending-acceptance).
 
 **In rollout: listen health.** A daemon reports "listening" only after it
 opens the mailbox's sealed handshake frame. After a stream that had heard from
@@ -224,10 +231,11 @@ There is one more association to cut: **entry ↔ recipient**. An OpenPGP armor
 shows the key ID of the key it is encrypted to, and a user's PGP key is public
 on chain. In the live protocol the sender's entry A therefore sees "this IP is
 writing to this recipient", and the listener's entry C sees the key ID of every
-message the mailbox forwards on the SSE. **In rollout:** the sender wraps every
-delivery in a second layer encrypted to the recipient's mailbox route key, so A
-sees only the mailbox node's key (shared by many users); and the mailbox seals
-every SSE frame with a per-listen key, so C sees only padded opaque frames.
+message the mailbox forwards on the SSE. **Live in the current releases:** the
+web app (Consumer PWA 0.52.930) wraps every delivery in a second layer
+encrypted to the recipient's mailbox route key, so A sees only the mailbox
+node's key (shared by many users); and the mailbox seals every SSE frame with a
+per-listen key, so C sees only padded opaque frames.
 
 Traditional messaging architecture tends to concentrate several kinds of information in the same operator:
 
@@ -525,7 +533,7 @@ The relationship-privacy objective is implemented on existing L0 contracts. Thos
 | **A/B/C mailbox routing** | Sender uses a random entry **A**; recipient listens through a random entry **C**; neither may be the sender's or the recipient's mailbox, and mailbox **B** is never the client HTTP target |
 | **EIP-191 sender signature** | Authenticates the outer envelope |
 | **Recipient user PGP** | Encrypts application plaintext |
-| **Mailbox route PGP** | Encrypts listen, mailbox ACK, presence query, call-offer store, and (in rollout) the mailbox layer around every delivery |
+| **Mailbox route PGP** | Encrypts listen, mailbox ACK, presence query, call-offer store, and the mailbox layer around every delivery (web app since PWA 0.52.930) |
 | **ChatIndexRegistry + IPFS fragments** | Encrypted recoverable history; the chain stores only a pointer |
 
 Chat is therefore an application of L0, not a separate messaging network.
@@ -537,14 +545,14 @@ Chat is therefore an application of L0, not a separate messaging network.
 ```text
 Sender wallet
     → sign envelope; encrypt to recipient user PGP
-    → (in rollout) wrap { data: armor, NoPush? } to recipient mailbox B route PGP
+    → wrap { data: armor, NoPush? } to recipient mailbox B route PGP (web app since PWA 0.52.930)
     → POST { "data" } to one random entry A (not B, not the sender's mailbox)
     → next entry only after a clear failure
     → mailbox B stores ciphertext
 Recipient wallet
-    → encrypt mailbox_listen to B route PGP (in rollout: with a fresh streamKey)
+    → encrypt mailbox_listen to B route PGP, with a fresh streamKey
     → SSE through random entry C ≠ B
-    → (in rollout) open each sealed SSE frame with streamKey
+    → open each sealed SSE frame with streamKey
     → decrypt locally, store
     → mailbox ACK to B
     → sender receipt to sender user PGP
@@ -697,7 +705,7 @@ That is how history recovery reconstructs **communication context**, not only me
 - Dual receipts, mailbox ACK after the client has stored the message, and offline flush
 - Encrypted-history append and recover on the Consumer path, with a Worker-local decrypted corpus and full-corpus text search
 - Native Chat daemon in the iOS and Android apps: stored keys, local signing, daemon-owned mailbox SSE
-- One-to-one voice and video calls, rung by the callee's own mailbox (released clients use voice channel v2, which the nodes no longer accept since 2 November 2026; v3 clients are release candidates)
+- One-to-one voice and video calls, rung by the callee's own mailbox (current releases use voice channel v3; nodes no longer accept v2 since 2 November 2026)
 - Published SDKs: `@conet.project/chat-sdk` (TypeScript), [chat-sdk-ios](https://github.com/CoNET-project/chat-sdk-ios), [chat-sdk-android](https://github.com/CoNET-project/chat-sdk-android)
 
 ## Real-time voice calls
@@ -750,12 +758,12 @@ design improves peer-address and identity privacy but does not resist traffic
 analysis. Relay success means only that a chunk entered the peer's SSE queue,
 not that it was played.
 
-### In rollout: voice channel v3 (payer-signed temporary channels)
+### Voice channel v3 (payer-signed temporary channels): live, no payment yet
 
 Today no one pays GB for voice sessions, and the v2 offer's temporary wallet
 field was unused. Every node accepts only v3 voice listens since 2 November
-2026; the v3 clients are release-candidate builds and ship with the privacy
-rollout:
+2026, and the current releases use v3. The format and the payer-signature
+check are live; payment, metering and charging are not implemented:
 
 - **The callee pays for every channel.** A call has four channels (each side
   receiving voice, each side receiving video), all opened when the call
@@ -780,21 +788,31 @@ rollout:
   composes this, and CoNET-SI does not take part.
 - This round builds the authorization architecture only. No usage is charged
   yet; settlement arrives with the GB settlement module. Voice usage will not be
-  added to the existing per-wallet byte counts, which issue GB rather than
-  charge it.
+  added to the existing per-wallet byte counts, which are meant to issue GB
+  rather than charge it; GB issuance from them is paused.
 - It is not backward compatible: released clients cannot open a voice channel on any node.
 
 Canary device tests passed two-way audio, four-channel setup, independent
 relay choice, all refusal cases, decline, cancel, cold-start answer and a
 network change mid-call. Not yet covered: moving a channel after a relay fails
 during a call. Wire format, results and latency:
-[whitepaper, Section 10](depin-chat-whitepaper.md#10-voice-channel-v3-payer-signed-temporary-channels-in-rollout).
+[whitepaper, Section 10](depin-chat-whitepaper.md#10-voice-channel-v3-payer-signed-temporary-channels-live).
 
 Privacy trade-off: a relay that verifies a payer signature learns that the
 payer wallet has a voice channel open, for how long, and how many bytes it
 carries. The relay still does not learn the other party: chunks arrive through
 entries and the authorization carries no call identifier. Splitting payment
 across wallets limits how much one relay can link to a single wallet.
+
+## Metering and charges
+
+Nodes count bytes per wallet today and charge nothing. The operator has
+decided two charging rules that are not deployed: service fees in paid GB,
+collected by the execution node in 0.1 GB steps and passed to earlier hops
+every 12 hours, and offline mailbox storage, prepaid with at least 0.5 GB of
+credit and charged by stored bytes and time until the recipient's ACK. See
+[whitepaper, Section 16](depin-chat-whitepaper.md#16-metering-charging-and-settlement)
+and [Mailbox storage billing](../l0/mailbox-storage-billing.md).
 
 ## What remains under development
 
@@ -837,7 +855,7 @@ claims more:
   outer layer for the entry. A network observer between the phone and the
   entry sees the entry address, sizes, timing and the outer key ID (after the
   rollout, the recipient mailbox's route key ID). This is not being changed now.
-- **Payer visibility** (voice channel v3, in rollout): the relay learns the
+- **Payer visibility** (voice channel v3): the relay learns the
   payer wallet of each channel it holds.
 - **Android push limits.** Deep sleep and force stop drop pushes on the phone
   before the app runs; calls are missed and messages wait in the mailbox until

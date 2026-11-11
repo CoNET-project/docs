@@ -33,15 +33,15 @@ network. Do not use it as CoNET L1 truth.
 | ChatIndexRegistry | `0x1511Caa71081C84d8a591490D1b83879088EED72` |
 | BeamioAgentReferrerRegistry (UUPS proxy; canonical) | `0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A` |
 | BeamioAgentReferrerRegistry implementation | `0xb3535499aBAA9369681e092eAA8d84555eB3fbDe` |
-| GBToken | `0xC3EF02DaE632b4C10abB66e07d92a387c10838D8` |
+| GBToken (no longer recognised; services stopped) | `0xC3EF02DaE632b4C10abB66e07d92a387c10838D8` |
 
 Canonical CoNET-USDC for CoNET L1 application settlement:
 [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA)
-(6 decimals). The sole active Treasury is TreasuryBridgeV3 at the address
-above; legacy USDC factory addresses and older Treasury addresses are
+(6 decimals). The current conet-USDC contract will be replaced by a newly deployed contract (decided, not yet live); the switch-over plan will be announced. The current contract will not be upgraded. The status of the current contract is to be verified. The sole Treasury is TreasuryBridgeV3 at the address
+above, and its cross-chain bridge is paused; legacy USDC factory addresses and older Treasury addresses are
 deprecated.
 
-The GBToken above is the live token. A proposed replacement design for GB and conet-USDC is described in the [GB token whitepaper (draft)](l1/gb-whitepaper.md). It is not deployed; deployment waits for design discussion and an independent audit.
+The GBToken above is no longer recognised and its services have stopped. The new GB design is described in [GB purchase, metering, fees and settlement](l1/gb-billing.md); it is approved, not yet live, and deployment needs an independent audit and a separate approval. The earlier [GB token whitepaper](l1/gb-whitepaper.md) is superseded.
 
 Verify current code and state on the active RPC before relying on a historical
 deployment note.
@@ -56,7 +56,11 @@ deployment note.
 | Build a wallet-addressed application | [`web3://` Application Protocol](l0/web3-application-protocol.md) |
 | Use the Linux `web3://` runtime | [`conet-l0d`](developers/conet-l0d.md) |
 | Implement a browser/native `web3://` client | [`web3://` application](applications/web3-url.md) |
-| Understand the AAC proof-driven bridge work | [AAC cross-chain settlement](l1/aac-cross-chain.md) |
+| Understand the two-way AAC bridge | [Two-way AAC bridge](l1/aac-two-way-bridge.md) (approved, not yet live) · [earlier AAC design](l1/aac-cross-chain.md) |
+| Understand GB fees and settlement | [GB purchase, metering, fees and settlement](l1/gb-billing.md) · [Mailbox storage billing](l0/mailbox-storage-billing.md) |
+| Understand node registry V2 | [Node registry V2](l1/node-registry-v2.md) (approved, not yet live) |
+| Understand third-party tokens and subscriptions | [Third-party tokens and subscriptions](l1/third-party-assets.md) (approved, not yet live) |
+| Understand DAO voting and the next-generation treasury | [DAO and the next-generation treasury](l1/dao-treasury.md) (approved, not yet live) |
 | Run an L1 node | [Run an L1 node](developers/l1-node.md) |
 | Confirm the period-18 checkpoint | [Confirm the period-18 checkpoint](developers/l1-independent-confirmation.md) |
 | Participate in mining | [L1 mining](developers/l1-mining.md) |

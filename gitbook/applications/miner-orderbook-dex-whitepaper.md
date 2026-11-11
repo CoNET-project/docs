@@ -188,7 +188,7 @@ This is the main architectural difference between this exchange and existing dec
 | DLE whitepaper | This paper builds on its asset chains, storage chains, committees, archive finality, data availability, 100 USDC cap and committee cumulative-exposure rule. Needed revisions are listed in Section 2.3. |
 | DLE trade-class chains (DLE §4.7, §10.2) | A trade chain coordinates the whole-ledger sale of one NFT-style subject. The order chain here keeps "one listing, one chain, opened by the lister" and extends it to fungible tokens. |
 | [Design study](miner-orderbook-dex.md) | This paper expands it. Its release gates are mapped in Chapter 15. |
-| [GB whitepaper](../l1/gb-whitepaper.md), [GB AMM whitepaper](../l1/gb-amm-whitepaper.md) | GB may be listed. The exchange does not change GB issuance, exit, official rate or AMO rules (Chapter 14). |
+| [GB whitepaper](../l1/gb-whitepaper.md), [GB AMM whitepaper](../l1/gb-amm-whitepaper.md) (both superseded by the [new GB design](../l1/gb-billing.md)) | GB may be listed. The exchange does not change GB issuance, exit, official rate or AMO rules (Chapter 14). |
 
 ### 1.7 Not promised
 
@@ -218,7 +218,7 @@ Fill latency or throughput (neither is measured); depth or spread on any pair; m
 
 | Component | Status |
 | --- | --- |
-| CoNET L1, Treasury V3, L1 Global Archive Routing Registry | Live / deployed |
+| CoNET L1, Treasury V3, L1 Global Archive Routing Registry | Live / deployed; the Treasury V3 cross-chain bridge is paused |
 | DLE lab network (0x44c45) and explorer | Lab environment, not production |
 | AssetBurnMintGateway (moving assets into and out of DLE) | Not live; production asset ingress closed |
 | DLE production archive signing | Forbidden by the specification; production blockers open |

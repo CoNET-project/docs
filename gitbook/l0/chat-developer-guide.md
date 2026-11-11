@@ -1,6 +1,6 @@
 # CoNET Chat developer guide
 
-**Evidence level: Implemented capability, with a privacy upgrade in rollout.** This page is a developer how-to for **CoNET Chat** on Layer Minus. Unmarked envelopes, commands, and APIs match current Beamio / chat-sdk clients. Text marked **In rollout** describes code that is written and tested: its node side runs on every Guardian node since 2 November 2026, and its client side is in release-candidate builds, not yet released; **Planned** describes decided designs that are not implemented. Write new clients to the rollout form. It is not a claim that Chat is a finished replacement for mainstream messengers.
+**Evidence level: Implemented capability, with a privacy upgrade in rollout.** This page is a developer how-to for **CoNET Chat** on Layer Minus. Unmarked envelopes, commands, and APIs match current Beamio / chat-sdk clients. Text marked **In rollout** describes code that is written and tested but not yet confirmed in released clients; **Planned** describes decided designs that are not implemented. Write new clients to the rollout form. It is not a claim that Chat is a finished replacement for mainstream messengers.
 
 CoNET Chat is relationship-private communication infrastructure: wallet identity, zero-trust mailbox routing, encrypted application envelopes, and wallet-controlled encrypted history. Use it to add wallet-addressed communication **without** first building a centralized user-and-relationship database. Product thesis, Beamio integration, and maturity limits live on [CoNET Chat](../applications/depin-chat.md).
 
@@ -14,9 +14,9 @@ Public packages: [CoNET-project/chat-sdk](https://github.com/CoNET-project/chat-
 
 | Step | Encrypt to | Transport |
 | --- | --- | --- |
-| Register user PGP + mailbox | — | `POST https://beamio.app/api/regiestChatRoute` signed by the wallet (EIP-191, timestamp, single-use nonce), then confirm with AddressPGP `searchKey`. Register only when a successful read shows no record, a different key or no mailbox; keep the existing mailbox ([rules](si-developer-guide.md#sample-register-a-mailbox-route)) |
+| Register user PGP + mailbox | — | `POST https://beamio.app/api/regiestChatRoute`; signing by the wallet (EIP-191, timestamp, single-use nonce) takes effect when the updated API is deployed (pending release), then confirm with AddressPGP `searchKey`. Register only when a successful read shows no record, a different key or no mailbox; keep the existing mailbox ([rules](si-developer-guide.md#sample-register-a-mailbox-route)) |
 | Look up a contact | — | `AddressPGP.searchKey(contact)` over CoNET RPC, **without** an `eth_call` `from` (in rollout; the live Consumer PWA still sends its own wallet as `from`) |
-| Send a message | Recipient **EOA user PGP**; in rollout always wrapped as mailbox work to the recipient mailbox **B route PGP** | `POST /post` to **one** random entry **A** (not the recipient's or the sender's mailbox); the next entry only after a clear failure |
+| Send a message | Recipient **EOA user PGP**, always wrapped as mailbox work to the recipient mailbox **B route PGP** (the web app does so since PWA 0.52.930) | `POST /post` to **one** random entry **A** (not the recipient's or the sender's mailbox); the next entry only after a clear failure |
 | Listen | Own mailbox **B route PGP** | `command: "mailbox_listen"` as SSE via entry **C ≠ B**. It must carry a fresh `streamKey` and every frame is sealed. The legacy `mining` + `listenKind: "chat"` pool receives no Chat |
 | After inbound ingest | (1) **B route PGP** ACK · (2) sender user PGP receipt, then mailbox-work wrap `NoPush` to sender mailbox B | ACK only after the message is stored. ACK and receipt both via entries ≠ B; HTTP still `{ data }` only. `NoPush` is **Chat/APNs only** |
 | Presence (green dot) | Contact mailbox **B route PGP** | `wallet_online_query` via **entry C ≠ B** (never dial B; that hides the querier's IP). Carries the querier's wallet: known limitation |
@@ -29,9 +29,9 @@ Protocol status (live, in rollout, planned) and the known limitations are
 listed on [CoNET Chat](../applications/depin-chat.md#protocol-status-november-2026).
 Every Guardian node runs the new CoNET-SI since 2 November 2026, with no
 backward compatibility: every mailbox refuses a `mailbox_listen` without
-`streamKey`, and every relay refuses a `voice_listen` that is not v3. The
-clients that follow these rules are release candidates; released clients no
-longer receive in real time or call.
+`streamKey`, and every relay refuses a `voice_listen` that is not v3. Released
+clients follow these rules (chat-sdk-ios v0.1.8, chat-sdk-android v0.2.6,
+Consumer PWA 0.52.930); older clients no longer receive in real time or call.
 
 ## Relationship-privacy field contract
 
@@ -41,13 +41,13 @@ recipient decrypts:
 ```text
 { from: senderEOA, text, signature }
   → encrypt complete object to recipient user PGP
-  → (in rollout) wrap { data: armor } to recipient mailbox B route PGP
+  → wrap { data: armor } to recipient mailbox B route PGP (the web app does so since PWA 0.52.930)
   → POST { data: armor } through one random entry A
 ```
 
 | Role | Receives | Must not receive |
 | --- | --- | --- |
-| **Entry A** | Client IP, ciphertext, timing, size, outer key ID. Live: that key ID is the recipient's user key. In rollout: the recipient mailbox's route key | Plaintext sender wallet or Chat body |
+| **Entry A** | Client IP, ciphertext, timing, size, outer key ID. With the mailbox layer (web app since PWA 0.52.930): the recipient mailbox's route key. Without it: the recipient's user key | Plaintext sender wallet or Chat body |
 | **Mailbox B** | Destination route, stored armor, listen state | Sender wallet inside the business envelope or Chat body |
 | **Listen entry C** | Recipient-side connection IP, encrypted listen traffic: sealed, padded SSE frames (every node refuses an unsealed listen) | Decrypted Chat body, recipient key ID of each message |
 | **Recipient** | Decrypted envelope and verified sender wallet | Other users' private keys |
@@ -179,8 +179,7 @@ do not ring. A call that ended before it rang must never ring later.
 Every online client keeps its mailbox SSE open during dialing, ringing and the
 call. Call control therefore travels as **ordinary Chat messages** through the
 mailbox: signed by the sender wallet, encrypted to the peer's user PGP, posted
-through a random entry (and, in rollout, wrapped to the peer's mailbox route
-key). This covers caller cancel, decline, ring timeout and hang-up
+through a random entry, wrapped to the peer's mailbox route key (the web app does so since PWA 0.52.930). This covers caller cancel, decline, ring timeout and hang-up
 (`voice_end_v1`):
 
 ```json
@@ -285,10 +284,11 @@ Voice channel v1 (`voice_uplink` / `voice_downlink` JSON with an outer `seq`,
 decryption) is gone: no node forwards v1 frames since 2 November 2026, and new
 clients have no v1 path.
 
-### Voice channel v3: payer-signed temporary channels (in rollout)
+### Voice channel v3: payer-signed temporary channels (live, no payment yet)
 
 Not backward compatible. Every node accepts only v3 listens since 2 November
-2026; the clients are release-candidate builds. The callee pays for all four channels of a call
+2026, and released clients use v3. The format and the payer-signature check
+are live; payment, metering and charging are not implemented. The callee pays for all four channels of a call
 (caller receives voice / video, callee receives voice / video), each with its
 own temporary wallet, AES key and write key, all opened when the call starts.
 Each side opens its own two channels on relays it chooses at random,
@@ -369,7 +369,7 @@ Inside the native apps, the page hands the shell the relays' public route keys
 (`setNativeVoiceRelayNodes`), so the shell can pick its relays and encrypt
 listens; a cold-start answer uses the last cached copy. Background, results
 and privacy trade-off:
-[CoNET Chat whitepaper, Section 10](../applications/depin-chat-whitepaper.md#10-voice-channel-v3-payer-signed-temporary-channels-in-rollout).
+[CoNET Chat whitepaper, Section 10](../applications/depin-chat-whitepaper.md#10-voice-channel-v3-payer-signed-temporary-channels-live).
 
 ## Native push and call-UI capability registration
 
@@ -437,7 +437,7 @@ Live `sendMessage` signs the **inner application string** (`text`), then OpenPGP
 ④ OpenPGP
    encrypt base64(JSON.stringify(③)) to R userPublicKeyArmored
 
-⑤ mailbox layer  (in rollout: always)
+⑤ mailbox layer  (always; web app since PWA 0.52.930)
    { data: <④ armor>, NoPush?: true } → OpenPGP encrypt to R's mailbox B route PGP
    No route key for B → fail with recipient_mailbox_unknown; do not send ④ bare
 
@@ -486,7 +486,7 @@ entryDomains:<comma-joined or empty>
 codec:<or empty>
 ```
 
-`sessionKey` and `tempWalletAddress` belong to the v2 flow, which no node supports since 2 November 2026. Voice channel v3 removes both from the offer and signs the `CoNET voice_call_offer_v3` text shown under [Voice channel v3](#voice-channel-v3-payer-signed-temporary-channels-in-rollout).
+`sessionKey` and `tempWalletAddress` belong to the v2 flow, which no node supports since 2 November 2026. Voice channel v3 removes both from the offer and signs the `CoNET voice_call_offer_v3` text shown under [Voice channel v3](#voice-channel-v3-payer-signed-temporary-channels-live-no-payment-yet).
 
 The caller signs that string with the same EOA private key (`signMessage`). The callee recovers the address and only then looks up the tag. If recovery fails, or it disagrees with the outer-envelope signer, do not present the offer’s claimed identity. A body claim that disagrees with the recovered key may be shown only as an extra unverified line with a warning. Native wake-up stays generic until this on-device check finishes.
 
@@ -930,6 +930,15 @@ UI code does not fetch history itself. It calls the module:
 
 ## Using the SDKs
 
+**Implemented, pending acceptance: entry-node service and domain fallback.** A
+candidate of the native SDKs reaches nodes through one entry-node service per
+app process: direct IP first, and HTTPS to the node's verified
+`<key ID>.conet.network` domain only after transport failures on 3 different
+nodes within 30 seconds. It is verified on real devices for ordinary network
+switches, cellular messaging and airplane-mode recovery, but not yet under a
+real carrier block. The iOS and Android apps have not integrated it, and no
+release contains it. Details: [CoNET Chat whitepaper, Section 7.6](../applications/depin-chat-whitepaper.md#76-native-entry-node-service-and-verified-domain-fallback-implemented-pending-acceptance).
+
 Three implementations share one command protocol: the TypeScript Worker
 (`@conet.project/chat-sdk`, used by browsers), [chat-sdk-ios](https://github.com/CoNET-project/chat-sdk-ios)
 and [chat-sdk-android](https://github.com/CoNET-project/chat-sdk-android). Inside
@@ -1037,7 +1046,7 @@ for each member except sender:
   pad body to fixed bucket (default 4096 bytes)
   EIP-191 envelope (same Chat outer shape)
   OpenPGP encrypt to that member’s user PGP  (exactly one key)
-  (in rollout) wrap to that member’s mailbox B route PGP
+  wrap to that member’s mailbox B route PGP (the web app does so since PWA 0.52.930)
   POST { data } through one random entry ≠ that member’s mailbox B and ≠ own mailbox
 ```
 
@@ -1064,7 +1073,7 @@ Reference implementation: `vendor/conet-chat-sdk` (`group.ts`,
 
 ## Checklist
 
-- [ ] Sender registered with a wallet-signed `regiestChatRoute` (fresh timestamp and nonce per attempt) + `searchKey` shows the local subkey
+- [ ] Sender registered with `regiestChatRoute` (wallet-signed, with a fresh timestamp and nonce, once the updated API is deployed) + `searchKey` shows the local subkey
 - [ ] A failed or timed-out read of your own record is retried, never answered by registering, picking a new mailbox or generating a new key
 - [ ] Business encrypt-to recipient **EOA user PGP**; listen/ACK/presence/offer store encrypt-to **route PGP**
 - [ ] (rollout) Every delivery wrapped to the recipient mailbox route PGP; no route key → `recipient_mailbox_unknown`

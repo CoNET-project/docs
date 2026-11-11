@@ -23,17 +23,21 @@ There is **one** production Treasury: `TreasuryBridgeV3`. Older CREATE2 / `BaseT
 
 | Component | Address | Role |
 | --- | --- | --- |
-| **TreasuryBridgeV3 proxy** | [`0xa208982212978550594A7FEEB70a61665d129003`](https://mainnet.conet.network/address/0xa208982212978550594A7FEEB70a61665d129003) | Sole Treasury: route policy, quorum, mint, burn, lock, and release on CoNET and Base |
+| **TreasuryBridgeV3 proxy** | [`0xa208982212978550594A7FEEB70a61665d129003`](https://mainnet.conet.network/address/0xa208982212978550594A7FEEB70a61665d129003) | Sole Treasury: route policy, quorum, mint, burn, lock, and release on CoNET and Base. **Cross-chain operation is paused** |
 | **ConetTreasuryPeer v4** | [`0x6093871d8a3EE6EaADc9869451D1693973cFBCC0`](https://mainnet.conet.network/address/0x6093871d8a3EE6EaADc9869451D1693973cFBCC0) | Peer module for registered burn/mint and configured swaps — **not** a second Treasury |
-| **conet-USDC** | [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA) | Treasury-canonical six-decimal settlement asset |
-| **GBToken (`GB`)** | [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) | Active nine-decimal DePIN service asset |
+| **conet-USDC** | [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA) | Treasury-canonical six-decimal settlement asset. Status to be verified. It will be replaced by a newly deployed contract (decided, not yet live); the switch-over plan will be announced |
+| **GBToken (`GB`)** | [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) | Nine-decimal DePIN service asset. **No longer recognised; services stopped** |
 | **Base USDC** | [`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`](https://basescan.org/token/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) | Current source-chain USDC for LockMint and product top-up paths |
 
 `TreasuryBridgeV3` is an ERC-1967/UUPS proxy. Its stable address does not imply immutable logic: upgrade authority, miner-roster administration, route configuration, and token roles remain part of the trust and governance boundary.
 
 The current production counterpart chain is **Base (`chainId` 8453)**. That is a governed CoNET ↔ Base route on the **same** V3 Treasury, not a permissionless bridge and not a second Treasury contract. `ConetTreasuryPeer` bytecode is present on CoNET L1 at the address above; do not assume the same Peer address is deployed on Base without checking `eth_getCode`.
 
-**GB and conet-USDC design status.** The contracts in the table above are live. The [GB token whitepaper (draft)](gb-whitepaper.md) proposes a replacement design for paid GB and for conet-USDC. That design is not deployed, and it does not change the live routes described on this page.
+**Cross-chain bridge paused.** The Treasury cross-chain bridge is paused, and GBToken is no longer recognised. The current conet-USDC contract will be replaced by a newly deployed contract (decided, not yet live); the switch-over plan will be announced. The current contract will not be upgraded. The status of the current contract is to be verified. The rest of this page records how the routes worked.
+
+**Next-generation treasury (decided, not yet live).** The next treasury will be deployed by the fixed AAC factory during initialisation, at a fixed address with no proxy and no upgrade function. Its key authorisations are frozen when initialisation completes. A later generation will be a new deployment, moved to by DAO decision. No address exists yet, and deployment still needs an independent audit and a separate approval. The previous CoNET and Base treasuries will not be used by the new system, and support for new inflows through this bridge will stop (decided, not yet live). See [DAO and the next-generation treasury](dao-treasury.md) and [Two-way AAC bridge](aac-two-way-bridge.md#deployment-and-upgrades-approved-not-yet-live).
+
+**GB and conet-USDC design status.** The contracts in the table above remain on chain. The [GB token whitepaper (draft)](gb-whitepaper.md) proposes a replacement design for paid GB and for conet-USDC. That design is not deployed, and it does not change the live routes described on this page.
 
 ## Three explicit route modes
 
