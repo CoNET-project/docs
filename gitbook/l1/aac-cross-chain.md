@@ -110,7 +110,7 @@ Rules that apply across the routes:
 
 ## 9. Open items (26 October 2026)
 
-See the current [open items](aac-two-way-bridge.md#open-items-11-november-2026). The list below is kept from the earlier version.
+See the current [open items](aac-two-way-bridge.md#open-items-12-november-2026). The list below is kept from the earlier version.
 
 1. The form of the AAC secure construction, including how the minter is replaced when the token has no admin (GB §19.11).
 2. Same-address deployment of cross-chain tokens: deployer, initialisation code and salt (GB §19.10).

@@ -1,6 +1,6 @@
 # Two-way AAC bridge (CoNET ↔ Base)
 
-**Status as of 11 November 2026.** This page describes the AAC bridge design the operator decided on 7 November 2026, with the deployment, limit, asset and governance rules decided on 8–10 November 2026 and the deposit confirmation and circuit-breaker rule decided on 11 November 2026. Nothing on it is deployed, and no address exists. Parts are implemented and tested locally, as marked; the fast-path anti-forgery gate has not passed. The earlier proof-driven design and its records are on [AAC proof-driven cross-chain settlement](aac-cross-chain.md). The legacy Treasury cross-chain bridge is paused.
+**Status as of 12 November 2026.** This page describes the AAC bridge design the operator decided on 7 November 2026, with the deployment, limit, asset and governance rules decided on 8–10 November 2026 the deposit confirmation rule decided on 11 November 2026, and the circuit-breaker rules decided on 12 November 2026. Nothing on it is deployed, and no address exists. Parts are implemented and tested locally, as marked; the fast-path anti-forgery gate has not passed. The earlier proof-driven design and its records are on [AAC proof-driven cross-chain settlement](aac-cross-chain.md). The legacy Treasury cross-chain bridge is paused.
 
 **How to read the labels**
 
@@ -34,15 +34,16 @@ Multi-chain same-address deployment is a design requirement and is not yet compl
 | --- | --- | --- |
 | Source action | USDC is locked in the AAC bridge on Base | conet-USDC is burned on CoNET |
 | First confirmation | **AAC deposit confirmation.** The Base block is still unsafe (pre-confirmed by the sequencer). AAC checks the authorised sequencer's signature for that period, the chain domain, the binding of the signed payload to the block header and `receiptsRoot`, the USDC lock receipt of the designated bridge, the amount, recipient and order ID, replay protection and the limits below. When all pass, CoNET mints conet-USDC at once, without a guarantee or collateral. An order is minted once only | The Base vault releases USDC equal to the amount burned on CoNET. The withdrawal contract is not implemented, and how Base verifies the CoNET burn is **[Open]** |
-| Later check | **Ethereum L1 health check.** Base's later commitments to Ethereum L1 are used to verify that Base is healthy and to track the exposure of deposits already minted. They mint nothing | — |
+| Later check | **Ethereum L1 health check.** Base's health is judged by the time at which each Base batch is actually included on Ethereum L1. The same L1 evidence is used to track the exposure of deposits already minted. It mints nothing | — |
 
-**[Approved, not yet live]** Fast crediting depends on the Base sequencer's pre-confirmation. A sequencer signature proves pre-confirmation only; Ethereum L1 commitments are used to verify Base's health. If no valid L1 commitment or finality proof for Base arrives in **two consecutive expected commitment windows**, AAC treats the Base cross-chain path as failed and stops both directions at once (see [Circuit breaker and reopening](#circuit-breaker-and-reopening)). The window and the other parameters are set by the DAO. This rule is decided; its implementation is pending. The term "early mint" describes when minting happens; it is not a stage name. Between the last valid L1 proof and the moment the circuit breaker stops the bridge there is a period of exposure; its length depends on the window parameters the DAO sets and is currently estimated at about 30 minutes, an estimate rather than a fixed limit or a service level, and any loss in that period is handled by the project case by case.
+**[Approved, not yet live]** Fast crediting depends on the Base sequencer's pre-confirmation. A sequencer signature proves pre-confirmation only; Base's health is judged by when its batches are actually included on Ethereum L1. A batch that is included on time keeps the path healthy, even if its proof or its relay to CoNET arrives late. Only trusted L1 evidence that no valid batch was included in **two consecutive expected windows** stops both directions (see [Circuit breaker and reopening](#circuit-breaker-and-reopening)); silence from an RPC endpoint or a relayer is not such evidence. The windows and the other parameters are set by the DAO. These rules are decided; their implementation is pending. The term "early mint" describes when minting happens; it is not a stage name. Between the last valid L1 proof and the moment the circuit breaker stops the bridge there is a period of exposure; its length depends on the window parameters the DAO sets and is currently estimated at about 30 minutes, an estimate rather than a fixed limit or a service level, and any loss in that period is handled by the project case by case.
 
 ## Deployment and upgrades [Approved, not yet live]
 
 - **One factory, one initialisation.** A fixed AAC factory deploys the bridge contracts during initialisation: the new conet-USDC ledger, the deposit controller and withdrawal gateway, the settlement contract, the new GB and wCNET contracts, and the new treasury. Each contract's exact address is bound once to a predefined role.
 - **No upgrades.** These contracts will be deployed at fixed addresses with no proxy and no upgrade function. This includes GB and wCNET. A later generation is a new deployment, moved to by DAO decision.
 - **Frozen authorisations.** When initialisation completes, the key authorisations are frozen: the gateways, the controllers, the settlement contract and the source of limits. Nobody can add or replace them afterwards, and no administrator can reopen them. Releasing or clearing exposure is possible only through the bound settlement path, against a verified order.
+- **Owner and administrator roles.** Where a new contract has an owner or administrator role, that role is held by the governance contract. No personal wallet or multisig holds it.
 - **Route versions.** A new route version may use only controller and treasury addresses that the factory bound at initialisation. A DAO route decision chooses among those bound addresses; it cannot introduce a new address.
 - What is frozen is the deployed code and the key authorisation addresses. The DAO keeps the governance rules already decided: per-asset limits, asset admission, the circuit breaker and reopening.
 
@@ -81,9 +82,13 @@ Each official stablecoin, including conet-USDC, has a cross-chain channel switch
 
 ## Circuit breaker and reopening
 
-The trigger below is **[Approved, not yet live]**: decided, with implementation pending. The DAO-only reopening is **[Implemented, pending acceptance]**.
+The trigger, the trusted-header rule, the evidence rule, the latch and state L below are **[Approved, not yet live]**: decided, with implementation pending. The DAO-only reopening is **[Implemented, pending acceptance]**.
 
-- If no valid Ethereum L1 commitment or finality proof for Base arrives in two consecutive expected commitment windows, AAC treats the Base cross-chain path as failed and immediately stops **both directions** between Base and CoNET. The window and the other parameters are set by the DAO.
+- **Trigger.** Windows are measured by the time at which a Base batch is actually included on Ethereum L1. When trusted L1 evidence confirms that no valid batch was included in two consecutive expected windows, AAC treats the Base cross-chain path as failed and immediately stops **both directions** between Base and CoNET. A batch that was included on time does not trigger the breaker because its proof or relay is late. Silence from an RPC endpoint or a relayer alone does not trigger it. Trusted L1 block headers come from an Ethereum sync-committee light client (see the next item). The window and the other parameters are set by the DAO; their values are **[Open]**.
+- **Trusted L1 headers.** An Ethereum sync-committee light client supplies the trusted L1 headers (decided, not yet implemented). Its initial checkpoint is confirmed by a CoNET DAO vote. The checkpoint root cannot be upgraded: if a defect is found, a new contract is deployed and a new checkpoint root is installed by DAO vote. The checkpoint's maximum age applies only to the first start and to re-bootstrapping after a long period without updates. In normal operation the light client keeps verifying and storing finalized Ethereum L1 headers and sync-committee handovers itself, and needs no periodic renewal by the DAO. The checkpoint's maximum age, the threshold for a long period without updates and the point at which re-bootstrapping is required are **[Open]**.
+- **Evidence is kept.** A later batch cannot overwrite, erase or skip the evidence of an earlier missed window.
+- **Latched stop.** Once the breaker has stopped the bridge, it stays stopped until the DAO reopens it. Base producing blocks again, or submitting batches again, never reopens AAC by itself.
+- **State L (no positive proof).** While there is no positive proof that Base batches are being included on L1, AAC enters state L: new minting on unsafe pre-confirmation is limited, and withdrawals are not affected. The threshold K that starts state L is **[Open]**, and so is the form of the positive batch proof.
 - While stopped, AAC accepts no new deposits or withdrawals and mints nothing. Approved refunds stay available; they do not mint or open ordinary withdrawals.
 - Reopening needs a **DAO vote**. When the approved reopening is executed, Base must have recovered; otherwise that vote has no effect. There is no grace period. Chain recovery alone never reopens AAC.
 - After reopening, AAC re-verifies existing locks and completes them automatically; users do not resubmit. A refund stays available against a proof that the order is closed and was not minted. A refund and a completion exclude each other. The same rule applies during a long stop.
@@ -98,29 +103,32 @@ conet-USDC received through AAC deposit confirmation can buy GB under the normal
 
 Status on 7 November 2026: in the local implementation the negative tests pass, the chain-ID byte order matches a public test vector, and block-header recomputation matches real Base blocks. Positive tests use test keys only; real sequencer signature samples are still missing. **The gate has not passed.**
 
-## Implementation status (11 November 2026)
+## Implementation status (12 November 2026)
 
 | Item | Status |
 | --- | --- |
 | Factory stack | **[Implemented, pending acceptance]**: the factory-deployed conet-USDC ledger with its gateways and freeze, new GB, wCNET and treasury, local tests. GB, wCNET and the treasury are not yet part of the same initialisation. Same-address deployment on CoNET, Base and Ethereum is not complete; predicted addresses were checked only in local simulation |
 | Deposit confirmation | Local code: block authenticator, signer epochs, lock log, window ledger, inbound controller, bridge breaker and CoNET cover. The local code also contains a Base guarantee contract from the earlier design; the current rule does not use a guarantee |
-| Two-missed-window circuit breaker | Decided; implementation pending |
+| Circuit breaker on L1 inclusion, kept evidence, latched stop and state L | Decided; implementation pending. Trusted L1 headers come from an Ethereum sync-committee light client (decided, not yet implemented), with its initial checkpoint confirmed by DAO vote and no periodic DAO renewal in normal operation. The checkpoint's maximum age, the long-gap threshold and the re-bootstrap point, the positive batch proof, the state L threshold K and the numeric parameters are **[Open]** |
 | Tests | The full local test suite passes, including a real Base lock receipt, real Base header offsets, real CoNET block headers and storage proofs, and the official-stablecoin channel. Some proof paths still use stand-ins (see Proofs). Nothing has been accepted |
 | Withdrawal | The CoNET → Base withdrawal contract is not implemented |
 | Deployment | None. No contract deployed and no transaction sent |
 | Known limits | When two valid proofs conflict, the effect of the one applied first is not rolled back; ordering two related events inside the same canonical block by transaction and log order is not implemented |
 
-## Open items (11 November 2026)
+## Open items (12 November 2026)
 
 1. The withdrawal contract, and how Base verifies a CoNET burn.
 2. The price source for counting GB and wCNET at USDC-equivalent value.
-3. The expected L1 commitment window and the other circuit-breaker parameters, which the DAO sets.
-4. Real sequencer signature samples for positive acceptance.
-5. How GB purchases and GB exits behave while AAC is stopped.
-6. Which components of the earlier bridge still run; this needs a read-only on-chain check.
-7. The cross-chain proof format and its parameters.
-8. The withdrawal fee details.
-9. The limit unit for third-party cross-chain tokens and the initial limits of newly admitted official stablecoins.
+3. For the Ethereum sync-committee light client: the checkpoint's maximum age, the threshold for a long period without updates, and the point at which re-bootstrapping is required.
+4. The form of the positive batch proof.
+5. The threshold K for state L, and how far new unsafe minting is limited in that state.
+6. The numeric circuit-breaker parameters, including the expected window, which the DAO sets.
+7. Real sequencer signature samples for positive acceptance.
+8. How GB purchases and GB exits behave while AAC is stopped.
+9. Which components of the earlier bridge still run; this needs a read-only on-chain check.
+10. The cross-chain proof format and its parameters.
+11. The withdrawal fee details.
+12. The limit unit for third-party cross-chain tokens and the initial limits of newly admitted official stablecoins.
 
 ## Related
 
