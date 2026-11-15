@@ -14,26 +14,33 @@ inside the Beamio iOS and Android shells.
 
 ## What the repository contains
 
-The repository holds the Consumer PWA source: the self-custody wallet, Discover,
-merchant programs and coupons, Store Credit and Reward PT, USDC payments, and
-CoNET Chat messaging. It is a React and TypeScript application built with
-Create React App and CRACO. It uses Ethers for chain reads and local signing,
-PouchDB and IndexedDB for device-local data, and OpenPGP for CoNET messaging.
+The repository holds the consumer PWA only: wallet creation and recovery,
+merchant discovery, memberships, coupons and rewards, merchant-issued store
+credit, supported USDC payments, CoNET Chat messaging, and voice and video
+calling over the CoNET Chat transport (not WebRTC). It is a React 18 and
+TypeScript application built with CRACO. It uses Ethers v6, IndexedDB and
+PouchDB for device-local data, web workers, and the CoNET Chat SDK with OpenPGP.
 
-Wallet material stays on the customer device. The repository contains no
-operator keys, signing secrets, or service configuration.
+Beamio POS, Merchant OS, the native shell projects, backend services, and smart
+contracts are separate components with their own repositories and release
+processes. Local development needs no production operator keys or native
+signing credentials.
 
 ## Build
 
-Requirements: Node.js 20 and Yarn.
+Use the toolchain declared by the checked-out revision (currently Node.js 20
+in `.nvmrc` and Yarn Classic 1.22.22).
 
 ```bash
+git clone https://github.com/beamio-APP/beamio-UI.git
+cd beamio-UI
 nvm use
-yarn install
-yarn start          # development server
-yarn build          # production build for the /app/ path
-yarn build:embedded # root-path build used by the native shells
-yarn test
+yarn install --frozen-lockfile
+yarn start                          # local development
+CI=true yarn test --watchAll=false  # tests
+yarn tsc --noEmit                   # type check
+yarn build                          # browser build
+yarn build:shell-embedded           # root-path build for a native shell
 ```
 
 A local build is for development and review. Official web releases and the
@@ -44,9 +51,11 @@ process; a local `build/` directory is not a release.
 
 - Open an issue or a pull request against `main` in
   [beamio-APP/beamio-UI](https://github.com/beamio-APP/beamio-UI).
-- Follow the contribution guide in the repository.
-- Never include private keys, mnemonics, access passwords, or service secrets
-  in issues, pull requests, logs, or screenshots.
+- Describe the affected runtime, application version, expected behavior, and
+  reproduction steps, and include the relevant checks with a change.
+- Never include wallet secrets, recovery codes, test-account credentials,
+  signing files, or private service configuration in issues, pull requests,
+  or commits. Use disposable test accounts, not a personal wallet.
 
 ## How it relates to other Beamio components
 
