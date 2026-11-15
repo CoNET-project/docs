@@ -43,6 +43,12 @@ yarn build                          # browser build
 yarn build:shell-embedded           # root-path build for a native shell
 ```
 
+`yarn build` produces the browser application served under the `/app/` path
+of the Beamio web origin. `yarn build:shell-embedded` produces the same
+interface with a root public path, so that a native shell can serve it locally
+from its embedded UI package. Use the scripts declared in the `package.json` of
+the revision you check out.
+
 A local build is for development and review. Official web releases and the
 package embedded in the native shells are produced by the Beamio release
 process; a local `build/` directory is not a release.
@@ -72,6 +78,7 @@ process; a local `build/` directory is not a release.
 
 Until November 2026, the Consumer PWA was developed on the `cashtree` branch
 of [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/cashtree).
-That branch remains public as the historical source. Code references elsewhere
+That branch remains public as the historical source. The separate `cashtrees`
+branch of the same repository holds Merchant OS and is not part of Beamio UI. Code references elsewhere
 in this book that point to `SilentPassUI` `cashtree` describe that history; new
 work happens in Beamio UI.
