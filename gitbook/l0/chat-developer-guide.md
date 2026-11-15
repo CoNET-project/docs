@@ -14,7 +14,7 @@ Public packages: [CoNET-project/chat-sdk](https://github.com/CoNET-project/chat-
 
 | Step | Encrypt to | Transport |
 | --- | --- | --- |
-| Register user PGP + mailbox | — | `POST https://beamio.app/api/regiestChatRoute`; signing by the wallet (EIP-191, timestamp, single-use nonce) takes effect when the updated API is deployed (pending release), then confirm with AddressPGP `searchKey`. Register only when a successful read shows no record, a different key or no mailbox; keep the existing mailbox ([rules](si-developer-guide.md#sample-register-a-mailbox-route)) |
+| Register user PGP + mailbox | — | `POST https://beamio.ca/api/regiestChatRoute`; signing by the wallet (EIP-191, timestamp, single-use nonce) takes effect when the updated API is deployed (pending release), then confirm with AddressPGP `searchKey`. Register only when a successful read shows no record, a different key or no mailbox; keep the existing mailbox ([rules](si-developer-guide.md#sample-register-a-mailbox-route)) |
 | Look up a contact | — | `AddressPGP.searchKey(contact)` over CoNET RPC, **without** an `eth_call` `from` (in rollout; the live Consumer PWA still sends its own wallet as `from`) |
 | Send a message | Recipient **EOA user PGP**, always wrapped as mailbox work to the recipient mailbox **B route PGP** (the web app does so since PWA 0.52.930) | `POST /post` to **one** random entry **A** (not the recipient's or the sender's mailbox); the next entry only after a clear failure |
 | Listen | Own mailbox **B route PGP** | `command: "mailbox_listen"` as SSE via entry **C ≠ B**. It must carry a fresh `streamKey` and every frame is sealed. The legacy `mining` + `listenKind: "chat"` pool receives no Chat |
@@ -801,7 +801,7 @@ export function pickExactBeamioTag(
 }
 ```
 
-Current discovery HTTP: `GET/POST` `https://beamio.app/api/search-users` (application API, not SI). If the exact match is ambiguous, **fail**. Never encrypt to `results[0]`.
+Current discovery HTTP: `GET/POST` `https://beamio.ca/api/search-users` (application API, not SI). If the exact match is ambiguous, **fail**. Never encrypt to `results[0]`.
 
 ## Typed payloads
 

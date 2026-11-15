@@ -1,7 +1,7 @@
 # Beamio Consumer PWA
 
 **Maturity: Production reference.** The Consumer PWA is live at
-[https://beamio.app/app/](https://beamio.app/app/). This chapter is a product
+[https://beamio.ca/app/](https://beamio.ca/app/). This chapter is a product
 inventory, not a screen-by-screen manual and not a claim of audit or SLA
 coverage.
 
@@ -47,7 +47,7 @@ is on returns the full Featured Brands list.
 | Domain | Capability |
 | --- | --- |
 | **Wallet** | Self-custody EOA from a local 12-word mnemonic. Cold start derives a global signing key. Missing mnemonic requires Restore (`@BeamioTag` + access password → on-chain recover package). |
-| **Agent invite / referrer bind** | Rewards Hub **Share invite** shows a QR for `https://beamio.app/app-download?target=` wrapping `https://beamio.app/app/?invite=0x…`, where `0x…` is the signed-in inviter. Deep link `https://beamio.app/app/?invite=0x…` (or app-download `target=` wrapping that URL) stashes the introducer EOA locally. The Google Play badge on that page opens the store with `referrer=beamio_dl=` set to the same inner `/app/?invite=0x…` URL. On the first launch after a fresh Android install, the Consumer shell reads that Play install referrer and opens the embedded app at that invite URL. After the wallet is ready (create or restore), Consumer offline-signs EIP-712 **RegisterReferrer** (domain `BeamioAgentReferrerRegistry` / `version` `1` / `verifyingContract` = UUPS proxy) and submits gasless `POST /api/agentReferrerRegister` (`op=registerReferrer`) to CoNET `BeamioAgentReferrerRegistry` proxy [`0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A`](https://mainnet.conet.network/address/0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A). On success, `introducerOf[referee] = introducer`. This is **not** Discover merchant `ref=` share attribution. Failures keep any prior trusted bind (do not clear). |
+| **Agent invite / referrer bind** | Rewards Hub **Share invite** shows a QR for an `/app-download?target=` link wrapping an `/app/?invite=0x…` link on the Beamio web origin, where `0x…` is the signed-in inviter. Deep link `/app/?invite=0x…` (or app-download `target=` wrapping that URL) stashes the introducer EOA locally. The Google Play badge on that page opens the store with `referrer=beamio_dl=` set to the same inner `/app/?invite=0x…` URL. On the first launch after a fresh Android install, the Consumer shell reads that Play install referrer and opens the embedded app at that invite URL. After the wallet is ready (create or restore), Consumer offline-signs EIP-712 **RegisterReferrer** (domain `BeamioAgentReferrerRegistry` / `version` `1` / `verifyingContract` = UUPS proxy) and submits gasless `POST /api/agentReferrerRegister` (`op=registerReferrer`) to CoNET `BeamioAgentReferrerRegistry` proxy [`0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A`](https://mainnet.conet.network/address/0x40f1B57280f9195AfEf2B4433CEc8f79d4b58b9A). On success, `introducerOf[referee] = introducer`. This is **not** Discover merchant `ref=` share attribution. Failures keep any prior trusted bind (do not clear). |
 | **Invite a business** | Rewards Hub **Invite a business** lets the signed-in wallet act as an agent on the same `BeamioAgentReferrerRegistry`. If that wallet does not already own a merchant program card, Consumer offline-signs **RegisterAgent**. **Add temp account** creates a separate `@agt…` Beamio ID and access password without replacing the signed-in wallet, then signs **RegisterTemp**. The panel lists that temp's program cards. With no manageable card, **Create merchant card** is shown directly. Creating a merchant program card does not require a BusinessStartKet entitlement NFT. **Open management page** appears after the temp owns a program card that has not been transferred, including a card kept off the panel list. A QR control beside that button shows the Discover merchant deep link (`/app-download?target=` wrapping `/app/?beamiocard=…&discover=open`, with the agent wallet as `ref=`). Opening that link still lands on the merchant detail page when the card is absent from Featured Brands. **Create merchant card** opens Merchant OS (`https://biz.beamio.app/biz/`) on **Tell us about your business**, with that temp Beamio ID, access password, and `flow=business` in the page hash. Merchant OS reads the hash and removes it from the address bar. After the business basics, it creates the merchant wallet from those credentials and does not show the username and password form. **Open management page** and an existing program-card row open the same host with the Beamio ID and access password only, and Merchant OS starts private-key unlock immediately into the merchant workspace. The operator does not type the Beamio ID or access password again. Merchant OS does not show an Agent workspace or a Temp EOA management page. A transferred card stays on the panel as Transferred and is not manageable; after ownership leaves the temp wallet, Consumer signs **RegisterMerchant**. |
 | **Smart Wallet** | Optional AA / Express Pay. **New consumer AA issuance is CoNET only.** Existing Base V1 accounts may remain readable; they are not a new-issuance path. |
 | **Identity** | `@BeamioTag`, profile language / currency, AddressPGP registration for Chat |
@@ -59,7 +59,7 @@ is on returns the full Featured Brands list.
 | **Network tools** | Bounty Board, CoNET mining views, Genesis referral, Referral registry |
 | **Team wallets** | V2 institutional multisig AA (CoNET, optional Base). See [Institutional multisig AA](../institutional-multisig-aa.md). |
 | **Fuel** | Fuel Packs shown as **price + total B-Units** only (no Paid / Free split in merchandising) |
-| **Native shell** | iOS / Android WebView at `/app/` plus Embedded OTA (`update.json` + `SilentPassUI-{ver}.zip`). Share / install links (`https://beamio.app/app-download?target=https://beamio.app/app/?…`) open **Consumer only**. They never open BeamioPOS. If Consumer is not installed, the page stays in Safari or the Consumer App Store. |
+| **Native shell** | iOS / Android WebView at `/app/` plus Embedded OTA (`update.json` + `SilentPassUI-{ver}.zip`). Share / install links (`/app-download?target=` wrapping an `/app/?…` link) open **Consumer only**. They never open BeamioPOS. If Consumer is not installed, the page stays in Safari or the Consumer App Store. |
 
 Stripe Checkout is shown only after the merchant card's Connected Account is
 ready. The consumer sends the card address, EOA, fiat amount, and card
@@ -103,7 +103,7 @@ The Consumer Home hub shows **Universal Cash** (USDC) plus **Store Credits** and
 | **Debit card** | Stripe Crypto Onramp (`eoaUsdcStripe`) — native **USDC on Base** to the owner **EOA** | Coinbase `walletDeposit` |
 | **Receive from a wallet** | Native CashTrees / CaehTrees: four catalog rows (Phantom, MetaMask, OKX Wallet, Trust Wallet) then `openURL` with the **PWA-built** deep link (Base USDC to the owner EOA). Native must not invent the URL. **Ordinary browser (not the native shell):** only already-installed EIP-6963 / injected extensions; if none are present, show the on-panel empty alert (install MetaMask or Coinbase Wallet). Tapping an injected row connects and switches/adds Base (`0x2105`); there is no USDC amount field and no “Receive Funds” row. Not a Beamio deposit API. | Coinbase Onramp / `walletDeposit` |
 
-**Receive via QR** is a follow-on view (EIP-681 `ethereum:<EOA>@8453`), not a Fund Wallet row and not a deposit rail. Stripe Onramp opens in the system browser (or native `openURL` bridge). Return lands on `https://beamio.app/app/?eoa_usdc_stripe=…`.
+**Receive via QR** is a follow-on view (EIP-681 `ethereum:<EOA>@8453`), not a Fund Wallet row and not a deposit rail. Stripe Onramp opens in the system browser (or native `openURL` bridge). Return lands on `/app/?eoa_usdc_stripe=…` on the Consumer web origin.
 
 The client should pass the **EOA** (`keyID`), not the AA address. If an AA address is submitted, Master resolves the owner EOA **when creating** the Onramp session and locks that wallet. Success is Stripe `fulfillment_complete`, not a Beamio `USDC.transfer`.
 
@@ -116,7 +116,7 @@ Beamio’s own USDC outflows (Pay / Send, Discover Gifting purchase, Discover le
 ## Discover Gifting
 
 The standalone public purchase page is available at
-`https://beamio.app/gift/<merchant-card-address>`. It does not require the
+`https://beamio.ca/gift/<merchant-card-address>`. It does not require the
 Consumer PWA login gate. Buyers may connect a third-party wallet such as
 MetaMask for the sponsored EIP-3009 rail, or pay with Visa/Mastercard through
 the merchant's Stripe Connected Account. After payment and on-chain creation

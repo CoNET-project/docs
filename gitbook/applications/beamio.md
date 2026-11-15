@@ -41,10 +41,10 @@ products:
 
 | Surface | Product role | Public entry |
 | --- | --- | --- |
-| **Consumer PWA** | Self-custody wallet, Smart Wallet access, Discover, coupons, messaging, and CoNET-facing account tools | [https://beamio.app/app/](https://beamio.app/app/) |
-| **Gift purchase page** | Public merchant-card Gift purchase with third-party wallet or merchant Stripe card payment | [https://beamio.app/gift/<cardAddress>](https://beamio.app/gift/) |
+| **Consumer PWA** | Self-custody wallet, Smart Wallet access, Discover, coupons, messaging, and CoNET-facing account tools | [https://beamio.ca/app/](https://beamio.ca/app/) |
+| **Gift purchase page** | Public merchant-card Gift purchase with third-party wallet or merchant Stripe card payment | [https://beamio.ca/gift/<cardAddress>](https://beamio.ca/gift/) |
 | **Merchant OS** | Merchant program management, staff and terminal administration, settlements, coupons, and catalogs | [https://biz.beamio.app](https://biz.beamio.app) |
-| **POS PWA** | In-store charge, top-up, claim, and redeem operations performed by an authorized terminal wallet | [https://pos.conet.network/](https://pos.conet.network/) · [https://beamio.app/pos/](https://beamio.app/pos/) · [https://pos.beamio.app/](https://pos.beamio.app/) |
+| **POS PWA** | In-store charge, top-up, claim, and redeem operations performed by an authorized terminal wallet | [https://pos.conet.network/](https://pos.conet.network/) · [https://beamio.ca/pos/](https://beamio.ca/pos/) · [https://pos.beamio.ca/](https://pos.beamio.ca/) |
 
 Beamio is not a fourth protocol tier. It coordinates application state across CoNET L1, Layer Minus, local wallet storage, and gas-relay services.
 
@@ -69,12 +69,12 @@ A related **Alliance** client exists as another Beamio-family surface. It is not
 
 ## Public distribution
 
-The Beamio public homepage at [https://beamio.app/](https://beamio.app/) presents the three active application surfaces and their current distribution channels.
+The Beamio public homepage at [https://beamio.ca/](https://beamio.ca/) presents the three active application surfaces and their current distribution channels.
 
 | Product | Apple | Google Play | Direct Android package | Web |
 | --- | --- | --- | --- | --- |
-| **Consumer** | [App Store](https://apps.apple.com/us/app/beamio-smart-local-pass/id6755375110) | [Google Play](https://play.google.com/store/apps/details?id=com.beamio.app) | [Beamio Android APK](https://beamio.app/beamio-android.apk) | [Consumer PWA](https://beamio.app/app/) |
-| **POS** | [App Store](https://apps.apple.com/ca/app/beamio-softpos/id6763462151) | [Google Play](https://play.google.com/store/apps/details?id=com.beamio.pos) | [Beamio POS Android APK](https://beamio.app/beamio-softpos.apk) | [POS PWA](https://pos.beamio.app/) |
+| **Consumer** | [App Store](https://apps.apple.com/us/app/beamio-smart-local-pass/id6755375110) | [Google Play](https://play.google.com/store/apps/details?id=com.beamio.app) | [Beamio Android APK](https://beamio.ca/beamio-android.apk) | [Consumer PWA](https://beamio.ca/app/) |
+| **POS** | [App Store](https://apps.apple.com/ca/app/beamio-softpos/id6763462151) | [Google Play](https://play.google.com/store/apps/details?id=com.beamio.pos) | [Beamio POS Android APK](https://beamio.ca/beamio-softpos.apk) | [POS PWA](https://pos.beamio.ca/) |
 | **Merchant OS** | Browser application; no native-store package is required | Browser application; no native-store package is required | Not applicable | [Merchant OS](https://biz.beamio.app/) |
 
 The public homepage presents Beamio as a low-friction route into stablecoin
@@ -96,7 +96,7 @@ Beamio as a bank, custodian, or payment principal.
 
 The native Consumer and POS packages are WebView shells around their corresponding active PWAs. They provide native integration and Embedded OTA delivery; they do not create a separate native business implementation.
 
-Share and install links on `https://beamio.app/app-download` open **Consumer only**. They never open BeamioPOS. If Consumer is not installed, the landing stays in the browser or the Consumer App Store. POS uses its own custom scheme (`beamiopos://`) and Associated Domains on `pos.beamio.app`.
+Share and install links on `https://beamio.ca/app-download` open **Consumer only**. They never open BeamioPOS. If Consumer is not installed, the landing stays in the browser or the Consumer App Store. POS uses its own custom scheme (`beamiopos://`) and Associated Domains on its own POS host.
 
 ## Protocol dependencies
 
@@ -186,7 +186,7 @@ Two USDC deposit rails must not be merged:
 | **Coinbase** | **Stopped:** CONET-USDC via Treasury LockMint (`walletDeposit`). The Coinbase row in the current app funds Base USDC | Base | [Cash and USDC](beamio/cash-and-usdc.md) |
 | **Buy USDC with card (`eoaUsdcStripe`)** | Stripe Crypto Onramp sends native USDC to the owner **EOA**. Consumer Home CTA is **Fund Wallet** (same rail). | **Base** | [Cash and USDC](beamio/cash-and-usdc.md) |
 
-Merchant Kit Stripe (CAD kits → B-Units / Ket) is a third Stripe product and is **not** a consumer USDC deposit rail. Both Kit Checkout and Consumer Onramp use the same operator Stripe account and the same live webhook **`https://beamio.app/api/stripeBeamioHook`**; its signing secret is held in the operator's key store. Older Dashboard URLs are retired; the API may still forward them to the same handler. Fulfillment remains on separate rails. Consumers who buy USDC with a card receive native Base USDC **directly in the owner EOA**.
+Merchant Kit Stripe (CAD kits → B-Units / Ket) is a third Stripe product and is **not** a consumer USDC deposit rail. Both Kit Checkout and Consumer Onramp use the same operator Stripe account and the same live webhook, path **`/api/stripeBeamioHook`** on the application API host,; its signing secret is held in the operator's key store. Older Dashboard URLs are retired; the API may still forward them to the same handler. Fulfillment remains on separate rails. Consumers who buy USDC with a card receive native Base USDC **directly in the owner EOA**.
 
 **Outbound USDC is a different rule.** Pay / Send, **Discover Gifting** (gifter CONET-USDC → open redeem; no merchant owner signature), Charge when USDC is the settlement asset, AA ↔ EOA, NFC / QR, Fuel Pack USDC debit, card `#13` escrow deposit, and institutional-multisig USDC out are **offline signatures**. Cluster prechecks; Master or the Factory Paymaster submits and sponsors gas. Do not describe those writes as “the user pays ETH or CNET.” Third-party **Receive from a wallet / Receive via QR** remains an inbound exception (the peer pays gas). See [Cash and USDC](beamio/cash-and-usdc.md) and [Consumer — Discover Gifting](beamio/consumer.md#discover-gifting).
 
@@ -214,10 +214,10 @@ Public endpoints:
 
 | Item | URL |
 | --- | --- |
-| Consumer app | https://beamio.app/app/ |
+| Consumer app | https://beamio.ca/app/ |
 | Merchant OS | https://biz.beamio.app |
-| POS | https://pos.conet.network/ · https://beamio.app/pos/ · https://pos.beamio.app/ |
-| API host | https://beamio.app |
+| POS | https://pos.conet.network/ · https://beamio.ca/pos/ · https://pos.beamio.ca/ |
+| API host | https://beamio.ca |
 | Explorer | https://mainnet.conet.network |
 | CoNET L1 RPC | https://rpc1.conet.network · https://publicrpc.conet.network |
 | Base RPC (treasury / USDC / institutional AA) | https://base-rpc.conet.network |

@@ -250,7 +250,7 @@ Optional outer wrap: encrypt a user-PGP business message to an **entry** route k
 | Read RPC | `https://rpc1.conet.network` (primary), `https://publicrpc.conet.network` (backup). Do not use deprecated `rpc.conet.network` |
 | AddressPGP | [`0x684b0ac760cEE9c9b85de36d69746420648Cf9e2`](https://mainnet.conet.network/address/0x684b0ac760cEE9c9b85de36d69746420648Cf9e2) |
 | GuardianNodesInfoV6 | [`0xBC6b53065b5647261396d002bDBA0d3396E0722f`](https://mainnet.conet.network/address/0xBC6b53065b5647261396d002bDBA0d3396E0722f) |
-| Register API | `POST https://beamio.app/api/regiestChatRoute` (spelling is live). Signed requests (EIP-191) take effect when the updated API is deployed (pending release); see [Sample: register a mailbox route](#sample-register-a-mailbox-route) |
+| Register API | `POST https://beamio.ca/api/regiestChatRoute` (spelling is live). Signed requests (EIP-191) take effect when the updated API is deployed (pending release); see [Sample: register a mailbox route](#sample-register-a-mailbox-route) |
 
 ## Sample: discover Guardian nodes
 
@@ -363,7 +363,7 @@ export async function registerChatRoute(opts: {
   mailboxDomain: string
 }): Promise<boolean> {
   const wallet = new ethers.Wallet(opts.eoaPrivateKey)
-  const res = await fetch('https://beamio.app/api/regiestChatRoute', {
+  const res = await fetch('https://beamio.ca/api/regiestChatRoute', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

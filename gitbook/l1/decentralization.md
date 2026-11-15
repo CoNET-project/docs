@@ -81,7 +81,7 @@ Because every **VDR-counted** record uses the same 32 CNET unit, address-level s
 
 The deposit-contract pointer on this proxy currently reads `0x4242424242424242424242424242424242424242`, the conventional consensus-layer deposit address used by the Prysm / Ethereum-style stack. That value identifies the consensus deposit path this VDR uses when it does deposit. It is not a CoNET application treasury, and it does not imply that every Beacon validator was funded here.
 
-The Explorer’s generic `GET /api/v2/validators` route is **not available** for this chain type (`Endpoint not available for current chain type`). Block withdrawals remain a public CL signal: they carry `validator_index`. A per-pubkey CL-reward JSON exists at `https://beamio.app/api/v2/conet/validators/{pubkey}` for already-known BLS keys. Neither endpoint is a complete validator-set census.
+The Explorer’s generic `GET /api/v2/validators` route is **not available** for this chain type (`Endpoint not available for current chain type`). Block withdrawals remain a public CL signal: they carry `validator_index`. A per-pubkey CL-reward JSON exists at `https://beamio.ca/api/v2/conet/validators/{pubkey}` for already-known BLS keys. Neither endpoint is a complete validator-set census.
 
 ## Guardian independence and geography
 

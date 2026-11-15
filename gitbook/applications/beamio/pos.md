@@ -6,8 +6,8 @@ loaded by native WebView shells.
 | Entry | Role |
 | --- | --- |
 | https://pos.conet.network/ | Primary POS load URL (and alias paths) |
-| https://beamio.app/pos/ | WebView `/pos/` fallback |
-| https://pos.beamio.app/ | Root-path Web + **Embedded OTA** (`update.json` + `BeamioPOS-{ver}.zip`) |
+| https://beamio.ca/pos/ | WebView `/pos/` fallback |
+| https://pos.beamio.ca/ | Root-path Web + **Embedded OTA** (`update.json` + `BeamioPOS-{ver}.zip`) |
 
 Retired native POS business apps (`iOS_NDEF`, `android-NDEF`) are **not** the current implementation.
 
@@ -22,7 +22,7 @@ A POS terminal is a **wallet that is also a lower-level merchant administrator**
 It is not Merchant OS. It does not create program cards or edit Programs metadata. Consumer Stripe Onramp (Buy USDC with card) and Coinbase deposit are **not** POS flows.
 
 The public merchant Gift purchase page is also not a POS flow. It is served at
-`https://beamio.app/gift/<cardAddress>` and uses the merchant Stripe Connected
+`https://beamio.ca/gift/<cardAddress>` and uses the merchant Stripe Connected
 Account for Visa/Mastercard checkout; the resulting Gift is claimed through
 the Consumer redeem flow.
 
@@ -97,9 +97,9 @@ Tap to Pay requires the platform entitlement / device eligibility checks require
 
 ## Native shell and updates
 
-Shells load the POS PWA. Process death must reload the WebView (no blank black screen). Embedded OTA polls **`https://pos.beamio.app/update.json`**, not `beamio.app/pos/update.json`.
+Shells load the POS PWA. Process death must reload the WebView (no blank black screen). Embedded OTA polls **`update.json` at the root of the POS host**, not `/pos/update.json`.
 
-iOS POS must **not** register the Consumer custom scheme `beamio://` or Associated Domains on `beamio.app`. POS uses `beamiopos://` and `applinks:pos.beamio.app` only. Consumer share URLs (`/app`, `/app-download`) must never open BeamioPOS.
+iOS POS must **not** register the Consumer custom scheme `beamio://` or the Consumer host's Associated Domains. POS uses `beamiopos://` and Associated Domains on its own POS host only. Consumer share URLs (`/app`, `/app-download`) must never open BeamioPOS.
 
 ## Membership information (KYC)
 

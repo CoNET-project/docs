@@ -1,7 +1,7 @@
 # Beamio cash and USDC
 
 **Maturity: mixed.** Stripe Crypto Onramp session APIs are live on
-`https://beamio.app`. The CONET-USDC minting path behind `walletDeposit` (Treasury LockMint) is stopped. In the current app the Coinbase row funds Base USDC. Onramp
+`https://beamio.ca`. The CONET-USDC minting path behind `walletDeposit` (Treasury LockMint) is stopped. In the current app the Coinbase row funds Base USDC. Onramp
 settlement depends on Stripe Crypto Onramp being enabled for the operator
 account and on the webhook event set. This page is not a claim that every paid
 session has already settled.
@@ -165,7 +165,7 @@ Cluster precheck → Master
   ▼
 User completes Stripe Onramp in the system browser
   │
-  ├─ return: https://beamio.app/app/?eoa_usdc_stripe=success|cancel&session_id=…
+  ├─ return: <Consumer web origin>/app/?eoa_usdc_stripe=success|cancel&session_id=…
   ├─ poll:   POST /api/eoaUsdcStripe/poll
   └─ hook:   POST /api/stripeBeamioHook  (crypto.onramp_session.*)
         ▼
@@ -187,7 +187,7 @@ Retired Stripe Checkout (`cs_`) sessions are marked failed. Users must start a n
 
 A successful `createSession` is **not** proof that USDC has arrived. Success is Stripe `fulfillment_complete`. Do not treat `fulfillment_processing` as succeeded.
 
-### HTTP (application API host `https://beamio.app`)
+### HTTP (application API host `https://beamio.ca`)
 
 | Method | Path | Body | Result |
 | --- | --- | --- | --- |
@@ -210,7 +210,7 @@ The product does **not** mint CONET-USDC on this rail and does **not** send USDC
 
 The operator Stripe account key is held in the operator's key store on the API host. Merchant Kit Checkout and Consumer Onramp use this account. The account must have **Crypto Onramp** enabled (including sandbox approval in the Stripe Dashboard).
 
-The only live Dashboard webhook is **`https://beamio.app/api/stripeBeamioHook`**. Verification uses the Merchant Kit webhook secret, also held in the operator's key store. This book does not publish secret values. The Dashboard event set for that endpoint must include `crypto.onramp_session.updated` (Onramp) and the Merchant Kit `checkout.session.*` events. Without that secret, Onramp can still be created, but webhook confirmation will abort.
+The only live Dashboard webhook is path **`/api/stripeBeamioHook`** on the application API host. Verification uses the Merchant Kit webhook secret, also held in the operator's key store. This book does not publish secret values. The Dashboard event set for that endpoint must include `crypto.onramp_session.updated` (Onramp) and the Merchant Kit `checkout.session.*` events. Without that secret, Onramp can still be created, but webhook confirmation will abort.
 
 The API still **forwards** the retired paths `/api/eoa-usdc-stripe-webhook` and `/api/merchant-kit-stripe-webhook` to the same `stripeBeamioHook` handler. Do **not** add those URLs in the Stripe Dashboard. `https://hooks.conet.network/api/stripeHook` is not a Beamio live hook.
 

@@ -11,11 +11,11 @@ boundaries for CoNET.
 | CoNET L1 backup public RPC | `https://publicrpc.conet.network` |
 | Explorer / Blockscout | `https://mainnet.conet.network` |
 | Alternate Explorer entry | `https://scan.conet.network` |
-| Beamio application/API origin | `https://beamio.app` |
-| Merchant OS onboarding website / file lookup (Cluster read; optional `files` JSON) | `POST https://beamio.app/api/onboardingBusinessLookup` |
-| Merchant OS onboarding Card Setup assets (Cluster read) | `POST https://beamio.app/api/onboardingBusinessCardSetup` |
-| Agent / referrer registry read (Cluster) | `GET https://beamio.app/api/agentReferrerRegistry` |
-| Agent / referrer registry write (Cluster → Master; EIP-712 ops) | `POST https://beamio.app/api/agentReferrerRegister` |
+| Beamio application/API origin | `https://beamio.ca` |
+| Merchant OS onboarding website / file lookup (Cluster read; optional `files` JSON) | `POST https://beamio.ca/api/onboardingBusinessLookup` |
+| Merchant OS onboarding Card Setup assets (Cluster read) | `POST https://beamio.ca/api/onboardingBusinessCardSetup` |
+| Agent / referrer registry read (Cluster) | `GET https://beamio.ca/api/agentReferrerRegistry` |
+| Agent / referrer registry write (Cluster → Master; EIP-712 ops) | `POST https://beamio.ca/api/agentReferrerRegister` |
 | IPFS fragment service | `https://ipfs.conet.network` |
 | Base RPC used by active Treasury and institutional-multisig paths | `https://base-rpc.conet.network` |
 
