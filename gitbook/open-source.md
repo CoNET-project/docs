@@ -26,12 +26,15 @@ separately.
 
 | Project | Repository |
 |---|---|
-| Consumer PWA — `cashtree` branch | [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/cashtree) |
+| Beamio UI — Consumer PWA ([project page](applications/beamio/beamio-ui.md)) | [beamio-APP/beamio-UI](https://github.com/beamio-APP/beamio-UI) |
 | Merchant OS — `cashtrees` branch | [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/cashtrees) |
 | Alliance client — `Alliance` branch | [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/Alliance) |
 | API, Cluster, Master, and Paymaster relay | [settleonbase/x402sdk](https://github.com/settleonbase/x402sdk) |
 | Marketing homepage | [beamio-APP/homepage](https://github.com/beamio-APP/homepage) |
 | Smart contracts | [beamio-APP/BeamioContract](https://github.com/beamio-APP/BeamioContract) |
+
+The Consumer PWA was previously developed on the SilentPassUI `cashtree`
+branch, which remains public as its history.
 
 The POS PWA has live public endpoints, but this documentation has not
 identified a standalone public repository for it. See the

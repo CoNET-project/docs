@@ -54,6 +54,7 @@
   * [SilentPass](applications/silentpass-vpn.md)
   * [Beamio](applications/beamio.md)
     * [Consumer PWA](applications/beamio/consumer.md)
+    * [Beamio UI (open source)](applications/beamio/beamio-ui.md)
     * [Merchant OS](applications/beamio/merchant-os.md)
     * [POS terminal](applications/beamio/pos.md)
     * [Cash and USDC](applications/beamio/cash-and-usdc.md)

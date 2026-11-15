@@ -228,7 +228,7 @@ For the cross-project list, see the
 
 | Component | Public repository | npm |
 | --- | --- | --- |
-| **Consumer PWA** | [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/cashtree) branch `cashtree` | — |
+| **Consumer PWA** | [Beamio UI](beamio/beamio-ui.md): [beamio-APP/beamio-UI](https://github.com/beamio-APP/beamio-UI) (`main`). Earlier history: SilentPassUI branch `cashtree` | — |
 | **Merchant OS** | [biz.beamio.ca](https://biz.beamio.ca); listed public branch [SilentPassUI `cashtrees`](https://github.com/CoNET-project/SilentPassUI/tree/cashtrees) | — |
 | **POS PWA** | Live endpoints; no standalone public repository identified | — |
 | **Alliance client** | [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/Alliance) branch `Alliance` | — |

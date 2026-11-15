@@ -5,7 +5,7 @@
 inventory, not a screen-by-screen manual and not a claim of audit or SLA
 coverage.
 
-Parent: [Beamio whitepaper](../beamio.md).
+Parent: [Beamio whitepaper](../beamio.md). Source: [Beamio UI (open source)](beamio-ui.md).
 
 Revision: **2026-10-19**.
 
