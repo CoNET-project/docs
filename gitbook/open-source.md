@@ -26,7 +26,7 @@ separately.
 
 | Project | Repository |
 |---|---|
-| Beamio UI — Consumer PWA ([project page](applications/beamio/beamio-ui.md)) | [beamio-APP/beamio-UI](https://github.com/beamio-APP/beamio-UI) |
+| Beamio UI — Consumer PWA ([project page](applications/beamio/beamio-ui.md)) | [CoNET-project/beamio-UI](https://github.com/CoNET-project/beamio-UI) |
 | Merchant OS — `cashtrees` branch | [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/cashtrees) |
 | Alliance client — `Alliance` branch | [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/Alliance) |
 | API, Cluster, Master, and Paymaster relay | [settleonbase/x402sdk](https://github.com/settleonbase/x402sdk) |

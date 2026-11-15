@@ -7,7 +7,7 @@ inside the Beamio iOS and Android shells.
 
 | | |
 |---|---|
-| Repository | [beamio-APP/beamio-UI](https://github.com/beamio-APP/beamio-UI) |
+| Repository | [CoNET-project/beamio-UI](https://github.com/CoNET-project/beamio-UI) |
 | Default branch | `main` |
 | License | MIT |
 | Product chapter | [Consumer PWA](consumer.md) |
@@ -32,7 +32,7 @@ Use the toolchain declared by the checked-out revision (currently Node.js 20
 in `.nvmrc` and Yarn Classic 1.22.22).
 
 ```bash
-git clone https://github.com/beamio-APP/beamio-UI.git
+git clone https://github.com/CoNET-project/beamio-UI.git
 cd beamio-UI
 nvm use
 yarn install --frozen-lockfile
@@ -56,7 +56,7 @@ process; a local `build/` directory is not a release.
 ## Contributing
 
 - Open an issue or a pull request against `main` in
-  [beamio-APP/beamio-UI](https://github.com/beamio-APP/beamio-UI).
+  [CoNET-project/beamio-UI](https://github.com/CoNET-project/beamio-UI).
 - Describe the affected runtime, application version, expected behavior, and
   reproduction steps, and include the relevant checks with a change.
 - Never include wallet secrets, recovery codes, test-account credentials,
