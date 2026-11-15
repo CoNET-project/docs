@@ -43,7 +43,7 @@ products:
 | --- | --- | --- |
 | **Consumer PWA** | Self-custody wallet, Smart Wallet access, Discover, coupons, messaging, and CoNET-facing account tools | [https://beamio.ca/app/](https://beamio.ca/app/) |
 | **Gift purchase page** | Public merchant-card Gift purchase with third-party wallet or merchant Stripe card payment | [https://beamio.ca/gift/<cardAddress>](https://beamio.ca/gift/) |
-| **Merchant OS** | Merchant program management, staff and terminal administration, settlements, coupons, and catalogs | [https://biz.beamio.app](https://biz.beamio.app) |
+| **Merchant OS** | Merchant program management, staff and terminal administration, settlements, coupons, and catalogs | [https://biz.beamio.ca](https://biz.beamio.ca) |
 | **POS PWA** | In-store charge, top-up, claim, and redeem operations performed by an authorized terminal wallet | [https://pos.conet.network/](https://pos.conet.network/) · [https://beamio.ca/pos/](https://beamio.ca/pos/) · [https://pos.beamio.ca/](https://pos.beamio.ca/) |
 
 Beamio is not a fourth protocol tier. It coordinates application state across CoNET L1, Layer Minus, local wallet storage, and gas-relay services.
@@ -75,7 +75,7 @@ The Beamio public homepage at [https://beamio.ca/](https://beamio.ca/) presents 
 | --- | --- | --- | --- | --- |
 | **Consumer** | [App Store](https://apps.apple.com/us/app/beamio-smart-local-pass/id6755375110) | [Google Play](https://play.google.com/store/apps/details?id=com.beamio.app) | [Beamio Android APK](https://beamio.ca/beamio-android.apk) | [Consumer PWA](https://beamio.ca/app/) |
 | **POS** | [App Store](https://apps.apple.com/ca/app/beamio-softpos/id6763462151) | [Google Play](https://play.google.com/store/apps/details?id=com.beamio.pos) | [Beamio POS Android APK](https://beamio.ca/beamio-softpos.apk) | [POS PWA](https://pos.beamio.ca/) |
-| **Merchant OS** | Browser application; no native-store package is required | Browser application; no native-store package is required | Not applicable | [Merchant OS](https://biz.beamio.app/) |
+| **Merchant OS** | Browser application; no native-store package is required | Browser application; no native-store package is required | Not applicable | [Merchant OS](https://biz.beamio.ca/) |
 
 The public homepage presents Beamio as a low-friction route into stablecoin
 settlement: merchants use the Consumer, POS, and Merchant OS applications
@@ -215,7 +215,7 @@ Public endpoints:
 | Item | URL |
 | --- | --- |
 | Consumer app | https://beamio.ca/app/ |
-| Merchant OS | https://biz.beamio.app |
+| Merchant OS | https://biz.beamio.ca |
 | POS | https://pos.conet.network/ · https://beamio.ca/pos/ · https://pos.beamio.ca/ |
 | API host | https://beamio.ca |
 | Explorer | https://mainnet.conet.network |
@@ -229,7 +229,7 @@ For the cross-project list, see the
 | Component | Public repository | npm |
 | --- | --- | --- |
 | **Consumer PWA** | [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/cashtree) branch `cashtree` | — |
-| **Merchant OS** | Live [biz.beamio.app](https://biz.beamio.app); listed public branch [SilentPassUI `cashtrees`](https://github.com/CoNET-project/SilentPassUI/tree/cashtrees) | — |
+| **Merchant OS** | [biz.beamio.ca](https://biz.beamio.ca); listed public branch [SilentPassUI `cashtrees`](https://github.com/CoNET-project/SilentPassUI/tree/cashtrees) | — |
 | **POS PWA** | Live endpoints; no standalone public repository identified | — |
 | **Alliance client** | [CoNET-project/SilentPassUI](https://github.com/CoNET-project/SilentPassUI/tree/Alliance) branch `Alliance` | — |
 | **API / Cluster / Master / Paymaster relay** | [settleonbase/x402sdk](https://github.com/settleonbase/x402sdk) | [`@settle402/sdk`](https://www.npmjs.com/package/@settle402/sdk) |

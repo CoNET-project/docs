@@ -52,7 +52,7 @@ and not the paymaster.
 
 ## Merchant OS product surface
 
-Live Merchant OS (`https://biz.beamio.app`) signs every wallet into
+Merchant OS (`https://biz.beamio.ca`) signs every wallet into
 `#/native-pos`. It does not show an Agent workspace or a Temp EOA management
 page. Consumer Rewards Hub **Invite a business** is the live surface for
 **RegisterAgent**, temp Beamio IDs, **RegisterTemp**, and invite links, against

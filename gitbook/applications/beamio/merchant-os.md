@@ -1,7 +1,7 @@
 # Beamio Merchant OS
 
 **Maturity: Production reference.** Merchant OS is live at
-[https://biz.beamio.app](https://biz.beamio.app). This chapter inventories
+[https://biz.beamio.ca](https://biz.beamio.ca). This chapter inventories
 merchant capabilities. It is not an operator runbook and not an audit or SLA
 claim.
 
