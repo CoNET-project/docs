@@ -1,6 +1,6 @@
 # Third-party tokens and subscriptions
 
-**Design status, 25 November 2026.** This page records proposed third-party asset and subscription rules. AAC implementation is paused while the v1 whitepaper is completed. Nothing here establishes a deployed route or current chain state; local implementation claims remain limited to their named candidate and tests.
+**Design status, 25 November 2026.** This page records proposed third-party asset and subscription rules. AAC implementation is paused. Nothing here establishes a deployed route or current chain state; local implementation claims remain limited to their named candidate and tests. V1 specifies third-party asset admission and treasury routes. Those routes may open only after per-asset production parameters, the exact factory candidate and independent acceptance are complete.
 
 **How to read the labels**
 
@@ -83,7 +83,7 @@ The requirement is decided. A local implementation exists; some details, such as
 ## 5. Official stablecoins [Approved, not yet live]
 
 - conet-USDC, backed by Base USDC, is the first official stablecoin.
-- The DAO may admit new official stablecoins at any time. Each is deployed from a fixed template with its own exchange entry, without redeploying AAC.
+- The DAO may admit a new official stablecoin through a separately accepted route decision. Each uses the fixed approved template with its own exchange entry; the design does not itself enable the route or authorize deployment.
 - **Each official stablecoin has exactly one external chain** for deposits and withdrawals. The same stablecoin cannot flow in from one chain and out to another.
 
 ### 5.1 Two switches per official stablecoin [Implemented, pending acceptance]

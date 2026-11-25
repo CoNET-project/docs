@@ -14,19 +14,19 @@ conet-USDC on this page means the new conet-USDC contract (not yet deployed) tha
 
 
 
-**[Approved, not yet live]** AAC is a two-way USDC bridge between CoNET and Base. Seen from CoNET, Base → CoNET is a **deposit** and CoNET → Base is a **withdrawal**. Withdrawals exist from the first version; this replaces the earlier rule that version 1 has no withdrawal.
+**Normative v1 specification, 25 November 2026.** AAC defines two-way USDC transfer between CoNET and Base. Seen from CoNET, Base → CoNET is a **deposit** and CoNET → Base is a **withdrawal**. Neither design is accepted for activation by this page; each requires its own evidence, acceptance and release decision. Current live route status is not asserted.
 
 ## Assets and chains [Approved, not yet live]
 
 | Asset | Chains | Rule |
 | --- | --- | --- |
 | conet-USDC | CoNET ↔ Base | The first official stablecoin. Deposits and withdrawals use Base only |
-| Other official stablecoins | CoNET ↔ one external chain each | The DAO may admit more at any time, each from a fixed template with its own exchange entry. Each has exactly one external chain; it cannot flow in from one chain and out to another. The one-channel rule is **[Implemented, pending acceptance]** |
+| Other official stablecoins | CoNET ↔ one external chain each | The DAO may admit an additional stablecoin only by a separate asset and route decision. Each uses the approved fixed template and one external chain. Production parameters and same-candidate acceptance are required before opening the route. |
 | New GB and wCNET | CoNET ↔ chains the DAO approves | Issued originally on CoNET only. Another chain mints only against a burn on CoNET verified by AAC; moving back mints on CoNET only against a verified burn on that chain. A move from one external chain to another goes through CoNET in two steps. Same address on every chain |
 | Third-party cross-chain tokens | CoNET ↔ chains the DAO approves | Admitted one by one by DAO decision. Deployed automatically at the same address on the first move to a chain (design; not implemented). See [Third-party tokens and subscriptions](third-party-assets.md) |
 | Third-party stablecoins | CoNET only | No route to other chains |
 
-Multi-chain same-address deployment is a design requirement and is not yet complete.
+Multi-chain same-address deployment is a design requirement and is not yet complete. These asset-admission and treasury rules are normative only and do not authorize activation. Current live route and treasury status is not asserted.
 
 ## Confirmation by direction
 
@@ -36,37 +36,37 @@ The v1 order invariant is **one terminal outcome**: a matching completion or a p
 | | Base → CoNET (deposit) | CoNET → Base (withdrawal) |
 | --- | --- | --- |
 | Source action | USDC is locked in the AAC bridge on Base | conet-USDC is burned on CoNET |
-| First confirmation | **AAC deposit confirmation (design).** The Base block is still unsafe (pre-confirmed by the sequencer). AAC is intended to check the authorised sequencer's signature for that period, chain domain, signed-payload binding to the block header and `receiptsRoot`, designated bridge lock receipt, order/recipient/amount, replay protection and limits. A valid check would credit conet-USDC once; it is not finality or collateral. Acceptance has not passed. | **Withdrawal (design).** Base may release USDC only after verifying a finalized CoNET burn bound to the same order, recipient and amount, with replay protection. The destination verifier and complete withdrawal path remain unaccepted; no end-to-end withdrawal is proven. |
+| First confirmation | **AAC deposit confirmation (design).** The Base block is still unsafe (pre-confirmed by the sequencer). AAC is intended to check the authorised sequencer's signature for that period, chain domain, signed-payload binding to the block header and `receiptsRoot`, designated bridge lock receipt, order/recipient/amount, replay protection and limits. A valid check could credit conet-USDC once only after the fast-credit gate passes; it is not finality or collateral. The gate has not passed, and this path is disabled by default. | **Withdrawal (design).** Base may release USDC only after verifying a finalized CoNET burn bound to the same order, recipient and amount, with replay protection. The destination verifier and complete withdrawal path remain unaccepted; no end-to-end withdrawal is proven. |
 | Later check | **Ethereum L1 health check.** Base's health is judged by the time at which each Base batch is actually included on Ethereum L1. The same L1 evidence is used to track the exposure of deposits already minted. It mints nothing | — |
 
-**[Approved, not yet live]** Fast crediting depends on the Base sequencer's pre-confirmation. A sequencer signature proves pre-confirmation only; Base's health is judged by when its batches are actually included on Ethereum L1. A batch that is included on time keeps the path healthy, even if its proof or its relay to CoNET arrives late. Only trusted L1 evidence that no valid batch was included in **two consecutive expected windows** stops both directions (see [Circuit breaker and reopening](#circuit-breaker-and-reopening)); silence from an RPC endpoint or a relayer is not such evidence. The windows and the other parameters are set by the DAO. These rules are decided; their implementation is pending. The term "early mint" describes when minting happens; it is not a stage name. Between the last batch confirmed as included on L1 and the moment the circuit breaker stops the bridge there is a period of exposure; its length depends on the window parameters the DAO sets and is currently estimated at about 30 minutes, an estimate rather than a fixed limit or a service level, and any loss in that period is handled by the project case by case.
+**Fast credit is disabled by default.** It can open only after one candidate has real sequencer-signature evidence, positive and negative proof tests, an enforced hard exposure cap, an identified risk owner and independent acceptance, followed by a separate release decision. The cap and loss allocation remain open. Under the v1 policy, new fast deposits must be refused until those gates and a separate release decision are complete; this statement does not assert current live behavior. A sequencer signature proves pre-confirmation only, not finality or collateral. Base health is judged by when batches are included on Ethereum L1. Trusted L1 evidence that no valid batch was included in **two consecutive expected windows** stops both directions (see [Circuit breaker and reopening](#circuit-breaker-and-reopening)); RPC failure, missing data or relayer silence is unknown, not evidence that a batch was missed. Unknown L1/RPC state blocks new unsafe minting. The DAO-set window values remain open. About 30 minutes is a historical estimate, not a cap or service level; until a hard cap and risk owner are accepted, the fast-credit path remains closed.
 
 ## Deployment and upgrades [Approved, not yet live]
 
-- **One factory, one initialisation.** A fixed AAC factory deploys the bridge contracts during initialisation: the new conet-USDC ledger, the deposit controller and withdrawal gateway, the settlement contract, the new GB and wCNET contracts, and the new treasury. Each contract's exact address is bound once to a predefined role.
+- **Factory Option 2: one factory, one initialisation.** The fixed AAC factory binds the exact contracts and roles once. The approved official template must be valid and bound, and the Router installed and bound, before sealing. After sealing, the factory cannot write to the Registry. The DAO retains governance permissions over policy and routes among bound addresses, but cannot replace sealed code or addresses. Exact ABI, constructor arguments, implementation, roles and template hash (`H`) remain to be frozen and tested on one candidate.
 - **No upgrades.** These contracts will be deployed at fixed addresses with no proxy and no upgrade function. This includes GB and wCNET. A later generation is a new deployment, moved to by DAO decision.
 - **Frozen authorisations.** When initialisation completes, the key authorisations are frozen: the gateways, the controllers, the settlement contract and the source of limits. Nobody can add or replace them afterwards, and no administrator can reopen them. Releasing or clearing exposure is possible only through the bound settlement path, against a verified order.
 - **Owner and administrator roles.** Where a new contract has an owner or administrator role, that role is held by the governance contract. No personal wallet or multisig holds it.
 - **Route versions.** A new route version may use only controller and treasury addresses that the factory bound at initialisation. A DAO route decision chooses among those bound addresses; it cannot introduce a new address.
 - What is frozen is the deployed code and the key authorisation addresses. The DAO keeps the governance rules already decided: per-asset limits, asset admission, the circuit breaker and reopening.
 
-The factory stack is **[Implemented, pending acceptance]** locally. Its freeze checks have not all passed, the per-stablecoin channel switch and mint and burn pause are implemented locally but not accepted, and no contract has been frozen at an address. The binding of route addresses is implemented on the governance side but is not yet wired into the factory.
+Factory Option 2 is the normative specification, not an accepted implementation. The factory binder, template/Router-before-seal behavior, Registry write lock and governance permissions require same-candidate positive and negative tests. Candidate `7994b6a` lacks a compatible binder; historical `af162402` calls `initIntervalLimit`, which the Candidate 4 Registry ABI does not expose. They are incompatible and must not be combined. No factory deployment or acceptance is claimed, and this specification does not authorize route or treasury enablement; current live status is not asserted.
 
-No address exists yet. Addresses will be published after audit and a separate deployment approval.
+This specification makes no deployment-address claim. Any production address must be verified and published after independent acceptance and a separate deployment approval.
 
 ## Limits [Approved, not yet live]
 
-USDC, GB and wCNET each have their own limits. Each asset has its own allowance and its own counter; there is no shared allowance between assets.
+USDC, GB and wCNET each have separate design limits and counters. **5,000 per transaction** and **50,000 per fixed 1,200-second window** are design values only, not production parameters. Per-asset production values, units, between-batch caps and DAO configuration remain to be frozen. This specification does not authorize a dependent route to open until its parameters and acceptance are complete; current live configuration is not asserted.
 
-- **Per transaction:** 5,000 initially, for each asset. The per-asset limits are **[Implemented, pending acceptance]** for the USDC stack.
-- **Per 20-minute window:** 50,000 initially, for each asset. The window is a fixed 1,200-second window, measured by the on-chain time at which CoNET accepts the order. Deposits and withdrawals of the same asset share that asset's allowance.
+- **Per transaction:** 5,000 is a design value only; this specification sets no production per-asset value. Current live configuration is not asserted.
+- **Per 20-minute window:** 50,000 is a design value only. The window is fixed at 1,200 seconds and measured by the on-chain time at which CoNET accepts the order. Inbound deposits and outbound withdrawals of the same asset share that asset’s fixed-window allowance. Production per-asset values remain to be frozen.
 - **Unit.** USDC is counted in USDC. GB and wCNET are counted at their USDC-equivalent value, not as raw token amounts. The price source for that conversion is **[Open]**.
 - **DAO adjustment.** The DAO can change each asset's two limits separately: one decision may change one limit of one asset, or both limits of that asset. Other assets' limits and counters are not affected. Changes made other than by DAO decision are refused. The per-transaction and per-window limits are enforced separately.
 - **Limit between L1 confirmations.** It caps how much of an asset can flow into CoNET between two consecutive confirmations of Base submissions to Ethereum L1. It applies alongside the per-transaction and 20-minute limits above; neither replaces the other. The DAO sets this limit for each asset separately, and it is counted on CoNET only.
-- **Starting values.** The new conet-USDC is deployed by the factory with this limit preset to 50,000 USDC; the DAO can change it later. An asset with no configured limit starts at 0, for example GB, wCNET and third-party tokens. For each other cross-chain token the DAO admits for flows into CoNET, the DAO sets a limit for the same interval.
-- **Bridge path: inflows are held.** On the bridge path into the treasury, an inflow of an asset with no limit set is held instead of minted, and so is an inflow that would exceed the limit. Held inflows do not count against the limit until they are released, and on release they are checked against the limit again. When and on what conditions held inflows are released is **[Open]**.
+- **Production values and enablement.** This specification sets no production starting value. Each asset requires separately frozen limits, units, DAO configuration and acceptance before its path may open. A missing or unknown limit does not mean zero by assumption; under v1 policy that path cannot open. Current live configuration is not asserted.
+- **Treasury path: admitted inflows may be held.** Only an order for an admitted asset may enter the hold path. An admitted inflow with no limit or above its limit is held without minting; it is checked against the limit again on release. An order for a non-admitted asset is refused, not held. When and under what conditions held inflows are released is **[Open]**.
 - **Fast USDC deposit path: deposits are refused.** On the fast deposit path for USDC, a deposit that would exceed the limit between L1 confirmations or the 20-minute limit is refused, not held. Once the limit between L1 confirmations is used up, deposits stay refused even in a new 20-minute window; the allowance returns only after the next batch is newly confirmed on L1. A deposit of an asset with no limit set is also refused on this path.
-- These are design rules; their implementation is not accepted.
+- These are normative design rules. Under v1 policy, a corresponding route cannot open until per-asset production parameters and same-candidate acceptance are complete. Current live route status is not asserted.
 
 ## DAO decisions [Approved, not yet live]
 
@@ -84,7 +84,7 @@ This page is a design specification. Local receipts cover limited components, no
 
 ## Fees [Approved, not yet live]
 
-A withdrawal from CoNET to Base pays a DAO-set fee of **n%**, paid by the withdrawing user. It is accounted separately from the GB exchange fee. No default value is set; the fee base, currency and refund handling are **[Open]**. The fee mechanism is **[Implemented, pending acceptance]**.
+A CoNET-to-Base withdrawal is specified to pay a DAO-set fee of **n%**, separately accounted from the GB exchange fee. This v1 specification sets no default fee. The fee base, currency, rounding and refund fee are **[Open]**. Under v1 policy, the withdrawal path cannot open until these are frozen and accepted for the same candidate; current live configuration is not asserted.
 
 ## Per-stablecoin switches [Implemented, pending acceptance]
 
@@ -113,7 +113,7 @@ conet-USDC received through AAC deposit confirmation can buy GB under the normal
 
 ## Gate before the fast path opens
 
-**[Approved, not yet live]** The fast path opens only after complete verification passes and negative tests show that forged signatures, forged block headers, forged receipts and replays are rejected. Production opening and operational acceptance are recorded separately.
+The fast-credit path remains closed by default. It can open only after real sequencer-signature samples, positive and negative proof tests, a hard exposure cap, named risk ownership and independent acceptance for one candidate, plus a separate release decision. Production opening is a distinct approval.
 
 Status on 7 November 2026: in the local implementation the negative tests pass, the chain-ID byte order matches a public test vector, and block-header recomputation matches real Base blocks. Positive tests use test keys only; real sequencer signature samples are still missing. **The gate has not passed.**
 
@@ -139,12 +139,12 @@ The table below records the page state on 12 November 2026. It is not a current 
 4. The form of the positive batch proof.
 5. The threshold K for state L and how far new unsafe minting is limited in state L; the parameters N and W for state U.
 6. The numeric circuit-breaker parameters, including the expected window, which the DAO sets.
-7. Real sequencer signature samples for positive acceptance.
+7. Real sequencer signature samples, positive/negative proof tests, a hard exposure cap and named risk owner for any future fast-credit path.
 8. How GB purchases and GB exits behave while AAC is stopped.
 9. Which components of the earlier bridge still run; this needs a read-only on-chain check.
 10. The cross-chain proof format and its parameters.
-11. The withdrawal fee details.
-12. The limit unit for third-party cross-chain tokens and the initial limits of newly admitted official stablecoins.
+11. The withdrawal fee details, including any refund fee; v1 requires these parameters to be frozen and accepted before any withdrawal path may open.
+12. The production limit units and per-asset values, between-batch cap and DAO configuration; v1 requires these parameters to be frozen and accepted before the dependent paths may open.
 
 ## Related
 

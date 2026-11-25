@@ -1,6 +1,6 @@
 # DAO and the next-generation treasury
 
-**Design status, 25 November 2026.** This page preserves operator-level DAO and next-generation treasury rules recorded in October and November 2026. AAC implementation is paused while the v1 whitepaper is completed. No deployment or current DAO configuration is claimed here. Current chain state has not been re-read.
+**Design status, 25 November 2026.** This page preserves operator-level DAO and next-generation treasury rules recorded in October and November 2026. The AAC v1 specification is frozen. AAC implementation remains paused pending a scope review against that specification. No deployment or current DAO configuration is claimed here. Current chain state has not been re-read.
 
 **How to read the labels**
 
@@ -46,7 +46,7 @@ The DAO keeps the decided governance rules: per-asset limits, asset admission, c
 
 - **One address on every chain.** The next treasury is to be deployed at the same address on CoNET and on each external chain the DAO supports. This is a design requirement; the address is not fixed yet, and same-address deployment is not complete.
 - **No upgrades.** It has no proxy and no upgrade function. A later generation is a new deployment, moved to by DAO decision.
-- **Deployment.** The design calls for one fixed AAC factory to deploy the treasury, GB, wCNET and new conet-USDC ledger at initialization. This binding is not complete: DAO candidate `7994b6a` has no compatible factory binder, while historical `af162402` targets a different Registry ABI. Do not combine them as one deployable candidate; no factory deployment is claimed. GB and wCNET have no administrator; cross-chain minting, burning and route activation belong to the treasury.
+- **Deployment — Factory Option 2.** One fixed AAC factory binds contracts, roles and routes once. The approved official template must be valid and bound, and the Router installed and bound, before sealing; after sealing, the factory cannot write to the Registry. Governance retains policy and route permissions among the bound addresses, not authority to replace sealed code or addresses. Exact ABI, constructor arguments, implementation, roles and template hash (`H`) require same-candidate positive/negative acceptance. This binding is not complete: DAO candidate `7994b6a` has no compatible factory binder, while historical `af162402` calls `initIntervalLimit`, absent from the Candidate 4 Registry ABI. They are incompatible and must not be combined; no factory deployment or enabled treasury route is claimed. GB and wCNET have no administrator; cross-chain minting, burning and route activation belong to the treasury.
 - **Routes start closed.** New assets are registered as candidates in the deployment transaction. Their routes in both directions stay closed until a final CoNET DAO decision to enable them, verified by AAC.
 - **External executors.** On each external chain, an executor at the same address acts only on a CoNET DAO decision that has been executed and is final. It checks the target chain, the treasury or executor, the action and replay protection before it acts. How CoNET finality is judged, and whether the treasury accepts calls only from the executor, are **[Open]**.
 

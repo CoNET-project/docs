@@ -56,7 +56,7 @@ deployment note.
 | Build a wallet-addressed application | [`web3://` Application Protocol](l0/web3-application-protocol.md) |
 | Use the Linux `web3://` runtime | [`conet-l0d`](developers/conet-l0d.md) |
 | Implement a browser/native `web3://` client | [`web3://` application](applications/web3-url.md) |
-| Understand AAC | [AAC whitepaper v1](l1/aac-whitepaper.md) (design draft; no deployment claim) · [two-way policy](l1/aac-two-way-bridge.md) · [earlier dated record](l1/aac-cross-chain.md) |
+| Understand AAC | [AAC whitepaper v1](l1/aac-whitepaper.md) (normative specification; implementation and deployment are not accepted or claimed) · [two-way policy](l1/aac-two-way-bridge.md) · [earlier dated record](l1/aac-cross-chain.md) |
 | Understand GB fees and settlement | [GB purchase, metering, fees and settlement](l1/gb-billing.md) · [Mailbox storage billing](l0/mailbox-storage-billing.md) |
 | Understand node registry V2 | [Node registry V2](l1/node-registry-v2.md) (approved, not yet live) |
 | Understand third-party tokens and subscriptions | [Third-party tokens and subscriptions](l1/third-party-assets.md) (approved, not yet live) |
