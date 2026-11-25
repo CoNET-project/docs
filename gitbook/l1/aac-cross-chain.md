@@ -1,10 +1,10 @@
 # AAC proof-driven cross-chain settlement
 
-**Status as of 7 November 2026.** This page keeps the earlier proof-driven AAC design. The current design is the [two-way AAC bridge](aac-two-way-bridge.md), approved and not yet live. Labels marked **[Decided]** are operator decisions with the stated date; they are not DAO approvals. **[Pending]** marks items not yet decided.
+**Historical design and evidence through 26 October 2026.** This page preserves the earlier proof-driven AAC design and dated records. Its statements about Shadow operation, bridge pauses, contract state, canaries and cutover are historical only; current service and chain state is unknown unless re-read. The later [two-way AAC bridge](aac-two-way-bridge.md) and [AAC whitepaper v1](aac-whitepaper.md) describe the proposed design, not a deployment. Labels marked **[Decided]** are dated operator decisions, not DAO approvals. **[Pending]** marks items not yet decided.
 
 Sections 1 to 9 keep the 26 October 2026 version, which followed the [GB token whitepaper](gb-whitepaper.md) (v0.3) and the [CoNET privacy and asset fragmentation whitepaper](privacy-fragmentation-whitepaper.md) (v0.3). Where they differ from the current design, the current design applies.
 
-The legacy Treasury cross-chain bridge is paused.
+Historical records described the legacy Treasury cross-chain bridge as paused; its current status was not re-read.
 
 ## Current design
 
@@ -96,7 +96,7 @@ Rules that apply across the routes:
 - **Deployment gate** (decided 25 October 2026). New contracts are deployed only after discussion and independent audit are complete. Nothing is deployed before the audit is complete (GB §17).
 - **The miner mint is not an AAC route.** The miner mint in GB §5.2 is a risk-reserve-backed issuance rule on CoNET. The legacy miner-vote bridge is a different mechanism and is closed (see Section 8).
 
-## 8. Status recorded in bridgeAAC (2026-10-26)
+## 8. Status recorded in bridgeAAC (snapshot dated 2026-10-26)
 
 | Item | Status |
 | --- | --- |

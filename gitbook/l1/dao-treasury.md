@@ -1,6 +1,6 @@
 # DAO and the next-generation treasury
 
-**Status as of 11 November 2026.** This page describes how the CoNET DAO decides and how the next-generation treasury carries out its decisions on CoNET and on other chains. The rules were decided by the operator and the user in October and November 2026. Nothing on this page is deployed, and no address exists. The DAO and treasury contracts are implemented and tested locally; acceptance on CoNET, Base and Ethereum is not complete.
+**Design status, 25 November 2026.** This page preserves operator-level DAO and next-generation treasury rules recorded in October and November 2026. AAC implementation is paused while the v1 whitepaper is completed. No deployment or current DAO configuration is claimed here. Current chain state has not been re-read.
 
 **How to read the labels**
 
@@ -10,7 +10,7 @@
 
 ## 1. Previous treasury
 
-The current `TreasuryBridgeV3` on CoNET and Base is described on [Decentralized cross-chain Treasury](cross-chain-treasury.md). Its cross-chain bridge is paused, and support for new inflows through it will stop (decided, not yet live). The new system is a new deployment and does not reuse the previous CoNET and Base treasuries (decided).
+Historical records identify `TreasuryBridgeV3` on CoNET and Base; see [Decentralized cross-chain Treasury](cross-chain-treasury.md). Those records described its cross-chain bridge as paused and recorded a decision to stop new inflows. The current state was not re-read. The proposed new system is a separate deployment and does not reuse the previous treasuries.
 
 ## 2. How the DAO votes [Approved, not yet live]
 
@@ -46,7 +46,7 @@ The DAO keeps the decided governance rules: per-asset limits, asset admission, c
 
 - **One address on every chain.** The next treasury is to be deployed at the same address on CoNET and on each external chain the DAO supports. This is a design requirement; the address is not fixed yet, and same-address deployment is not complete.
 - **No upgrades.** It has no proxy and no upgrade function. A later generation is a new deployment, moved to by DAO decision.
-- **Deployment.** The fixed AAC factory deploys the treasury, GB, wCNET and the conet-USDC ledger at initialisation. GB and wCNET have no administrator; cross-chain minting, burning and route activation belong to the treasury.
+- **Deployment.** The design calls for one fixed AAC factory to deploy the treasury, GB, wCNET and new conet-USDC ledger at initialization. This binding is not complete: DAO candidate `7994b6a` has no compatible factory binder, while historical `af162402` targets a different Registry ABI. Do not combine them as one deployable candidate; no factory deployment is claimed. GB and wCNET have no administrator; cross-chain minting, burning and route activation belong to the treasury.
 - **Routes start closed.** New assets are registered as candidates in the deployment transaction. Their routes in both directions stay closed until a final CoNET DAO decision to enable them, verified by AAC.
 - **External executors.** On each external chain, an executor at the same address acts only on a CoNET DAO decision that has been executed and is final. It checks the target chain, the treasury or executor, the action and replay protection before it acts. How CoNET finality is judged, and whether the treasury accepts calls only from the executor, are **[Open]**.
 

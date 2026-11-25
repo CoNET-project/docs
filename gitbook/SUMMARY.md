@@ -36,6 +36,7 @@
   * [GB AMM whitepaper v0.2 (superseded)](l1/gb-amm-whitepaper.md)
   * [Decentralized cross-chain Treasury](l1/cross-chain-treasury.md)
   * [Two-way AAC bridge (CoNET ↔ Base)](l1/aac-two-way-bridge.md)
+    * [AAC whitepaper v1](l1/aac-whitepaper.md)
   * [DAO and the next-generation treasury](l1/dao-treasury.md)
   * [AAC proof-driven cross-chain settlement (earlier design)](l1/aac-cross-chain.md)
 * [L2 — CoNET-DLE](l2/README.md)

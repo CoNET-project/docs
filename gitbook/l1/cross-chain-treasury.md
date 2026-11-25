@@ -1,6 +1,6 @@
 # Decentralized cross-chain Treasury
 
-**Evidence level: mixed.** The deployed `TreasuryBridgeV3` proxy and its canonical CoNET assets are production references. The bridge policy, quorum, and replay controls are implemented capabilities. The AAC read-only Shadow is production-approved, but AAC custody and the hand-off from a bridged asset into CoNET-DLE remain closed.
+**Evidence level: historical and mixed.** This page preserves production references and dated operating records for the legacy `TreasuryBridgeV3` system. The current chain, bridge, asset and Shadow status was not re-read for this document. AAC custody and the hand-off from a bridged asset into CoNET-DLE are not authorized by this historical page. Read the [AAC whitepaper v1](aac-whitepaper.md) for the proposed successor design and its evidence boundary.
 
 Public site: [https://gitbook.conet.network/l1/cross-chain-treasury.html](https://gitbook.conet.network/l1/cross-chain-treasury.html)
 
@@ -17,27 +17,27 @@ The CoNET Treasury provides an explicit cross-chain boundary:
 
 This separates asset custody and supply conservation from relaying. A relayer can carry evidence, but it does not receive an unrestricted right to mint.
 
-## Production anchors
+## Historical production anchors
 
-There is **one** production Treasury: `TreasuryBridgeV3`. Older CREATE2 / `BaseTreasury` / `ConetTreasury` addresses are deprecated and must not be documented as a second Treasury.
+The cited deployment records identify **one** production Treasury at that evidence point: `TreasuryBridgeV3`. Older CREATE2 / `BaseTreasury` / `ConetTreasury` addresses were marked deprecated in those records. This paragraph is historical, not a current chain read.
 
 | Component | Address | Role |
 | --- | --- | --- |
-| **TreasuryBridgeV3 proxy** | [`0xa208982212978550594A7FEEB70a61665d129003`](https://mainnet.conet.network/address/0xa208982212978550594A7FEEB70a61665d129003) | Sole Treasury: route policy, quorum, mint, burn, lock, and release on CoNET and Base. **Cross-chain operation is paused** |
+| **TreasuryBridgeV3 proxy** | [`0xa208982212978550594A7FEEB70a61665d129003`](https://mainnet.conet.network/address/0xa208982212978550594A7FEEB70a61665d129003) | Sole Treasury in the cited deployment snapshot: route policy, quorum, mint, burn, lock, and release on CoNET and Base. The same historical record described cross-chain operation as paused; current status is unknown |
 | **ConetTreasuryPeer v4** | [`0x6093871d8a3EE6EaADc9869451D1693973cFBCC0`](https://mainnet.conet.network/address/0x6093871d8a3EE6EaADc9869451D1693973cFBCC0) | Peer module for registered burn/mint and configured swaps — **not** a second Treasury |
 | **conet-USDC** | [`0x5209865D404aA5646eDe5B91CD4218909eA72eDA`](https://mainnet.conet.network/token/0x5209865D404aA5646eDe5B91CD4218909eA72eDA) | Treasury-canonical six-decimal settlement asset. Status to be verified. It will be replaced by a newly deployed contract (decided, not yet live); the switch-over plan will be announced |
-| **GBToken (`GB`)** | [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) | Nine-decimal DePIN service asset. **No longer recognised; services stopped** |
-| **Base USDC** | [`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`](https://basescan.org/token/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) | Current source-chain USDC for LockMint and product top-up paths |
+| **GBToken (`GB`)** | [`0xC3EF02DaE632b4C10abB66e07d92a387c10838D8`](https://mainnet.conet.network/token/0xC3EF02DaE632b4C10abB66e07d92a387c10838D8) | Nine-decimal DePIN service asset. The cited historical record said it was no longer recognised and services had stopped; current status is unknown |
+| **Base USDC** | [`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`](https://basescan.org/token/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) | Source-chain USDC identified in the cited LockMint and product top-up records; verify any current route before use |
 
-`TreasuryBridgeV3` is an ERC-1967/UUPS proxy. Its stable address does not imply immutable logic: upgrade authority, miner-roster administration, route configuration, and token roles remain part of the trust and governance boundary.
+The cited deployment/source records described `TreasuryBridgeV3` as an ERC-1967/UUPS proxy. Its stable address did not establish immutable logic: upgrade authority, miner-roster administration, route configuration, and token roles formed part of the historical trust and governance boundary.
 
-The current production counterpart chain is **Base (`chainId` 8453)**. That is a governed CoNET ↔ Base route on the **same** V3 Treasury, not a permissionless bridge and not a second Treasury contract. `ConetTreasuryPeer` bytecode is present on CoNET L1 at the address above; do not assume the same Peer address is deployed on Base without checking `eth_getCode`.
+The cited deployment records identify **Base (`chainId` 8453)** as the counterpart chain for a governed CoNET ↔ Base route on the same V3 Treasury, not a permissionless bridge or a second Treasury contract. Those records reported `ConetTreasuryPeer` bytecode at the CoNET address above; they did not establish a matching Base deployment. Re-read code on the target chain before relying on either statement.
 
-**Cross-chain bridge paused.** The Treasury cross-chain bridge is paused, and GBToken is no longer recognised. The current conet-USDC contract will be replaced by a newly deployed contract (decided, not yet live); the switch-over plan will be announced. The current contract will not be upgraded. The status of the current contract is to be verified. The rest of this page records how the routes worked.
+**Historical status recorded in October 2026:** the Treasury cross-chain bridge was recorded as paused and GBToken as no longer recognised. Those states have not been re-read. The planned conet-USDC replacement is a design decision, not a deployed migration. The remainder of this page records historical route descriptions.
 
 **Next-generation treasury (decided, not yet live).** The next treasury will be deployed by the fixed AAC factory during initialisation, at a fixed address with no proxy and no upgrade function. Its key authorisations are frozen when initialisation completes. A later generation will be a new deployment, moved to by DAO decision. No address exists yet, and deployment still needs an independent audit and a separate approval. The previous CoNET and Base treasuries will not be used by the new system, and support for new inflows through this bridge will stop (decided, not yet live). See [DAO and the next-generation treasury](dao-treasury.md) and [Two-way AAC bridge](aac-two-way-bridge.md#deployment-and-upgrades-approved-not-yet-live).
 
-**GB and conet-USDC design status.** The contracts in the table above remain on chain. The [GB token whitepaper (draft)](gb-whitepaper.md) proposes a replacement design for paid GB and for conet-USDC. That design is not deployed, and it does not change the live routes described on this page.
+**GB and conet-USDC design status.** The contracts in the table above were recorded as deployed at the cited evidence point; their current code and status have not been re-read. The [GB token whitepaper (draft)](gb-whitepaper.md) proposes a replacement design for paid GB and for conet-USDC. That design was not deployed in the cited records, and it did not change the historical routes described on this page.
 
 ## Three explicit route modes
 
@@ -83,29 +83,22 @@ The operation identity commits to the source and destination chains, Treasuries 
 
 These controls decentralize authorization across the configured miner set. They do not prove that every miner is operationally independent, that source-chain finality cannot reorganize, or that governance and upgrade keys cannot be compromised.
 
-## AAC read-only production Shadow
+## Historical AAC read-only Shadow record
 
 [AAC proof-driven settlement](aac-cross-chain.md) is the proposed deterministic successor to per-operation miner votes. It separates source inclusion, source-header authenticity, finality, route constraints, and destination replay protection.
 
-`bridge-aac-v0.33.13` runs the production read-only Shadow as `bridge-aac-shadow-prod.service` on the operator's Shadow host (switched 2026-10-16). Its two Base readers are the public nodes `mainnet.base.org` and `base.publicnode.com`, run by different operators. It scans
-two independent Base readers and two CONET reader paths, agrees block hash,
-state root, and receipts root at the lower finalized height, verifies receipt
-inclusion, persists its cursor, and pages on divergence. Both chains completed
-the required 256-block lower-head stability hold. On-chain Obstacles **1–5 are
-Accepted** (2026-10-14); see [AAC proof-driven settlement](aac-cross-chain.md).
+Historical records dated October 2026 describe `bridge-aac-v0.33.13` as a read-only Shadow and record its reader and stability checks. Those records are retained in [AAC proof-driven settlement](aac-cross-chain.md); they are not a current service readback. Current process, reader, route and custody state are **unknown** unless verified from a fresh authorized source.
 
-This is operational and gate evidence for the observer path, not a custody
-cutover. The Shadow reports `broadcast no`, `settled no`, `custody closed`, and
-`light-client no`. Mint, release, and miner-vote cutover stay closed. Therefore:
+The historical receipt described an observer-only path, not a custody cutover. Its status fields must not be read as current. No new AAC mint, release, or miner-vote state is asserted here. The following bullets summarize the dated evidence:
 
 - a miner vote is not described as a Merkle or finality proof;
 - `isReserved` does not replace source locking or burning;
-- live `voteBridgeOperation`, `executeMint`, and `executeRelease` revert `VoteBridgeClosed` (2026-10-15). Paid-GB `voteBridgeMint` stays paused. `sourceInitiateOpen` is true on Base and CoNET. Base chain id `8453` is open on both treasuries, and Base chain id `224422` is open. A 0.01 Base USDC receipt is covered on the [patch-geth](https://github.com/CoNET-project/patch-geth) execution client and settled as canonical CoNET-USDC; and
-- AAC additionally covers paid GB and unbound developer-token burn/mint routes, while free GB and GB-bound developer tokens remain non-bridgeable.
+- A 2026-10-15 readback recorded `voteBridgeOperation`, `executeMint`, and `executeRelease` reverting `VoteBridgeClosed`; it also recorded paid-GB `voteBridgeMint` as paused, `sourceInitiateOpen` as true on Base and CoNET, and the listed Base route switches as open. These are dated historical values, not current state. An October 2026 receipt recorded a 0.01 Base USDC canary covered by [patch-geth](https://github.com/CoNET-project/patch-geth) and settled as canonical CoNET-USDC;
+- The historical route description additionally covered paid GB and unbound developer-token burn/mint routes, while excluding free GB and GB-bound developer tokens; current route configuration is unknown.
 
 ## Onboarding an ERC-20 from another chain
 
-The architecture can admit ERC-20s from supported chains, but admission is **policy-driven, not automatic**, and **not permissionless**. A caller-supplied token address does not create a route. Current product paths use pre-registered assets such as Base USDC, conet-USDC, GB, and B-Unit. A route needs all of the following:
+The architecture can admit ERC-20s from supported chains, but admission is **policy-driven, not automatic**, and **not permissionless**. A caller-supplied token address does not create a route. The historical product-path records named pre-registered assets such as Base USDC, conet-USDC, GB, and B-Unit. A route needs all of the following:
 
 1. **Source identity** — exact source `chainId`, token contract, decimals, and finality policy.
 2. **Custody mode** — `LockMint`, `BurnMint`, and any reverse `BurnRelease` path must conserve exact raw token units.
@@ -151,7 +144,7 @@ Once a CoNET representation has passed the future DLE admission gates, the targe
 - wallet-addressed L0 coordination for private order and notification traffic; and
 - class-specific settlement, including future miner-assisted markets.
 
-**This DLE transition is not live today.** Bridging into CoNET L1 does not by itself create an asset tip, activate L2 backing, or prove that the required pool, oracle, gateway, archive, and economic release gates have passed.
+**At the evidence date of this page, this DLE transition had not been verified live; current status is unknown.** Bridging into CoNET L1 does not by itself create an asset tip, activate L2 backing, or prove that the required pool, oracle, gateway, archive, and economic release gates have passed.
 
 ## Security boundary
 
@@ -170,14 +163,14 @@ No bridge can remove all cross-chain trust. CoNET's design makes route authority
 
 ## DLE maturity boundary
 
-The deployed Treasury primitives are necessary but not sufficient for production DLE asset ingress. The DLE specification additionally requires a dedicated `AssetBurnMintGateway`, replacement-capacity reservation, pending-burn activation or refund, normal and challenged exits, cumulative conservation accounting, and formal release gates.
+Treasury primitives identified in historical deployment records were necessary but not sufficient for production DLE asset ingress. The DLE specification additionally requires a dedicated `AssetBurnMintGateway`, replacement-capacity reservation, pending-burn activation or refund, normal and challenged exits, cumulative conservation accounting, and formal release gates.
 
 See [Cross-chain assets in CoNET-DLE](../l2/cross-chain-assets.md) for that second boundary.
 
 ## Source anchors
 
 - Explorer [`TreasuryBridgeV3`](https://mainnet.conet.network/address/0xa208982212978550594A7FEEB70a61665d129003) — sole upgradeable Treasury (`0xa208…`); older Treasury addresses are deprecated
-- [beamio-APP/BeamioContract](https://github.com/beamio-APP/BeamioContract) snapshot — `src/b-unit/TreasuryBridgeV3.sol`, `src/b-unit/ConetTreasuryPeer.sol`; treat Explorer-verified bytecode as current
+- [beamio-APP/BeamioContract](https://github.com/beamio-APP/BeamioContract) snapshot — `src/b-unit/TreasuryBridgeV3.sol`, `src/b-unit/ConetTreasuryPeer.sol`; re-read code and proxy implementation at the target block before reporting the current deployment
 - [settleonbase/x402sdk](https://github.com/settleonbase/x402sdk) — `CONET_TREASURY` / `CONET_TREASURY_BRIDGE_V3` (`0xa208…`); `CONET_TREASURY_CREATE2` / `BASE_TREASURY` (`0xa311…`) are deprecated
 - [CoNET-DLE whitepaper](https://github.com/CoNET-project/CoNET-DLE/blob/main/src/whitepaper/Decentralization%20Cluster%20multi-chain.md), §4.6 — external-chain to Treasury to DLE responsibility split
 - [DLE-AssetBurnMintGateway-Invariant-Spec.md](https://github.com/CoNET-project/CoNET-DLE/blob/main/src/whitepaper/DLE-AssetBurnMintGateway-Invariant-Spec.md), §§1–3 — canonical-asset boundary and conservation rules

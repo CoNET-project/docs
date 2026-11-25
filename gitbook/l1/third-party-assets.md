@@ -1,6 +1,6 @@
 # Third-party tokens and subscriptions
 
-**Status as of 11 November 2026.** This page describes how third parties issue tokens on CoNET through AAC, and how users pay CoNET DePIN nodes with them. The rules were decided by the operator and the user on 8–10 November 2026. Nothing on this page is deployed, and no address exists. Parts are implemented and tested locally, as marked.
+**Design status, 25 November 2026.** This page records proposed third-party asset and subscription rules. AAC implementation is paused while the v1 whitepaper is completed. Nothing here establishes a deployed route or current chain state; local implementation claims remain limited to their named candidate and tests.
 
 **How to read the labels**
 
@@ -26,7 +26,7 @@ In the examples, **T** is a third-party stablecoin and **S** is the official CoN
 
 ## 2. Cross-chain tokens on other chains [Approved, not yet live]
 
-- When a cross-chain token first moves to a chain the DAO has approved, the new CoNET treasury on that chain deploys it automatically through the fixed factory. **Its address on that chain is the same as on CoNET.** Nobody deploys it by hand.
+- The design calls for first-use deployment on an approved chain through a fixed factory at the same address as CoNET. This is not implemented or verified; no same-address deployment is claimed.
 - Later transfers reuse that deployment.
 - Before deploying or minting, the chain's executor verifies a final CoNET DAO admission decision for that token and direction, and an AAC transfer proof. Route closures, circuit breakers and limits still apply.
 
@@ -105,7 +105,7 @@ The two switches replace any earlier description in which one switch stopped onl
 
 | Item | Status |
 | --- | --- |
-| Stablecoin factory, dual balances, redemption fee p, profit rate m, issuer minting at burn, mixed transfers, fractional ratios | **[Implemented, pending acceptance]**, local tests. The 500% upper limit on m is not yet enforced in the code under test |
+| Stablecoin factory, dual balances, redemption fee p, profit rate m, issuer minting at burn, mixed transfers, fractional ratios | In local candidate `e6380ec33bf9fb40bf1d4c958073b47fe06355f7`, `ThirdPartyStableToken.sol` sets `MAX_PROFIT_RATE_BPS = 50000` and constructor/setter reject values above it; `third-party-decimals-reentrancy.test.ts` covers the 50,000 bps boundary. This is source and test evidence for that candidate, not a fresh test run or production state |
 | Settlement of third-party asset payments across chains | Tested only with stand-in proofs; not verified |
 | Per-stablecoin channel switch and mint and burn pause (Section 5.1) | **[Implemented, pending acceptance]**, local tests in the AAC contracts and in DAO candidate 4 (not locked; candidate 3 remains the locked candidate). Not deployed |
 | Subscriptions (ERC-1155) | **[Implemented, pending acceptance]**, local tests; payments go to the issuer. Term counting details pending |

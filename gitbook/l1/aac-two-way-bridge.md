@@ -1,6 +1,6 @@
 # Two-way AAC bridge (CoNET ↔ Base)
 
-**Status as of 12 November 2026.** This page describes the AAC bridge design the operator decided on 7 November 2026, with the deployment, limit, asset and governance rules decided on 8–10 November 2026 the deposit confirmation rule decided on 11 November 2026, and the circuit-breaker rules decided on 12 November 2026. Nothing on it is deployed, and no address exists. Parts are implemented and tested locally, as marked; the fast-path anti-forgery gate has not passed. The earlier proof-driven design and its records are on [AAC proof-driven cross-chain settlement](aac-cross-chain.md). The legacy Treasury cross-chain bridge is paused.
+**Status and evidence, 25 November 2026.** This page records operator design decisions from 7–12 November 2026. AAC implementation is paused; this page is not deployment approval. No current AAC deployment or address is claimed. Current chain and service state was not re-read for this update. See the [AAC whitepaper v1](aac-whitepaper.md) for the consolidated design, evidence labels and current acceptance boundary. The earlier proof-driven design and its dated records are on [AAC proof-driven cross-chain settlement](aac-cross-chain.md). The legacy Treasury cross-chain bridge was recorded as paused; its current status is not re-verified here.
 
 **How to read the labels**
 
@@ -30,10 +30,13 @@ Multi-chain same-address deployment is a design requirement and is not yet compl
 
 ## Confirmation by direction
 
+The v1 order invariant is **one terminal outcome**: a matching completion or a proven refund after expiry, never both. Errors, missing RPC responses and malformed proofs are unknown/unavailable, not a valid empty result.
+
+
 | | Base → CoNET (deposit) | CoNET → Base (withdrawal) |
 | --- | --- | --- |
 | Source action | USDC is locked in the AAC bridge on Base | conet-USDC is burned on CoNET |
-| First confirmation | **AAC deposit confirmation.** The Base block is still unsafe (pre-confirmed by the sequencer). AAC checks the authorised sequencer's signature for that period, the chain domain, the binding of the signed payload to the block header and `receiptsRoot`, the USDC lock receipt of the designated bridge, the amount, recipient and order ID, replay protection and the limits below. When all pass, CoNET mints conet-USDC at once, without a guarantee or collateral. An order is minted once only | The Base vault releases USDC equal to the amount burned on CoNET. The withdrawal contract is not implemented, and how Base verifies the CoNET burn is **[Open]** |
+| First confirmation | **AAC deposit confirmation (design).** The Base block is still unsafe (pre-confirmed by the sequencer). AAC is intended to check the authorised sequencer's signature for that period, chain domain, signed-payload binding to the block header and `receiptsRoot`, designated bridge lock receipt, order/recipient/amount, replay protection and limits. A valid check would credit conet-USDC once; it is not finality or collateral. Acceptance has not passed. | **Withdrawal (design).** Base may release USDC only after verifying a finalized CoNET burn bound to the same order, recipient and amount, with replay protection. The destination verifier and complete withdrawal path remain unaccepted; no end-to-end withdrawal is proven. |
 | Later check | **Ethereum L1 health check.** Base's health is judged by the time at which each Base batch is actually included on Ethereum L1. The same L1 evidence is used to track the exposure of deposits already minted. It mints nothing | — |
 
 **[Approved, not yet live]** Fast crediting depends on the Base sequencer's pre-confirmation. A sequencer signature proves pre-confirmation only; Base's health is judged by when its batches are actually included on Ethereum L1. A batch that is included on time keeps the path healthy, even if its proof or its relay to CoNET arrives late. Only trusted L1 evidence that no valid batch was included in **two consecutive expected windows** stops both directions (see [Circuit breaker and reopening](#circuit-breaker-and-reopening)); silence from an RPC endpoint or a relayer is not such evidence. The windows and the other parameters are set by the DAO. These rules are decided; their implementation is pending. The term "early mint" describes when minting happens; it is not a stage name. Between the last batch confirmed as included on L1 and the moment the circuit breaker stops the bridge there is a period of exposure; its length depends on the window parameters the DAO sets and is currently estimated at about 30 minutes, an estimate rather than a fixed limit or a service level, and any loss in that period is handled by the project case by case.
@@ -69,7 +72,10 @@ USDC, GB and wCNET each have their own limits. Each asset has its own allowance 
 
 Every proposal, including AAC reopening and limit changes, has an observation period of **600 seconds** from when voting opens. During that period votes are still collected and nothing is executed early. A DAO proposal that has reached its threshold is executed only after the 600 seconds have passed; the DAO voting window stays **7 days**.
 
-## Proofs
+## Proofs and evidence
+
+This page is a design specification. Local receipts cover limited components, not a live bridge. Real CoNET header/storage-proof verification has local test evidence. The e638 Stage 2 receipt exercised synthetic consensus fields and locally generated CoNET RLP/slot-9 proof with Base mock USDC and a test executor; one release succeeded and recipient substitution/replay were rejected. Separately, the complete local `AacResolutionExecutor.relayBridge` diagnostic reverted with `NotFinal(bytes32)` (status 0; gas 16,178,615); balances and replay state did not change, and the trace did not prove the inner cause. No real-chain end-to-end withdrawal acceptance is established.
+
 
 - **[Implemented, pending acceptance]** Verification of real CoNET block headers and real CoNET storage proofs, which proves CoNET chain state to another chain. Tested locally; not accepted.
 - **[Open]** Carrying a final CoNET DAO decision to an external chain with a real proof has not yet been shown to work end to end.
@@ -111,7 +117,9 @@ conet-USDC received through AAC deposit confirmation can buy GB under the normal
 
 Status on 7 November 2026: in the local implementation the negative tests pass, the chain-ID byte order matches a public test vector, and block-header recomputation matches real Base blocks. Positive tests use test keys only; real sequencer signature samples are still missing. **The gate has not passed.**
 
-## Implementation status (12 November 2026)
+## Implementation status — historical snapshot (12 November 2026)
+
+The table below records the page state on 12 November 2026. It is not a current implementation inventory. Later local evidence is summarized in the [AAC whitepaper v1](aac-whitepaper.md).
 
 | Item | Status |
 | --- | --- |
@@ -119,13 +127,13 @@ Status on 7 November 2026: in the local implementation the negative tests pass, 
 | Deposit confirmation | Local code: block authenticator, signer epochs, lock log, window ledger, inbound controller, bridge breaker and CoNET cover. The local code also contains a Base guarantee contract from the earlier design; the current rule does not use a guarantee |
 | Circuit breaker on L1 inclusion, kept evidence, latched stop, unknown-implementation rule and states L, U and S | Design rules decided; implementation and review in progress, not accepted. The state U implementation has known defects that are not yet fixed, and the production path that judges Base's health by L1 inclusion time is not implemented. Trusted L1 headers come from an Ethereum sync-committee light client (decided, not yet implemented), with its initial checkpoint confirmed by DAO vote and no periodic DAO renewal in normal operation. The checkpoint's maximum age, the long-gap threshold and the re-bootstrap point, the positive batch proof, the state L threshold K, the state U parameters N and W and the other numeric parameters are **[Open]** |
 | Tests | The full local test suite passes, including a real Base lock receipt, real Base header offsets, real CoNET block headers and storage proofs, and the official-stablecoin channel. Some proof paths still use stand-ins (see Proofs). Nothing has been accepted |
-| Withdrawal | The CoNET → Base withdrawal contract is not implemented |
+| Withdrawal | On 12 November 2026, the page recorded the CoNET → Base contract as not implemented. Later local evidence includes a synthetic Stage 2 component release, but no complete `relayBridge` success or real-chain end-to-end withdrawal acceptance; see [AAC whitepaper v1](aac-whitepaper.md) |
 | Deployment | None. No contract deployed and no transaction sent |
 | Known limits | When two valid proofs conflict, the effect of the one applied first is not rolled back; ordering two related events inside the same canonical block by transaction and log order is not implemented |
 
 ## Open items (12 November 2026)
 
-1. The withdrawal contract, and how Base verifies a CoNET burn.
+1. Freeze the v1 withdrawal proof and finality integration: Base must verify the finalized CoNET burn and match its order, recipient and amount with replay protection. A synthetic component test is not full relay acceptance.
 2. The price source for counting GB and wCNET at USDC-equivalent value.
 3. For the Ethereum sync-committee light client: the checkpoint's maximum age, the threshold for a long period without updates, and the point at which re-bootstrapping is required.
 4. The form of the positive batch proof.
@@ -139,6 +147,8 @@ Status on 7 November 2026: in the local implementation the negative tests pass, 
 12. The limit unit for third-party cross-chain tokens and the initial limits of newly admitted official stablecoins.
 
 ## Related
+
+- [AAC whitepaper v1](aac-whitepaper.md) — consolidated design and dated evidence boundary
 
 - [GB purchase, metering, fees and settlement](gb-billing.md)
 - [Third-party tokens and subscriptions](third-party-assets.md)

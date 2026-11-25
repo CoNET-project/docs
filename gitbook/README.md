@@ -44,7 +44,7 @@ on consumer, merchant, and POS workflows.
 | Area | Status | Read |
 |---|---|---|
 | **CoNET L1** | Production, `chainId` 224422. Osaka / Fulu active since 2026-10-18; the official Geth release runs current blocks | [L1 overview](l1/README.md) · [Run an L1 node](developers/l1-node.md) |
-| **Cross-chain settlement** | The Treasury cross-chain bridge is paused. The two-way AAC bridge between CoNET and Base is approved, not yet live: nothing is deployed, and deployment needs an independent audit and a separate approval | [Two-way AAC](l1/aac-two-way-bridge.md) · [Treasury](l1/cross-chain-treasury.md) |
+| **Cross-chain settlement** | The legacy Treasury bridge was recorded as paused; current status was not re-read. The two-way AAC design is not deployed. AAC implementation is paused pending the v1 whitepaper and later, separate engineering, acceptance and deployment decisions | [AAC whitepaper v1](l1/aac-whitepaper.md) · [Two-way AAC policy](l1/aac-two-way-bridge.md) · [Treasury history](l1/cross-chain-treasury.md) |
 | **GB** | The previous GBToken is no longer recognised and its services have stopped; GB issuance from node metering is paused. The [new GB design](l1/gb-billing.md) is not deployed; its rules are decided and parts are implemented locally. Cross-chain service for the current wCNET has stopped while the bridge is paused. The current conet-USDC contract will be replaced by a newly deployed contract (decided, not yet live); the switch-over plan will be announced. The current contract will not be upgraded. The status of the current contract is to be verified. | [New GB design](l1/gb-billing.md) · [Assets](l1/assets.md) |
 | **DAO and treasury** | The DAO, the next-generation treasury and NodeRegistryV2 are implemented and tested locally, pending acceptance; nothing is deployed. Key bridge addresses are frozen at initialisation and the contracts cannot be upgraded | [DAO and treasury](l1/dao-treasury.md) · [Node registry V2](l1/node-registry-v2.md) |
 | **CoNET-DLE** | Normative design; the lab explorer is paused. The 30-day lab assessment was partial success, not qualified; production archive signing and asset ingress are not enabled | [L2 overview](l2/README.md) · [Lab honesty track](l2/lab-honesty-track.md) |
@@ -59,9 +59,8 @@ deployed. Deployment needs an independent audit and a separate approval.
 - [GB purchase, metering, fees and settlement](l1/gb-billing.md) — the new
   GB design: issuance paths, free GB, reserve, metering, service fees and
   settlement. Approved, not yet live.
-- [Two-way AAC bridge](l1/aac-two-way-bridge.md) — USDC, GB, wCNET and
-  third-party tokens between CoNET and other chains: assets, confirmations,
-  per-asset limits, circuit breaker and DAO reopening. Approved, not yet live.
+- [AAC whitepaper v1](l1/aac-whitepaper.md) — consolidated CoNET–Base design, evidence labels and open parameters. Draft; no deployment claim.
+- [Two-way AAC bridge](l1/aac-two-way-bridge.md) — detailed policy for USDC, GB, wCNET, proofs, limits, switches and DAO reopening.
 - [DAO and the next-generation treasury](l1/dao-treasury.md) — voting rules,
   frozen key addresses and the non-upgradeable treasury. Approved, not yet
   live.
@@ -125,7 +124,9 @@ traffic.
   [RPC and Explorer](l1/rpc-explorer.md), and
   [decentralization evidence](l1/decentralization.md).
 - Cross-chain assets: [Cross-chain Treasury](l1/cross-chain-treasury.md) →
-  [AAC proof-driven settlement](l1/aac-cross-chain.md) →
+  [AAC whitepaper v1](l1/aac-whitepaper.md) →
+  [Two-way AAC policy](l1/aac-two-way-bridge.md) →
+  [earlier proof-driven record](l1/aac-cross-chain.md) →
   [cross-chain assets in DLE](l2/cross-chain-assets.md).
 - Economics: [Core L1 assets](l1/assets.md) →
   [GB whitepaper](l1/gb-whitepaper.md) →

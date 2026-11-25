@@ -56,7 +56,7 @@ deployment note.
 | Build a wallet-addressed application | [`web3://` Application Protocol](l0/web3-application-protocol.md) |
 | Use the Linux `web3://` runtime | [`conet-l0d`](developers/conet-l0d.md) |
 | Implement a browser/native `web3://` client | [`web3://` application](applications/web3-url.md) |
-| Understand the two-way AAC bridge | [Two-way AAC bridge](l1/aac-two-way-bridge.md) (approved, not yet live) · [earlier AAC design](l1/aac-cross-chain.md) |
+| Understand AAC | [AAC whitepaper v1](l1/aac-whitepaper.md) (design draft; no deployment claim) · [two-way policy](l1/aac-two-way-bridge.md) · [earlier dated record](l1/aac-cross-chain.md) |
 | Understand GB fees and settlement | [GB purchase, metering, fees and settlement](l1/gb-billing.md) · [Mailbox storage billing](l0/mailbox-storage-billing.md) |
 | Understand node registry V2 | [Node registry V2](l1/node-registry-v2.md) (approved, not yet live) |
 | Understand third-party tokens and subscriptions | [Third-party tokens and subscriptions](l1/third-party-assets.md) (approved, not yet live) |
@@ -95,7 +95,7 @@ documentation repositories is maintained in the
 | L1 chain, RPC, Explorer, validators, and assets | Production reference |
 | CoNET Chat delivery, receipt, presence, and encrypted-history components | Implemented capability |
 | `web3://` locator, Linux runtime, caller-signed gateway, and early browser client | Under development |
-| AAC proof-driven cross-chain settlement | Production read-only Shadow `v0.33.13` (switched 2026-10-16; audit fixes H1, H2, M1–M6); Obstacles 1–5 Accepted (2026-10-14); Phases B–E recorded (2026-10-15); `sourceInitiateOpen` is true on Base and CoNET. Checked execution clients run [patch-geth](https://github.com/CoNET-project/patch-geth); a 0.01 Base USDC receipt in period 1884 is covered and settled |
+| AAC proof-driven cross-chain settlement | Historical October 2026 Shadow and canary receipts are preserved on the [earlier AAC page](l1/aac-cross-chain.md). They were not re-verified for this document and do not establish current service, custody or chain state. The new two-way design is [not deployed](l1/aac-whitepaper.md) |
 | CoNET-DLE specifications | Normative design; lab evidence is separate from production |
 
 These labels are not security-audit, uptime, or anonymity guarantees.
